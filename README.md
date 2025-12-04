@@ -6,8 +6,8 @@ Web application for sharing Docker images, developed as a project for the Softwa
 
 - [Spasoje Brborić](https://github.com/spasoje2001)
 - [Luka Zelović](https://github.com/Zela11)
-- [Ime Prezime](https://github.com/username3)
-- [Ime Prezime](https://github.com/username4)
+- [Milica Đumić](https://github.com/dumitka)
+- [Luka Milanko](https://github.com/Lukaa01)
 
 ## About
 
