@@ -67,3 +67,6 @@ logs/
 *.pem
 *.key
 admin_password.txt
+
+# ===== Queries ====
+queries/
