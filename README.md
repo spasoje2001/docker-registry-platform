@@ -34,6 +34,133 @@ Key features:
 | CI/CD | GitHub Actions | - |
 | Containerization | Docker + Docker Compose | - |
 
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- [Git](https://git-scm.com/downloads)
+- [Docker Desktop](https://www.docker.com/products/docker-desktop/) (includes Docker Compose)
+- [Python 3.12+](https://www.python.org/downloads/) (for local development without Docker)
+
+## Getting Started
+
+### 1. Clone the Repository
+```bash
+git clone https://github.com/spasoje2001/docker-registry-platform.git
+cd docker-registry-platform
+```
+
+### 2. Start the Application
+```bash
+docker-compose up --build
+```
+
+First run will take 5-10 minutes to download all images.
+
+### 3. Verify Everything is Running
+
+Open in browser:
+- Application: http://localhost
+- Elasticsearch: http://localhost:9200 (should return JSON)
+- Registry: http://localhost:5000/v2/ (should return `{}`)
+
+### 4. Stop the Application
+
+Press `Ctrl+C` in the terminal, then:
+```bash
+docker-compose down
+```
+
+## Development Guide
+
+### Docker Commands Reference
+
+| Command | Description |
+|---------|-------------|
+| `docker-compose up` | Start all services |
+| `docker-compose up --build` | Start and rebuild images (use after changing Dockerfile or requirements.txt) |
+| `docker-compose up -d` | Start in background (detached mode) |
+| `docker-compose down` | Stop and remove containers (data persists) |
+| `docker-compose down -v` | Stop and remove containers AND volumes (deletes database!) |
+| `docker-compose logs web` | View Django logs |
+| `docker-compose logs -f` | Follow all logs in real-time |
+| `docker-compose restart web` | Restart only Django service |
+| `docker-compose exec web bash` | Open shell inside Django container |
+
+### When to Rebuild
+
+| Change | Command Needed |
+|--------|----------------|
+| Python code changes | Nothing (auto-reload) |
+| requirements.txt changes | `docker-compose up --build` |
+| Dockerfile changes | `docker-compose up --build` |
+| docker-compose.yml changes | `docker-compose down` then `docker-compose up` |
+| nginx.conf changes | `docker-compose restart nginx` |
+
+### Database Access
+```bash
+# PostgreSQL CLI
+docker-compose exec db psql -U postgres -d dockerhub
+
+# Useful psql commands:
+# \dt          - list tables
+# \d tablename - describe table
+# \q           - quit
+```
+
+### Running Tests Locally
+
+**Option A: Inside Docker (recommended)**
+```bash
+docker-compose exec web python manage.py test
+```
+
+**Option B: Local virtual environment**
+```bash
+cd app
+python -m venv venv
+venv\Scripts\activate  # Windows
+# source venv/bin/activate  # Linux/Mac
+pip install -r requirements.txt
+python manage.py test
+```
+
+### Running Linter Locally
+
+Run linter before committing to avoid CI failures:
+
+**Option A: Inside Docker**
+```bash
+docker-compose exec web flake8 .
+```
+
+**Option B: Local virtual environment**
+```bash
+cd app
+venv\Scripts\activate
+flake8 .
+```
+
+**Linter rules:**
+- Max line length: 127 characters
+- Max complexity: 10
+
+### Running Migrations
+```bash
+# Create new migrations after model changes
+docker-compose exec web python manage.py makemigrations
+
+# Apply migrations
+docker-compose exec web python manage.py migrate
+```
+
+### Creating a Superuser (for Django Admin)
+```bash
+docker-compose exec web python manage.py createsuperuser
+```
+
+Then access Django Admin at: http://localhost/admin
+
 ## Git Workflow
 
 This project follows the [GitFlow](https://www.atlassian.com/git/tutorials/comparing-workflows/gitflow-workflow) branching model.
@@ -78,30 +205,77 @@ Format: `<type>: <description>`
 
 Use lowercase letters and hyphens, no spaces.
 
-## Local Setup
-
-*To be added.*
-
 ## Project Structure
 ```
 docker-registry-platform/
 ├── .github/
-│   ├── workflows/          # CI/CD pipeline definitions
-│   └── ISSUE_TEMPLATE/     # Issue templates
-├── app/                    # Django application
-├── nginx/                  # NGINX configuration
-├── docs/                   # Documentation and diagrams
-├── docker-compose.yml
+│   ├── workflows/
+│   │   ├── ci.yml              # CI pipeline (runs on PR)
+│   │   └── deploy.yml          # Deploy pipeline (runs on release)
+│   ├── ISSUE_TEMPLATE/
+│   │   ├── feature.md
+│   │   └── bug.md
+│   └── pull_request_template.md
+├── app/
+│   ├── accounts/               # User management app
+│   ├── analytics/              # Elasticsearch logs app
+│   ├── config/                 # Django project settings
+│   ├── explore/                # Search functionality app
+│   ├── repositories/           # Repository management app
+│   ├── templates/              # HTML templates
+│   ├── Dockerfile
+│   ├── manage.py
+│   ├── pytest.ini
+│   └── requirements.txt
+├── docs/                       # Documentation and diagrams
+├── nginx/
+│   └── nginx.conf
+├── .env.example
 ├── .gitignore
+├── docker-compose.yml
 └── README.md
 ```
-
-*To be updated during development.*
 
 ## API Documentation
 
 *To be added.*
 
-## Deployment
+## Troubleshooting
 
-*To be added.*
+### Port already in use
+
+If you get an error about port 80 being in use:
+```bash
+# Find process using port 80
+netstat -ano | findstr :80
+
+# Kill the process (replace PID with actual number)
+taskkill /PID  /F
+```
+
+Or change the port in `docker-compose.yml`:
+```yaml
+nginx:
+  ports:
+    - "8080:80"  # Access via localhost:8080
+```
+
+### Database connection issues
+```bash
+# Reset everything
+docker-compose down -v
+docker-compose up --build
+```
+
+### Elasticsearch not starting
+
+Elasticsearch needs at least 4GB of RAM. If you have less:
+
+1. Reduce memory in `docker-compose.yml`:
+```yaml
+   elasticsearch:
+     environment:
+       - "ES_JAVA_OPTS=-Xms256m -Xmx256m"
+```
+
+2. Or disable Elasticsearch temporarily by commenting it out in `docker-compose.yml`
