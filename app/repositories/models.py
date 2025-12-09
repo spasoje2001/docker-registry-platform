@@ -4,7 +4,6 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-
 class Repository(models.Model):
     class VisibilityChoices(models.TextChoices):
         PUBLIC = "PUBLIC", "Public"

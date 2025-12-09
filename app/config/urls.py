@@ -17,8 +17,10 @@ Including another URLconf
 from django.contrib import admin
 from django.urls import path
 from repositories.views import base
+from django.urls import include
 
 urlpatterns = [
     path('', base, name='base'),
     path('admin/', admin.site.urls),
+    path('repositories/', include('repositories.urls')),
 ]
