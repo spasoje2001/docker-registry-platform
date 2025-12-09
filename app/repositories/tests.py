@@ -14,12 +14,12 @@ class RepositoryModelTests(TestCase):
         """Test creating a repository."""
         repo = Repository.objects.create(
             name="test-repo",
-            is_public=True,
+            visibility=True,
             description="A test repository",
             owner=self.user,
         )
         self.assertEqual(repo.name, "test-repo")
-        self.assertTrue(repo.is_public)
+        self.assertTrue(repo.visibility)
         self.assertEqual(repo.description, "A test repository")
         self.assertEqual(repo.owner, self.user)
         self.assertFalse(repo.is_official)
