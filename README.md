@@ -50,21 +50,49 @@ git clone https://github.com/spasoje2001/docker-registry-platform.git
 cd docker-registry-platform
 ```
 
-### 2. Start the Application
+### 2. Configure Environment Variables
+Create your local environment file from the template:
+```bash
+# Copy the template
+cp .env.example .env
+```
+
+### 3. Start the Application
 ```bash
 docker-compose up --build
 ```
 
 First run will take 5-10 minutes to download all images.
 
-### 3. Verify Everything is Running
+### 4. Initialize the Database
+Run migrations to create database tables:
+```bash
+docker-compose exec web python manage.py migrate
+```
+
+### 5. Create Super Administrator
+Create the super admin account (run this ONLY ONCE):
+```bash
+docker-compose exec web python manage.py setup_admin
+```
+
+View the generated credentials:
+```bash
+cat admin_password.txt
+```
+
+**Important:** This command is idempotent (safe to run multiple times). Super admin will be forced to change password on first login.
+
+### 6. Verify Everything is Running
 
 Open in browser:
 - Application: http://localhost
 - Elasticsearch: http://localhost:9200 (should return JSON)
 - Registry: http://localhost:5000/v2/ (should return `{}`)
 
-### 4. Stop the Application
+Login at http://localhost/admin with credentials from `admin_password.txt`.
+
+### 7. Stop the Application
 
 Press `Ctrl+C` in the terminal, then:
 ```bash
