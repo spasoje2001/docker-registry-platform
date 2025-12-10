@@ -1,6 +1,7 @@
 """
 Tests for accounts app.
 """
+
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 
@@ -13,9 +14,7 @@ class UserModelTest(TestCase):
     def test_create_user(self):
         """Test creating a regular user."""
         user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.assertEqual(user.username, "testuser")
         self.assertEqual(user.email, "test@example.com")
@@ -28,9 +27,7 @@ class UserModelTest(TestCase):
     def test_create_superuser(self):
         """Test creating a superuser."""
         admin = User.objects.create_superuser(
-            username="admin",
-            email="admin@example.com",
-            password="adminpass123"
+            username="admin", email="admin@example.com", password="adminpass123"
         )
         self.assertTrue(admin.is_superuser)
         self.assertTrue(admin.is_staff)
@@ -38,8 +35,6 @@ class UserModelTest(TestCase):
     def test_user_string_representation(self):
         """Test User __str__ method."""
         user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123"
         )
         self.assertEqual(str(user), "testuser")

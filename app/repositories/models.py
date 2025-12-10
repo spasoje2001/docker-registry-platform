@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
 class Repository(models.Model):
     class VisibilityChoices(models.TextChoices):
         PUBLIC = "PUBLIC", "Public"
@@ -33,9 +34,7 @@ class Repository(models.Model):
     class Meta:
         verbose_name_plural = "repositories"
         constraints = [
-            models.UniqueConstraint(
-                fields=["owner", "name"],
-                name="unique_owner_name")
+            models.UniqueConstraint(fields=["owner", "name"], name="unique_owner_name")
         ]
 
     @property
