@@ -22,14 +22,8 @@ services:
         - ./app:/app
         - static_volume:/app/staticfiles
         - logs_volume:/app/logs
-      environment:
-        - DEBUG=True
-        - SECRET_KEY=dev-secret-key-change-in-production
-        - DATABASE_URL=postgres://postgres:postgres@db:5432/dockerhub
-        - REDIS_URL=redis://redis:6379/0
-        - ELASTICSEARCH_URL=http://elasticsearch:9200
-        - REGISTRY_URL=http://registry:5000
-        - ALLOWED_HOSTS=localhost,127.0.0.1,0.0.0.0
+      env_file:
+        - .env
       depends_on:
         db:
           condition: service_healthy
@@ -43,10 +37,8 @@ services:
         - "5444:5432"
       volumes:
         - postgres_data:/var/lib/postgresql/data
-      environment:
-        - POSTGRES_DB=dockerhub
-        - POSTGRES_USER=postgres
-        - POSTGRES_PASSWORD=postgres
+      env_file:
+        - .env
       healthcheck:
         test: [ "CMD-SHELL", "pg_isready -U postgres" ]
         interval: 5s

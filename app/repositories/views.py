@@ -2,9 +2,6 @@ from django.shortcuts import render
 from .models import Repository
 from django.db import models
 
-def base(request):
-    return render(request, 'base.html')
-
 def repository_list(request):
     """List of all public repositories + user's private repositories"""
     user = request.user

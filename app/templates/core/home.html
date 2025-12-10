@@ -1,0 +1,100 @@
+{% extends 'base.html' %}
+
+{% block title %}Docker Registry Platform - Home{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center mt-5">
+        <div class="col-lg-10">
+            <!-- Hero Section -->
+            <div class="text-center mb-5">
+                <h1 class="display-3 fw-bold mb-3">
+                    <i class="bi bi-box-seam text-primary"></i> Docker Registry Platform
+                </h1>
+                <p class="lead text-muted mb-4">
+                    Share, discover, and manage Docker container images.
+                    Build, push, and pull with ease.
+                </p>
+
+                <div class="d-grid gap-3 d-md-flex justify-content-md-center">
+                    <a href="#" class="btn btn-primary btn-lg px-4">
+                        <i class="bi bi-search me-2"></i>Explore Images
+                    </a>
+                    <a href="#" class="btn btn-outline-primary btn-lg px-4">
+                        <i class="bi bi-person-plus me-2"></i>Get Started
+                    </a>
+                </div>
+            </div>
+
+            <!-- Features Section -->
+            <div class="row g-4 mt-5">
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="bi bi-lock-fill text-primary" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <h5 class="card-title">Public & Private</h5>
+                            <p class="card-text text-muted">
+                                Host public images or keep them private for your team.
+                                Full control over visibility.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="bi bi-patch-check-fill text-success" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <h5 class="card-title">Official Images</h5>
+                            <p class="card-text text-muted">
+                                Access verified Docker Official Images from trusted publishers
+                                and sponsored OSS projects.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="card h-100 border-0 shadow-sm">
+                        <div class="card-body text-center p-4">
+                            <div class="mb-3">
+                                <i class="bi bi-terminal-fill text-info" style="font-size: 2.5rem;"></i>
+                            </div>
+                            <h5 class="card-title">Easy Integration</h5>
+                            <p class="card-text text-muted">
+                                Standard Docker CLI support. Use familiar docker push and
+                                docker pull commands.
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Quick Start Section -->
+            <div class="card border-0 shadow-sm mt-5">
+                <div class="card-body p-5">
+                    <h3 class="card-title mb-4">
+                        <i class="bi bi-rocket-takeoff text-primary me-2"></i>Quick Start
+                    </h3>
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <h5><i class="bi bi-upload me-2"></i>Push an image</h5>
+                            <pre class="bg-dark text-light p-3 rounded"><code>docker tag myimage registry.local/myimage
+docker push registry.local/myimage</code></pre>
+                        </div>
+                        <div class="col-md-6 mb-3">
+                            <h5><i class="bi bi-download me-2"></i>Pull an image</h5>
+                            <pre class="bg-dark text-light p-3 rounded"><code>docker pull registry.local/myimage
+docker run registry.local/myimage</code></pre>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
