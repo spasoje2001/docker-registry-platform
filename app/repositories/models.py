@@ -34,9 +34,7 @@ class Repository(models.Model):
     class Meta:
         verbose_name_plural = "repositories"
         constraints = [
-            models.UniqueConstraint(
-                fields=["owner", "name"],
-                name="unique_owner_name")
+            models.UniqueConstraint(fields=["owner", "name"], name="unique_owner_name")
         ]
 
     @property

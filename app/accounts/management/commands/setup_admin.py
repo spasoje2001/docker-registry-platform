@@ -5,6 +5,7 @@ Usage:
     python manage.py setup_admin
     python manage.py setup_admin --username=myadmin
 """
+
 import os
 import secrets
 import string
@@ -19,28 +20,28 @@ User = get_user_model()
 class Command(BaseCommand):
     """Create super administrator account with random password."""
 
-    help = 'Creates a super administrator account with a random password'
+    help = "Creates a super administrator account with a random password"
 
     def add_arguments(self, parser):
         """Add optional command arguments."""
         parser.add_argument(
-            '--username',
+            "--username",
             type=str,
-            default='admin',
-            help='Username for the super admin (default: admin)'
+            default="admin",
+            help="Username for the super admin (default: admin)",
         )
 
     def handle(self, *args, **options):
         """Execute the command."""
-        username = options['username']
+        username = options["username"]
 
         # Check if super admin already exists
         if User.objects.filter(role=User.Role.SUPER_ADMIN).exists():
             existing_admin = User.objects.get(role=User.Role.SUPER_ADMIN)
             self.stdout.write(
                 self.style.WARNING(
-                    f'Super admin already exists: {existing_admin.username}. '
-                    f'Skipping creation.'
+                    f"Super admin already exists: {existing_admin.username}. "
+                    f"Skipping creation."
                 )
             )
             return
@@ -59,9 +60,7 @@ class Command(BaseCommand):
         )
 
         self.stdout.write(
-            self.style.SUCCESS(
-                f'Successfully created super admin: {username}'
-            )
+            self.style.SUCCESS(f"Successfully created super admin: {username}")
         )
 
         # Write password to file
@@ -69,13 +68,11 @@ class Command(BaseCommand):
         self._write_password_to_file(password_file_path, username, password)
 
         self.stdout.write(
-            self.style.SUCCESS(
-                f'Password written to: {password_file_path}'
-            )
+            self.style.SUCCESS(f"Password written to: {password_file_path}")
         )
         self.stdout.write(
             self.style.WARNING(
-                'IMPORTANT: Super admin must change password on first login!'
+                "IMPORTANT: Super admin must change password on first login!"
             )
         )
 
@@ -90,7 +87,7 @@ class Command(BaseCommand):
             Randomly generated password string
         """
         alphabet = string.ascii_letters + string.digits
-        password = ''.join(secrets.choice(alphabet) for _ in range(length))
+        password = "".join(secrets.choice(alphabet) for _ in range(length))
         return password
 
     def _get_password_file_path(self):
@@ -106,16 +103,16 @@ class Command(BaseCommand):
             Absolute path to password file
         """
         # Check environment variable first
-        path = os.environ.get('ADMIN_PASSWORD_FILE')
+        path = os.environ.get("ADMIN_PASSWORD_FILE")
 
         if not path:
             # Check Django settings
-            path = getattr(settings, 'ADMIN_PASSWORD_FILE', None)
+            path = getattr(settings, "ADMIN_PASSWORD_FILE", None)
 
         if not path:
             # Default to project root (one level above app directory)
             base_dir = settings.BASE_DIR
-            path = os.path.join(base_dir.parent, 'admin_password.txt')
+            path = os.path.join(base_dir.parent, "admin_password.txt")
 
         return path
 
@@ -132,20 +129,18 @@ class Command(BaseCommand):
             Exception: If file writing fails
         """
         try:
-            with open(file_path, 'w') as f:
-                f.write('Super Admin Credentials\n')
-                f.write('========================\n')
-                f.write(f'Username: {username}\n')
-                f.write(f'Password: {password}\n')
-                f.write('\nIMPORTANT: Change this password on first login!\n')
+            with open(file_path, "w") as f:
+                f.write("Super Admin Credentials\n")
+                f.write("========================\n")
+                f.write(f"Username: {username}\n")
+                f.write(f"Password: {password}\n")
+                f.write("\nIMPORTANT: Change this password on first login!\n")
 
             # Set restrictive permissions (owner read/write only)
             os.chmod(file_path, 0o600)
 
         except Exception as e:
             self.stdout.write(
-                self.style.ERROR(
-                    f'Failed to write password file: {str(e)}'
-                )
+                self.style.ERROR(f"Failed to write password file: {str(e)}")
             )
             raise

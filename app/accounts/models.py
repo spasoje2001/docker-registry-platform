@@ -1,6 +1,7 @@
 """
 Custom User model for the application.
 """
+
 from django.contrib.auth.models import AbstractUser
 from django.db import models
 
@@ -23,9 +24,9 @@ class User(AbstractUser):
     """
 
     class Role(models.TextChoices):
-        SUPER_ADMIN = 'super_admin', 'Super Admin'
-        ADMIN = 'admin', 'Admin'
-        USER = 'user', 'User'
+        SUPER_ADMIN = "super_admin", "Super Admin"
+        ADMIN = "admin", "Admin"
+        USER = "user", "User"
 
     role = models.CharField(
         max_length=20,
