@@ -18,8 +18,9 @@ def register(request):
             login(request, user)
             messages.success(
                 request,
-                "Your account has been created! You are now able to log in"
+                f"Welcome, {user.username}! Your account has been created successfully."
             )
+
             return redirect("core:home")
 
     else:
