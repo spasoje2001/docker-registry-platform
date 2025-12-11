@@ -4,7 +4,7 @@ from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
 
-from app.accounts.forms import CustomUserCreationForm
+from .forms import CustomUserCreationForm
 
 
 def register(request):
