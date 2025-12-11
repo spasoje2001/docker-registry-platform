@@ -50,7 +50,7 @@ class Command(BaseCommand):
         password = self._generate_password()
 
         # Create super admin user
-        user = User.objects.create_user(
+        User.objects.create_user(
             username=username,
             password=password,
             role=User.Role.SUPER_ADMIN,
