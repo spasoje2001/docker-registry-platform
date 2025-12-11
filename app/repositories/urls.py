@@ -17,4 +17,17 @@ urlpatterns = [
         views.repository_delete,
         name="delete",
     ),
+    path(
+        "<str:owner_username>/<str:name>/tags/new/",
+        views.tag_create,
+        name="tag_create"
+    ),
+    path(
+        "<str:owner_username>/<str:name>/tags/<str:tag_name>/edit/",
+        views.tag_update,
+        name="tag_update"
+    ),
+    path(
+        "<str:owner_username>/<str:name>/tags/<str:tag_name>/delete/", views.tag_delete, name="tag_delete"
+    ),
 ]
