@@ -208,7 +208,8 @@ class RepositoryModelTests(TestCase):
         )
         tag = repo.tags.create(
             name="v1.0",
-            digest="sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            digest="sha256:abcdef1234567890abcdef12345"
+                   "67890abcdef1234567890abcdef1234567890",
             size=2048,
         )
         self.assertEqual(tag.short_digest, "sha256:abcdef123456...")
