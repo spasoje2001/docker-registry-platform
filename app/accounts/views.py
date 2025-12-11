@@ -1,9 +1,11 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from .forms import CustomUserCreationForm
 from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
+
+from app.accounts.forms import CustomUserCreationForm
+
 
 def register(request):
     if request.user.is_authenticated:
