@@ -3,8 +3,8 @@ from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import Http404
 from django.db import models
-from .models import Repository
-from .forms import RepositoryForm
+from .models import Repository, Tag
+from .forms import RepositoryForm, TagForm
 
 
 def repository_list(request):
@@ -32,7 +32,8 @@ def repository_detail(request, owner_username, name):
         if not request.user.is_authenticated or request.user != repo.owner:
             raise Http404("Repository not found")
 
-    return render(request, "repositories/repository_detail.html", {"repository": repo})
+    tags = repo.tags.all()
+    return render(request, "repositories/repository_detail.html", {"repository": repo, "tags": tags})
 
 
 @login_required
@@ -111,3 +112,98 @@ def repository_delete(request, owner_username, name):
     return render(
         request, "repositories/repository_confirm_delete.html", {"repository": repo}
     )
+
+@login_required
+def tag_create(request, owner_username, name):
+    """Create new tag for repository (only owner)"""
+    repository = get_object_or_404(
+        Repository,
+        owner__username=owner_username,
+        name=name
+    )
+    
+    if repository.owner != request.user:
+        messages.error(request, 'You cannot create tags for this repository.')
+        return redirect('repositories:detail', owner_username=owner_username, name=name)
+    
+    if request.method == 'POST':
+        form = TagForm(request.POST)
+        if form.is_valid():
+            tag = form.save(commit=False)
+            tag.repository = repository
+            
+            if Tag.objects.filter(repository=repository, name=tag.name).exists():
+                form.add_error('name', f'Tag "{tag.name}" already exists for this repository.')
+            else:
+                tag.save()
+                messages.success(
+                    request,
+                    f'Tag "{tag.name}" created successfully!'
+                )
+                return redirect('repositories:detail', owner_username=owner_username, name=name)
+    else:
+        form = TagForm()
+    
+    return render(request, 'tags/tag_form.html', {
+        'form': form,
+        'repository': repository,
+        'title': f'New Tag for {repository.full_name}'
+    })
+
+def tag_delete(request, owner_username, name, tag_name):
+    """Delete tag from repository"""
+    repo = get_object_or_404(Repository, owner__username=owner_username, name=name)
+
+    if repo.owner != request.user:
+        messages.error(request, "You cannot delete tags from this repository.")
+        return redirect(
+            "repositories:detail", owner_username=repo.owner.username, name=repo.name
+        )
+
+    tag = get_object_or_404(repo.tags, name=tag_name)
+
+    if request.method == "POST":
+        tag.delete()
+        messages.success(request, f'Tag "{tag_name}" deleted from repository "{repo.full_name}".')
+        return redirect(
+            "repositories:detail", owner_username=repo.owner.username, name=repo.name
+        )
+
+    return render(
+        request,
+        "tags/tag_confirm_delete.html",
+        {"repository": repo, "tag": tag},
+    )
+
+def tag_update(request, owner_username, name, tag_name):
+    """Edit tag for repository (only owner)"""
+    repository = get_object_or_404(
+        Repository,
+        owner__username=owner_username,
+        name=name
+    )
+    
+    if repository.owner != request.user:
+        messages.error(request, 'You cannot edit tags for this repository.')
+        return redirect('repositories:detail', owner_username=owner_username, name=name)
+    
+    tag = get_object_or_404(repository.tags, name=tag_name)
+    
+    if request.method == 'POST':
+        form = TagForm(request.POST, instance=tag)
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                f'Tag "{tag.name}" updated successfully!'
+            )
+            return redirect('repositories:detail', owner_username=owner_username, name=name)
+    else:
+        form = TagForm(instance=tag)
+    
+    return render(request, 'tags/tag_form.html', {
+        'form': form,
+        'repository': repository,
+        'tag': tag,
+        'title': f'Edit Tag {tag.name} for {repository.full_name}'
+    })
