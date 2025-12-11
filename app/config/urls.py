@@ -22,6 +22,8 @@ urlpatterns = [
 
     path('admin/', admin.site.urls),
 
+    path('accounts/', include('accounts.urls')),
+
     # Apps (will be implemented in future sprints)
     # path('accounts/', include('accounts.urls')),      # Sprint 1
     # path('repositories/', include('repositories.urls')),  # Sprint 1
