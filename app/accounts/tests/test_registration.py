@@ -56,10 +56,12 @@ class RegistrationTest(TestCase):
         }
 
         response = self.client.post(self.url, data, follow=True)
+
         messages = list(response.context.get("messages"))
         self.assertTrue(messages)
+
         self.assertIn(
-            "Your account has been created! You are now able to log in",
+            "Welcome, msguser! Your account has been created successfully.",
             str(messages[0])
         )
 
