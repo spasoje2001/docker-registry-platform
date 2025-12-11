@@ -169,7 +169,6 @@ class RepositoryModelTests(TestCase):
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
 
-
     # TAG TESTS
     def test_create_repository_tag(self):
         """Test creating a tag for a repository."""

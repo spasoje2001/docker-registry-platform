@@ -7,23 +7,45 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('repositories', '0002_remove_repository_is_public_repository_visibility_and_more'),
+        (
+            "repositories",
+            "0002_remove_repository_is_public_repository_visibility_and_more",
+        ),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Tag',
+            name="Tag",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('name', models.CharField(max_length=100)),
-                ('digest', models.CharField(max_length=256)),
-                ('size', models.PositiveBigIntegerField()),
-                ('created_at', models.DateTimeField(auto_now_add=True)),
-                ('repository', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='tags', to='repositories.repository')),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("name", models.CharField(max_length=100)),
+                ("digest", models.CharField(max_length=256)),
+                ("size", models.PositiveBigIntegerField()),
+                ("created_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "repository",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="tags",
+                        to="repositories.repository",
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-created_at'],
-                'constraints': [models.UniqueConstraint(fields=('repository', 'name'), name='unique_repository_name')],
+                "ordering": ["-created_at"],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("repository", "name"), name="unique_repository_name"
+                    )
+                ],
             },
         ),
     ]

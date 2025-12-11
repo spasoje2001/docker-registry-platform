@@ -46,6 +46,7 @@ class Repository(models.Model):
     def __str__(self):
         return self.full_name
 
+
 class Tag(models.Model):
     name = models.CharField(max_length=100)
     digest = models.CharField(max_length=256)
@@ -57,19 +58,21 @@ class Tag(models.Model):
 
     class Meta:
         constraints = [
-            models.UniqueConstraint(fields=["repository", "name"], name="unique_repository_name")
+            models.UniqueConstraint(
+                fields=["repository", "name"], name="unique_repository_name"
+            )
         ]
         ordering = ["-created_at"]
 
     @property
     def full_tag_name(self):
         return f"{self.repository.full_name}:{self.name}"
-    
+
     @property
     def size_display(self):
         """Human-readable size"""
         size = self.size
-        for unit in ['B', 'KB', 'MB', 'GB']:
+        for unit in ["B", "KB", "MB", "GB"]:
             if size < 1024.0:
                 return f"{size:.2f} {unit}"
             size /= 1024.0
@@ -80,7 +83,7 @@ class Tag(models.Model):
         """Returns truncated digest for display"""
         if not self.digest:
             return ""
-        if self.digest.startswith('sha256:'):
+        if self.digest.startswith("sha256:"):
             return f"sha256:{self.digest[7:19]}..."
         return f"{self.digest[:12]}..."
 
