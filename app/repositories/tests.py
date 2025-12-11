@@ -168,3 +168,72 @@ class RepositoryModelTests(TestCase):
         )
         response = self.client.get(url)
         self.assertEqual(response.status_code, 404)
+
+
+    # TAG TESTS
+    def test_create_repository_tag(self):
+        """Test creating a tag for a repository."""
+        repo = Repository.objects.create(
+            name="tag-repo",
+            owner=self.user1,
+        )
+        tag = repo.tags.create(
+            name="v1.0",
+            digest="sha256:abcdef1234567890",
+            size=2048,
+        )
+        self.assertEqual(tag.name, "v1.0")
+        self.assertEqual(tag.digest, "sha256:abcdef1234567890")
+        self.assertEqual(tag.size, 2048)
+        self.assertEqual(tag.repository, repo)
+        self.assertIsNotNone(tag.created_at)
+
+    def test_tag_full_tag_name(self):
+        """Test full_tag_name property"""
+        repo = Repository.objects.create(
+            name="tag-repo",
+            owner=self.user1,
+        )
+        tag = repo.tags.create(
+            name="v1.0",
+            digest="sha256:abcdef1234567890",
+            size=2048,
+        )
+        self.assertEqual(tag.full_tag_name, "user1/tag-repo:v1.0")
+
+    def test_tag_short_digest(self):
+        """Test short_digest property"""
+        repo = Repository.objects.create(
+            name="tag-repo",
+            owner=self.user1,
+        )
+        tag = repo.tags.create(
+            name="v1.0",
+            digest="sha256:abcdef1234567890abcdef1234567890abcdef1234567890abcdef1234567890",
+            size=2048,
+        )
+        self.assertEqual(tag.short_digest, "sha256:abcdef123456...")
+
+    def test_tag_size_display(self):
+        """Test size_display property"""
+        repo = Repository.objects.create(
+            name="tag-repo",
+            owner=self.user1,
+        )
+        tag = repo.tags.create(
+            name="v1.0",
+            digest="sha256:abcdef1234567890",
+            size=1536,
+        )
+        self.assertEqual(tag.size_display, "1.50 KB")
+
+    def test_tag_uniqueness_constraint(self):
+        """Test: (repository, name) combination must be unique"""
+        repo = Repository.objects.create(
+            name="tag-repo",
+            owner=self.user1,
+        )
+        repo.tags.create(name="v1.0", digest="sha256:abc", size=1024)
+
+        with self.assertRaises(IntegrityError):
+            repo.tags.create(name="v1.0", digest="sha256:def", size=2048)
