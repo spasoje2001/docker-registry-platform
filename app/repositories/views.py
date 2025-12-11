@@ -40,7 +40,7 @@ def repository_detail(request, owner_username, name):
 def repository_create(request):
     """Create new repository (only authenticated users)"""
     if request.method == "POST":
-        form = RepositoryForm(request.POST)
+        form = RepositoryForm(request.POST, request=request)
         if form.is_valid():
             repo = form.save(commit=False)
             repo.owner = request.user
@@ -50,7 +50,7 @@ def repository_create(request):
             )
             return redirect("repositories:list")
     else:
-        form = RepositoryForm()
+        form = RepositoryForm(request=request)
 
     return render(
         request,
