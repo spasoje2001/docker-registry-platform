@@ -53,7 +53,8 @@ class CustomPasswordChangeView(auth_views.PasswordChangeView):
 
             messages.success(
                 self.request,
-                'Password changed successfully! You now have full access to the application.'
+                'Password changed successfully! '
+                'You now have full access to the application.'
             )
 
         return response
