@@ -25,16 +25,17 @@ class RepositoryForm(forms.ModelForm):
         if self.instance.pk:
             return name
 
-        if self.request and Repository.objects.filter(
-            owner=self.request.user, name=name
-        ).exists():
+        if (
+            self.request
+            and Repository.objects.filter(owner=self.request.user, name=name).exists()
+        ):
             raise forms.ValidationError("Repository with this name already exists!")
 
         return name
 
     def __init__(self, *args, **kwargs):
-        self.request = kwargs.pop('request', None)
+        self.request = kwargs.pop("request", None)
         super().__init__(*args, **kwargs)
         if self.instance.pk:
-            self.fields['name'].disabled = True
-            self.fields['name'].help_text = 'Repository name cannot be changed'
+            self.fields["name"].disabled = True
+            self.fields["name"].help_text = "Repository name cannot be changed"
