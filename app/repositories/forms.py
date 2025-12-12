@@ -6,7 +6,7 @@ import re
 class RepositoryForm(forms.ModelForm):
     class Meta:
         model = Repository
-        fields = ["name", "description", "visibility"]
+        fields = ["name", "description", "visibility", "is_official"]
         widgets = {
             "name": forms.TextInput(
                 attrs={"class": "form-control", "placeholder": "Enter repository name"}
@@ -19,6 +19,7 @@ class RepositoryForm(forms.ModelForm):
                 }
             ),
             "visibility": forms.Select(attrs={"class": "form-select"}),
+            "is_official": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
     def clean_name(self):

@@ -44,6 +44,16 @@ def repository_create(request):
         if form.is_valid():
             repo = form.save(commit=False)
             repo.owner = request.user
+            if not request.user.is_staff and repo.is_official:
+                form.add_error(
+                    "is_official",
+                    "Only staff users can create official repositories."
+                )
+                return render(request, "repositories/repository_form.html", {
+                    "form": form,
+                    "title": "New Repository"
+                })
+
             repo.save()
             messages.success(
                 request, f'Repository "{repo.full_name}" successfully created!'
