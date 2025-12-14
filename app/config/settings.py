@@ -107,6 +107,13 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
+# Registry configuration
+REGISTRY_CONFIG = {
+    "base_url": os.environ.get("REGISTRY_URL", "http://localhost:5000"),
+    "username": os.environ.get("REGISTRY_USERNAME", "admin"),
+    "password": os.environ.get("REGISTRY_PASSWORD", "Admin123"),
+}
+
 
 # Internationalization
 # https://docs.djangoproject.com/en/5.2/topics/i18n/
