@@ -135,6 +135,23 @@ docker-compose exec db psql -U postgres -d dockerhub
 # \d tablename - describe table
 # \q           - quit
 ```
+### Registry configuration
+
+### 1. Create htpasswd file
+
+Create htpasswd file locally using Docker htpasswd image.
+
+```docker run --rm httpd:2.4-alpine htpasswd -Bbn admin Admin123 > auth/htpasswd```
+
+Do not edit file manually. Encode it to UTF-8 LF.
+
+### 2. Test login
+
+```docker login localhost:5000```
+
+Then, in command prompt
+
+```curl -i -u admin:Admin123 http://localhost:5000/v2/_catalog```
 
 ### Running Tests Locally
 
@@ -258,6 +275,8 @@ docker-registry-platform/
 ├── docs/                       # Documentation and diagrams
 ├── nginx/
 │   └── nginx.conf
+├── auth/
+│   └── htpasswd
 ├── .env.example
 ├── .gitignore
 ├── docker-compose.yml
