@@ -67,7 +67,6 @@ logs/
 *.pem
 *.key
 admin_password.txt
-auth/htpasswd
 
 # ===== Queries ====
 queries/
