@@ -39,4 +39,7 @@ urlpatterns = [
     ),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+    path('admin_panel', views.admin_panel, name='admin_panel'),
+    path('admin_panel/<int:user_id>/update_badges/', views.update_badges, name="update_badges"),
+    # path('profile/', views.profile, name='profile'),
 ]
