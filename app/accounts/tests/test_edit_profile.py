@@ -13,6 +13,13 @@ class EditProfileTest(TestCase):
             email="test@example.com",
             password="StrongPass123!"
         )
+
+        self.other_user = User.objects.create_user(
+            username="hacker",
+            email="hacker@example.com",
+            password="StrongPass123!"
+        )
+
         self.url = reverse("accounts:edit_profile")
         self.profile_url = reverse("accounts:profile")
 
@@ -62,3 +69,24 @@ class EditProfileTest(TestCase):
         self.assertEqual(response.status_code, 200)
         self.assertTrue(response.context["form"].errors)
         self.assertIn("first_name", response.context["form"].errors)
+
+    def test_user_cannot_edit_other_users_data(self):
+        self.client.login(username="testuser", password="StrongPass123!")
+
+        data = {
+            "first_name": "Hacked",
+            "last_name": "User",
+        }
+
+        self.client.post(self.url, data)
+
+        self.user.refresh_from_db()
+        self.other_user.refresh_from_db()
+
+        # Samo ulogovani korisnik je izmenjen
+        self.assertEqual(self.user.first_name, "Hacked")
+        self.assertEqual(self.user.last_name, "User")
+
+        # Drugi korisnik NIJE dirnut
+        self.assertEqual(self.other_user.first_name, "")
+        self.assertEqual(self.other_user.last_name, "")

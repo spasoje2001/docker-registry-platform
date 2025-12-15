@@ -5,11 +5,13 @@ from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
+from django.utils import timezone
+import random
+from django.core.mail import send_mail
 
-from .forms import CustomUserCreationForm
-from .forms import EditProfileForm
-from .forms import ChangeEmailForm
-from .forms import ChangePasswordForm
+from .forms import CustomUserCreationForm, EditProfileForm
+from .forms import ChangePasswordForm, RequestEmailChangeForm
+from .forms import ConfirmEmailChangeForm
 
 
 def register(request):
@@ -94,26 +96,6 @@ def edit_profile(request):
 
 
 @login_required
-def change_email(request):
-    user = request.user
-
-    if request.method == "POST":
-        form = ChangeEmailForm(request.POST, instance=user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, "Email changed successfully.")
-            return redirect("accounts:profile")
-    else:
-        form = ChangeEmailForm(instance=user)
-
-    return render(
-        request,
-        "accounts/email_change.html",
-        {"form": form}
-    )
-
-
-@login_required
 def change_password(request):
     if request.method == "POST":
         form = ChangePasswordForm(user=request.user, data=request.POST)
@@ -124,7 +106,7 @@ def change_password(request):
             messages.success(request, "Password successfully changed.")
             return redirect("accounts:profile")
         else:
-            messages.success(request, "Current password wasn't correct.")
+            messages.error(request, "Current password wasn't correct.")
     else:
         form = ChangePasswordForm(user=request.user)
 
@@ -133,3 +115,101 @@ def change_password(request):
         "accounts/change_password.html",
         {"form": form, "user": request.user}
     )
+
+
+@login_required
+def email_change(request):
+    if request.method == "POST":
+        form = RequestEmailChangeForm(request.user, request.POST)
+        if form.is_valid():
+            code = f"{random.randint(100000, 999999)}"
+
+            user = request.user
+            user.email_change_code = code
+            user.email_change_new_email = form.cleaned_data["new_email"]
+            user.email_change_requested_at = timezone.now()
+            user.save(update_fields=[
+                "email_change_code",
+                "email_change_new_email",
+                "email_change_requested_at",
+            ])
+
+            send_mail(
+                subject="Confirm your email change",
+                message=f"Your verification code is: {code}",
+                from_email=None,
+                recipient_list=[user.email_change_new_email],
+            )
+
+            messages.success(
+                request,
+                "Verification code sent to new email address."
+            )
+            return redirect("accounts:email_change_confirm")
+    else:
+        form = RequestEmailChangeForm(request.user)
+
+    return render(
+        request,
+        "accounts/email_change.html",
+        {"form": form}
+    )
+
+
+@login_required
+def email_change_confirm(request):
+    if request.method == "POST":
+        form = ConfirmEmailChangeForm(request.POST)
+        if form.is_valid():
+            code = form.cleaned_data["code"]
+            user = request.user
+
+            if (
+                not user.email_change_code
+                or user.is_email_change_code_expired()
+            ):
+                form.add_error(
+                    'code',
+                    'Verification code has expired. Please request a new one.'
+                    )
+            elif code != user.email_change_code:
+                form.add_error("code", "Invalid verification code.")
+            else:
+                user.email = user.email_change_new_email
+                user.email_change_code = None
+                user.email_change_new_email = None
+                user.email_change_requested_at = None
+                user.save()
+
+                messages.success(
+                    request,
+                    "Email address changed successfully."
+                )
+                return redirect("accounts:profile")
+    else:
+        form = ConfirmEmailChangeForm()
+
+    return render(
+        request,
+        "accounts/email_change_confirm.html",
+        {"form": form}
+    )
+
+
+@login_required
+def cancel_email_change(request):
+    user = request.user
+
+    user.email_change_code = None
+    user.email_change_new_email = None
+    user.email_change_requested_at = None
+    user.save(
+        update_fields=[
+            "email_change_code",
+            "email_change_new_email",
+            "email_change_requested_at",
+        ]
+    )
+
+    messages.info(request, "Email change request has been canceled.")
+    return redirect("accounts:profile")

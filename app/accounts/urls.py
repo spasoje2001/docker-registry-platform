@@ -21,8 +21,22 @@ urlpatterns = [
     path("register/", views.register, name="register"),
     path("profile/", views.profile_view, name="profile"),
     path("profile/edit/", views.edit_profile, name="edit_profile"),
-    path("profile/change-email/", views.change_email, name="change_email"),
     path("profile/change-password/", views.change_password, name="change_password"),
+    path(
+        "profile/change-email/",
+        views.email_change,
+        name="email_change"
+    ),
+    path(
+        "profile/change-email/confirm/",
+        views.email_change_confirm,
+        name="email_change_confirm"
+    ),
+    path(
+        "profile/email-change/cancel/",
+        views.cancel_email_change,
+        name="email_change_cancel",
+    ),
     # path('register/', views.register, name='register'),
     # path('login/', auth_views.LoginView.as_view(), name='login'),
     # path('logout/', auth_views.LogoutView.as_view(), name='logout'),
