@@ -4,6 +4,8 @@ Custom User model for the application.
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
+from django.utils import timezone
+from datetime import timedelta
 
 
 class User(AbstractUser):
@@ -39,3 +41,30 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    email_change_code = models.CharField(
+        max_length=6,
+        blank=True,
+        null=True
+    )
+
+    email_change_new_email = models.EmailField(
+        blank=True,
+        null=True
+    )
+
+    email_change_requested_at = models.DateTimeField(
+        blank=True,
+        null=True
+    )
+
+    EMAIL_CHANGE_EXPIRATION_MINUTES = 10
+
+    def is_email_change_code_expired(self):
+        if not self.email_change_requested_at:
+            return True
+
+        return timezone.now() > (
+            self.email_change_requested_at
+            + timedelta(minutes=self.EMAIL_CHANGE_EXPIRATION_MINUTES)
+        )

@@ -1,0 +1,35 @@
+{% extends "base.html" %}
+{% block title %}Confirm Email Change{% endblock %}
+
+{% block content %}
+<div class="container mt-5" style="max-width: 400px;">
+    <h3 class="mb-3">Confirm Email Change</h3>
+    <p class="text-muted">
+        Enter the 6-digit verification code sent to your new email address.
+    </p>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label">Verification code</label>
+            {{ form.code }}
+            {% if form.code.errors %}
+                <div class="text-danger">
+                    {{ form.code.errors.0 }}
+                </div>
+            {% endif %}
+        </div>
+
+        <button type="submit" class="btn btn-primary w-100">
+            Confirm
+        </button>
+       <form method="post" action="{% url 'accounts:email_change_cancel' %}">
+            {% csrf_token %}
+            <button type="submit" class="btn btn-outline-secondary w-100">
+                Cancel
+            </button>
+        </form>
+    </form>
+</div>
+{% endblock %}
