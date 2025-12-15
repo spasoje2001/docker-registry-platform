@@ -1,6 +1,6 @@
 from django.shortcuts import render, redirect
 from django.contrib import messages
-from django.contrib.auth import login
+from django.contrib.auth import login, logout
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
 from django.contrib.auth.decorators import login_required
@@ -9,10 +9,53 @@ from django.utils import timezone
 import random
 from django.core.mail import send_mail
 
-from .forms import CustomUserCreationForm, EditProfileForm
 from .forms import ChangePasswordForm, RequestEmailChangeForm
-from .forms import ConfirmEmailChangeForm
+from .forms import ConfirmEmailChangeForm, EditProfileForm
+from .forms import CustomUserCreationForm, CustomAuthenticationForm
 
+
+def login_view(request):
+    if request.user.is_authenticated:
+        return redirect("core:home")
+
+    next_url = request.GET.get("next") or request.POST.get("next")
+
+    if request.method == "POST":
+        form = CustomAuthenticationForm(data=request.POST)
+        if form.is_valid():
+            user = form.get_user()
+            login(request, user)
+
+            messages.success(
+                request,
+                "You have successfully logged in!"
+            )
+
+            if next_url:
+                return redirect(next_url)
+            return redirect("core:home")
+        else:
+            messages.error(
+                request,
+                "Invalid username or password. Please try again."
+            )
+    else:
+        form = CustomAuthenticationForm(request)
+
+    return render(
+            request,
+            "accounts/login.html",
+            {"form": form, "next": next_url},
+        )
+
+def logout_view(request):
+    logout(request)
+
+    messages.success(
+        request,
+        "You have successfully logged out!"
+    )
+    return redirect("core:home")
 
 def register(request):
     if request.user.is_authenticated:
