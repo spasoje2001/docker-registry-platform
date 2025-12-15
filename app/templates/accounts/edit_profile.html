@@ -1,0 +1,134 @@
+{% extends "base.html" %}
+
+{% block title %}Edit profile{% endblock %}
+
+{% block content %}
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+
+                <div class="row g-2">
+                    <div class="col-6">
+                        <a href="{% url 'accounts:change_email' %}" class="btn btn-primary w-77">
+                            Change email
+                        </a>
+                    </div>
+                    <div class="col-6 text-end">
+                        <a href="{% url 'accounts:change_password' %}" class="btn btn-primary w-77">
+                            Change password
+                        </a>
+                    </div>
+                </div>
+                
+                </br></br>
+
+                <h3 class="mb-4 text-center">
+                    <i class="bi bi-person-gear"></i> Edit profile
+                </h3>
+
+                <form method="post">
+                    {% csrf_token %}
+
+                    <div class="mb-3">
+                        <label class="form-label">Username</label>
+                        <input class="form-control" value="{{ user.username }}" disabled>
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">First name</label>
+                        {{ form.first_name }}
+                        {% if form.first_name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.first_name.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Last name</label>
+                        {{ form.last_name }}
+                        {% if form.last_name.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ form.last_name.errors.0 }}
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="mb-3">
+                        <label class="form-label">Date joined</label>
+                        <input class="form-control" value="{{ user.date_joined }}" disabled>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <input class="form-control" value="{{ user.role }}" disabled>
+                    </div><div class="mb-3">
+                    
+                    <div>
+                        <label class="form-label">Badges</label>
+                        <input
+                            class="form-control"
+                            value="{% if user.is_verified_publisher %} Verified Publisher
+                                {% elif user.is_sponsored_oss %} Sponsored OSS
+                                {% else %} Community User
+                                {% endif %}"
+                            disabled
+                        >
+                    </div>
+
+                    </br></br>
+                    <div
+                        id="input-error"
+                        class="text-danger small mt-2 d-none"
+                    ></div>
+
+                    <div class="d-grid gap-2">
+                        <button
+                            id="save-btn"
+                            type="submit"
+                            class="btn btn-primary w77"
+                            disabled
+                        >
+                            Save changes
+                        </button>
+                        <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary w-77">
+                            Cancel
+                        </a>
+                    </div>
+                </form>
+
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    const firstName = document.getElementById("id_first_name");
+    const lastName = document.getElementById("id_last_name");
+    const saveBtn = document.getElementById("save-btn");
+    const err = document.getElementById("input-error");
+
+    function validateForm() {
+        saveBtn.disabled = !firstName.value.trim() || !lastName.value.trim();
+        if (!firstName.value.trim() || !lastName.value.trim()) {
+            err.classList.remove("d-none");
+            if (!firstName.value.trim() && !lastName.value.trim())
+                err.textContent = "First and last name must have value.";
+            else if (!lastName.value.trim())
+                err.textContent = "Last name must have value.";
+            else
+                err.textContent = "First name must have value.";
+        }
+        else {
+            err.textContent = "";
+        }
+    }
+
+    firstName.addEventListener("input", validateForm);
+    lastName.addEventListener("input", validateForm);
+
+    // inicijalna provera (ako su već popunjeni)
+    validateForm();
+</script>
+{% endblock %}

@@ -3,8 +3,13 @@ from django.contrib import messages
 from django.contrib.auth import login
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
+from django.contrib.auth.decorators import login_required
+from django.contrib.auth import update_session_auth_hash
 
 from .forms import CustomUserCreationForm
+from .forms import EditProfileForm
+from .forms import ChangeEmailForm
+from .forms import ChangePasswordForm
 
 
 def register(request):
@@ -61,3 +66,70 @@ class CustomPasswordChangeView(auth_views.PasswordChangeView):
             )
 
         return response
+
+
+@login_required
+def profile_view(request):
+    return render(request, "accounts/profile.html", {"user": request.user})
+
+
+@login_required
+def edit_profile(request):
+    user = request.user
+
+    if request.method == "POST":
+        form = EditProfileForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Profile updated successfully.")
+            return redirect("accounts:profile")
+    else:
+        form = EditProfileForm(instance=user)
+
+    return render(
+        request,
+        "accounts/edit_profile.html",
+        {"form": form, "user": user}
+    )
+
+
+@login_required
+def change_email(request):
+    user = request.user
+
+    if request.method == "POST":
+        form = ChangeEmailForm(request.POST, instance=user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Email changed successfully.")
+            return redirect("accounts:profile")
+    else:
+        form = ChangeEmailForm(instance=user)
+
+    return render(
+        request,
+        "accounts/email_change.html",
+        {"form": form}
+    )
+
+
+@login_required
+def change_password(request):
+    if request.method == "POST":
+        form = ChangePasswordForm(user=request.user, data=request.POST)
+
+        if form.is_valid():
+            user = form.save()
+            update_session_auth_hash(request, user)
+            messages.success(request, "Password successfully changed.")
+            return redirect("accounts:profile")
+        else:
+            messages.success(request, "Current password wasn't correct.")
+    else:
+        form = ChangePasswordForm(user=request.user)
+
+    return render(
+        request,
+        "accounts/change_password.html",
+        {"form": form, "user": request.user}
+    )
