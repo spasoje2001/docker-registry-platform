@@ -3,6 +3,15 @@
 
 {% block content %}
 <div class="container">
+
+    <!-- URL template for JS -->
+    <div id="badge-config"
+         data-url-template="{% url 'accounts:update_badges' 0 %}">
+    </div>
+
+    <!-- Toast container -->
+    <div class="toast-container position-fixed top-0 end-0 p-3"></div>
+
     <div class="d-flex align-items-center justify-content-between mb-3">
         <h2 class="h3 mb-0">
             <i class="bi bi-shield-lock text-primary me-2"></i>Admin Panel
@@ -23,11 +32,13 @@
             <button class="btn btn-primary" type="submit">Search</button>
         </div>
         {% if q %}
-            <div class="form-text">Showing results for: <b>{{ q }}</b></div>
+            <div class="form-text">
+                Showing results for: <b>{{ q }}</b>
+            </div>
         {% endif %}
     </form>
 
-    <!-- Results -->
+    <!-- Users table -->
     <div class="card shadow-sm border-0">
         <div class="card-body p-0">
             <div class="table-responsive">
@@ -38,56 +49,51 @@
                             <th>Email</th>
                             <th>Verified Publisher</th>
                             <th>Sponsored OSS</th>
-                            <th class="text-end pe-3">Action</th>
                         </tr>
                     </thead>
                     <tbody>
                         {% for u in users %}
                         <tr>
-                            <td class="ps-3 fw-semibold">{{ u.username }}</td>
+                            <td class="ps-3 fw-semibold">
+                                {{ u.username }}
+                            </td>
                             <td>{{ u.email }}</td>
 
-                            <td colspan="3" class="pe-3">
-                                <form method="post" action="{% url 'accounts:update_badges' u.id %}" class="d-flex align-items-center justify-content-between gap-3">
-                                    {% csrf_token %}
-
-                                    <div class="form-check form-switch m-0">
-                                        <input
-                                            class="form-check-input"
-                                            type="checkbox"
-                                            id="vp-{{ u.id }}"
-                                            name="is_verified_publisher"
-                                            {% if u.is_verified_publisher %}checked{% endif %}
-                                        >
-                                        <label class="form-check-label" for="vp-{{ u.id }}">
-                                            Verified
-                                        </label>
-                                    </div>
-
-                                    <div class="form-check form-switch m-0">
-                                        <input
-                                            class="form-check-input"
-                                            type="checkbox"
-                                            id="so-{{ u.id }}"
-                                            name="is_sponsored_oss"
-                                            {% if u.is_sponsored_oss %}checked{% endif %}
-                                        >
-                                        <label class="form-check-label" for="so-{{ u.id }}">
-                                            Sponsored
-                                        </label>
-                                    </div>
-
-                                    <button class="btn btn-sm btn-outline-primary" type="submit">
-                                        Save
-                                    </button>
-                                </form>
+                            <td>
+                                <div class="form-check form-switch m-0">
+                                    <input
+                                        class="form-check-input badge-toggle"
+                                        type="checkbox"
+                                        id="vp-{{ u.id }}"
+                                        data-user-id="{{ u.id }}"
+                                        data-badge="is_verified_publisher"
+                                        {% if u.is_verified_publisher %}checked{% endif %}
+                                    >
+                                    <label class="form-check-label" for="vp-{{ u.id }}">
+                                        Verified
+                                    </label>
+                                </div>
                             </td>
 
-                            <td class="text-end pe-3"></td>
+                            <td>
+                                <div class="form-check form-switch m-0">
+                                    <input
+                                        class="form-check-input badge-toggle"
+                                        type="checkbox"
+                                        id="so-{{ u.id }}"
+                                        data-user-id="{{ u.id }}"
+                                        data-badge="is_sponsored_oss"
+                                        {% if u.is_sponsored_oss %}checked{% endif %}
+                                    >
+                                    <label class="form-check-label" for="so-{{ u.id }}">
+                                        Sponsored
+                                    </label>
+                                </div>
+                            </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="5" class="text-center text-muted py-4">
+                            <td colspan="4" class="text-center text-muted py-4">
                                 No users found.
                             </td>
                         </tr>
@@ -97,5 +103,74 @@
             </div>
         </div>
     </div>
+
 </div>
+
+<script>
+/* ---------------- CSRF ---------------- */
+function getCookie(name) {
+    const value = `; ${document.cookie}`;
+    const parts = value.split(`; ${name}=`);
+    if (parts.length === 2) return parts.pop().split(';').shift();
+}
+
+const csrftoken = getCookie("csrftoken");
+const urlTemplate = document
+    .getElementById("badge-config")
+    .dataset.urlTemplate;
+
+/* ---------------- Toast ---------------- */
+function showToast(message, type = "success") {
+    const container = document.querySelector(".toast-container");
+
+    const toast = document.createElement("div");
+    toast.className = `toast align-items-center text-bg-${type} border-0 show`;
+    toast.setAttribute("role", "alert");
+
+    toast.innerHTML = `
+        <div class="d-flex">
+            <div class="toast-body">${message}</div>
+            <button type="button" class="btn-close btn-close-white me-2 m-auto"></button>
+        </div>
+    `;
+
+    container.appendChild(toast);
+
+    setTimeout(() => toast.remove(), 2000);
+}
+
+/* ---------------- Toggle logic ---------------- */
+document.querySelectorAll(".badge-toggle").forEach(toggle => {
+    toggle.addEventListener("change", async () => {
+        const userId = toggle.dataset.userId;
+        const badge = toggle.dataset.badge;
+        const value = toggle.checked ? "1" : "0";
+        const previous = !toggle.checked;
+
+        const url = urlTemplate.replace("/0/", `/${userId}/`);
+
+        try {
+            const response = await fetch(url, {
+                method: "POST",
+                headers: {
+                    "Content-Type": "application/x-www-form-urlencoded",
+                    "X-CSRFToken": csrftoken
+                },
+                body: new URLSearchParams({ badge, value })
+            });
+
+            if (!response.ok) {
+                toggle.checked = previous;
+                showToast("Error saving changes", "danger");
+                return;
+            }
+
+            showToast("Saved successfully ✔");
+        } catch (error) {
+            toggle.checked = previous;
+            showToast("Network error", "danger");
+        }
+    });
+});
+</script>
 {% endblock %}

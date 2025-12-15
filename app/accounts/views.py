@@ -15,6 +15,8 @@ from django.core.mail import send_mail
 from .forms import ChangePasswordForm, RequestEmailChangeForm
 from .forms import ConfirmEmailChangeForm, EditProfileForm
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 
 User = get_user_model()
 
@@ -38,26 +40,26 @@ def admin_panel(request):
         )
     return render(request, "accounts/admin_panel.html", {"users": users, "q": q})
 
+@login_required
+@require_POST
 def update_badges(request, user_id):
-    if not request.user.is_authenticated:
-        return redirect("accounts:login")
-
     if request.user.role not in ["admin", "super_admin"]:
-        messages.error(request, "You do not have permission to do that.")
-        return redirect("core:home")
-
-    if request.method != "POST":
-        return redirect("accounts:admin_panel")
+        return JsonResponse({"ok": False, "error": "forbidden"}, status=403)
 
     target = get_object_or_404(User, id=user_id)
 
-    target.is_verified_publisher = "is_verified_publisher" in request.POST
-    target.is_sponsored_oss = "is_sponsored_oss" in request.POST
-    target.save(update_fields=["is_verified_publisher", "is_sponsored_oss"])
+    badge = request.POST.get("badge")
+    value = request.POST.get("value")
 
-    messages.success(request, f"Badges updated for {target.username}.")
+    if badge not in ["is_verified_publisher", "is_sponsored_oss"]:
+        return JsonResponse({"ok": False, "error": "bad badge"}, status=400)
 
-    return redirect(request.META.get("HTTP_REFERER", "accounts:admin_panel"))
+    bool_value = str(value).lower() in ["1", "true", "on", "yes"]
+
+    setattr(target, badge, bool_value)
+    target.save(update_fields=[badge])
+
+    return JsonResponse({"ok": True, "user_id": target.id, "badge": badge, "value": bool_value})
 
 def login_view(request):
     if request.user.is_authenticated:
