@@ -48,6 +48,7 @@ def login_view(request):
             {"form": form, "next": next_url},
         )
 
+
 def logout_view(request):
     logout(request)
 
@@ -56,6 +57,7 @@ def logout_view(request):
         "You have successfully logged out!"
     )
     return redirect("core:home")
+
 
 def register(request):
     if request.user.is_authenticated:
