@@ -5,20 +5,24 @@ from django.http import Http404
 from django.db import models
 from .models import Repository, Tag
 from .forms import RepositoryForm, TagForm
+from .services.repositories_service import RepositoryService
 
 
 def repository_list(request):
     """List of all public repositories + user's private repositories"""
     user = request.user
-    if user.is_authenticated:
-        repositories = Repository.objects.filter(
-            models.Q(visibility=Repository.VisibilityChoices.PUBLIC)
-            | models.Q(owner=user)
-        )
-    else:
-        repositories = Repository.objects.filter(
-            visibility=Repository.VisibilityChoices.PUBLIC
-        )
+    service = RepositoryService()
+    repositories = service.list_repositories(request.user)
+    
+    # if user.is_authenticated:
+    #     repositories = Repository.objects.filter(
+    #         models.Q(visibility=Repository.VisibilityChoices.PUBLIC)
+    #         | models.Q(owner=user)
+    #     )
+    # else:
+    #     repositories = Repository.objects.filter(
+    #         visibility=Repository.VisibilityChoices.PUBLIC
+    #     )
     return render(
         request, "repositories/repository_list.html", {"repositories": repositories}
     )

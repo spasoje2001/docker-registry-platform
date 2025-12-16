@@ -1,96 +1,206 @@
 {% extends 'base.html' %}
 
 {% block content %}
-<div class="container">
+<div class="container mt-4">
     <div class="row justify-content-center">
         <div class="col-lg-8">
             <div class="card shadow-sm">
-                <div class="d-flex justify-content-between card-header bg-white py-3">
-                    <h3 class="mb-0">
-                        <i class="bi bi-{% if repository %}pencil-square{% else %}folder-plus{% endif %} text-primary"></i>
-                        {{ title }}
+                <div class="card-header bg-white py-3">
+                    <h3 class="mb-0 text-center">
+                        <i class="bi bi-folder-plus text-primary"></i>
+                        New Repository
                     </h3>
-                    <a href="{% url 'repositories:list' %}" class="btn btn-link text-decoration-none">
-                        <i class="bi bi-arrow-left"></i> Go Back
-                    </a>
                 </div>
+                
                 <div class="card-body p-4">
-                    <form method="post">
-                        {% csrf_token %}
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between mb-2">
+                            <div class="text-center flex-fill">
+                                <div class="step-indicator active" id="step1-indicator">
+                                    <span class="step-number">1</span>
+                                </div>
+                                <small class="d-block mt-2 fw-semibold text-primary" id="step1-label">Repository Details</small>
+                            </div>
+                            <div class="flex-fill d-flex align-items-center">
+                                <hr class="flex-fill step-line" id="line1">
+                            </div>
+                            <div class="text-center flex-fill">
+                                <div class="step-indicator" id="step2-indicator">
+                                    <span class="step-number">2</span>
+                                </div>
+                                <small class="d-block mt-2" id="step2-label">Docker Commands</small>
+                            </div>
+                        </div>
+                    </div>
 
-                        <div class="mb-4">
-                            <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
-                                Name <span class="text-danger">*</span>
+                    <div id="step1" class="step-content">
+                        <form method="post" id="repositoryForm">
+                            {% csrf_token %}
+
+                            <div class="mb-4">
+                                <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
+                                    Name <span class="text-danger">*</span>
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-tag"></i>
+                                    </span>
+                                    {{ form.name }}
+                                </div>
+                                {% if form.name.errors %}
+                                    <div class="text-danger mt-2">
+                                        {{ form.name.errors }}
+                                    </div>
+                                {% else %}
+                                    <div class="form-text">
+                                        <i class="bi bi-info-circle"></i>
+                                        Lowercase alphanumeric with hyphens (e.g., my-awesome-repo)
+                                    </div>
+                                {% endif %}
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
+                                    Description
+                                </label>
+                                {{ form.description }}
+                                {% if form.description.errors %}
+                                    <div class="text-danger mt-2">
+                                        {{ form.description.errors }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <i class="bi bi-chat-left-text"></i>
+                                    A brief description of what this repository is about
+                                </div>
+                            </div>
+
+                            <div class="mb-4">
+                                <label for="{{ form.visibility.id_for_label }}" class="form-label fw-semibold">
+                                    Visibility <span class="text-danger">*</span>
+                                </label>
+                                {{ form.visibility }}
+                                {% if form.visibility.errors %}
+                                    <div class="text-danger mt-2">
+                                        {{ form.visibility.errors }}
+                                    </div>
+                                {% endif %}
+                                <div class="form-text">
+                                    <i class="bi bi-eye"></i>
+                                    <strong>Public:</strong> Anyone can see this repository •
+                                    <i class="bi bi-lock"></i>
+                                    <strong>Private:</strong> Only you can see this repository
+                                </div>
+                            </div>
+
+                            {% if user.is_staff %}
+                            <div class="mb-4">
+                                <div class="form-check">
+                                    <input type="checkbox" class="form-check-input" 
+                                           id="{{ form.is_official.id_for_label }}" 
+                                           name="{{ form.is_official.html_name }}" 
+                                           {% if form.is_official.value %}checked{% endif %}>
+                                    <label class="form-check-label fw-semibold" for="{{ form.is_official.id_for_label }}">
+                                        Official
+                                    </label>
+                                </div>
+                            </div>
+                            {% endif %}
+
+                            <div class="mb-4">
+                                <label for="imageTag" class="form-label fw-semibold">
+                                    Initial Tag
+                                </label>
+                                <div class="input-group">
+                                    <span class="input-group-text">
+                                        <i class="bi bi-tag-fill"></i>
+                                    </span>
+                                    <input type="text" class="form-control" id="imageTag" value="latest" placeholder="latest">
+                                </div>
+                                <div class="form-text">
+                                    <i class="bi bi-info-circle"></i>
+                                    Default tag for your Docker image
+                                </div>
+                            </div>
+
+                            <div class="d-flex justify-content-between gap-2 pt-3 border-top">
+                                <a href="{% url 'repositories:list' %}" class="btn btn-outline-secondary">
+                                    <i class="bi bi-arrow-left"></i> Cancel
+                                </a>
+                                <button type="button" class="btn btn-primary" id="nextBtn">
+                                    Next <i class="bi bi-arrow-right"></i>
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+
+                    <div id="step2" class="step-content" style="display: none;">
+                        <div class="alert alert-success mb-4">
+                            <i class="bi bi-check-circle-fill"></i> 
+                            <strong>Repository created successfully!</strong>
+                        </div>
+
+                        <h5 class="mb-3">
+                            <i class="bi bi-terminal"></i> Docker Commands
+                        </h5>
+                        <p class="text-muted">Use these commands to build, tag, and push your image:</p>
+
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <span class="badge bg-primary">1</span> Build your image
                             </label>
                             <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="bi bi-tag"></i>
-                                </span>
-                                {{ form.name }}
-                            </div>
-                            {% if form.name.errors %}
-                                <div class="text-danger mt-2">
-                                    {{ form.name.errors }}
-                                </div>
-                            {% else %}
-                                <i class="bi bi-info-circle"></i>
-                                Lowercase alphanumeric with hyphens (e.g., my-awesome-repo)
-                            {% endif %}
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
-                                Description
-                            </label>
-                            {{ form.description }}
-                            {% if form.description.errors %}
-                                <div class="text-danger mt-2">
-                                    {{ form.description.errors }}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">
-                                <i class="bi bi-chat-left-text"></i>
-                                A brief description of what this repository is about
+                                <span class="input-group-text bg-dark text-white font-monospace">$</span>
+                                <input type="text" class="form-control font-monospace bg-light" id="buildCmd" readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand('buildCmd')">
+                                    <i class="bi bi-clipboard"></i> Copy
+                                </button>
                             </div>
                         </div>
 
-                        <div class="mb-4">
-                            <label for="{{ form.visibility.id_for_label }}" class="form-label fw-semibold">
-                                Visibility <span class="text-danger">*</span>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <span class="badge bg-primary">2</span> Tag your image
                             </label>
-                            {{ form.visibility }}
-                            {% if form.visibility.errors %}
-                                <div class="text-danger mt-2">
-                                    {{ form.visibility.errors }}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">
-                                <i class="bi bi-eye"></i>
-                                <strong>Public:</strong> Anyone can see this repository •
-                                <i class="bi bi-lock"></i>
-                                <strong>Private:</strong> Only you can see this repository
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark text-white font-monospace">$</span>
+                                <input type="text" class="form-control font-monospace bg-light" id="tagCmd" readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand('tagCmd')">
+                                    <i class="bi bi-clipboard"></i> Copy
+                                </button>
                             </div>
                         </div>
 
-                        {% if user.is_staff %}
-                        <div class="mb-2">
-                            <label for="{{ form.is_official.id_for_label }}" class="form-label fw-semibold">
-                                Official <span class="text-danger">*</span>
+                        <div class="mb-3">
+                            <label class="form-label fw-bold">
+                                <span class="badge bg-primary">3</span> Push to registry
                             </label>
-                            <input type="checkbox" class="form-check-input" id="{{ form.is_official.id_for_label }}" name="{{ form.is_official.html_name }}" {% if form.is_official.value %}checked{% endif %}/>
+                            <div class="input-group">
+                                <span class="input-group-text bg-dark text-white font-monospace">$</span>
+                                <input type="text" class="form-control font-monospace bg-light" id="pushCmd" readonly>
+                                <button class="btn btn-outline-secondary" type="button" onclick="copyCommand('pushCmd')">
+                                    <i class="bi bi-clipboard"></i> Copy
+                                </button>
+                            </div>
                         </div>
-                        {% endif %}
 
-                        <div class="d-flex gap-2 pt-3 border-top">
-                            <button type="submit" class="btn btn-success">
-                                <i class="bi bi-{% if repository %}check-circle{% else %}plus-circle{% endif %}"></i>
-                                {% if repository %}Update{% else %}Create{% endif %}
+                        <div class="alert alert-info mt-4">
+                            <i class="bi bi-key"></i>
+                            <strong>Note:</strong> Make sure you're logged in to the registry first:
+                            <br>
+                            <code class="text-dark">docker login localhost:5000</code>
+                        </div>
+
+                        <div class="d-flex justify-content-between gap-2 pt-3 border-top">
+                            <button type="button" class="btn btn-outline-secondary" id="backBtn">
+                                <i class="bi bi-arrow-left"></i> Back
                             </button>
-                            <button type="reset" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-counterclockwise"></i> Reset
-                            </button>
+                            <a href="{% url 'repositories:list' %}" class="btn btn-success">
+                                <i class="bi bi-check-lg"></i> Done
+                            </a>
                         </div>
-                    </form>
+                    </div>
+
                 </div>
             </div>
 
@@ -101,4 +211,181 @@
         </div>
     </div>
 </div>
+
+<style>
+    .step-indicator {
+        width: 50px;
+        height: 50px;
+        border-radius: 50%;
+        background: #e9ecef;
+        border: 3px solid #dee2e6;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.3s ease;
+    }
+    
+    .step-indicator.active {
+        background: #0d6efd;
+        border-color: #0d6efd;
+    }
+    
+    .step-indicator.completed {
+        background: #198754;
+        border-color: #198754;
+    }
+    
+    .step-number {
+        font-size: 1.2rem;
+        font-weight: bold;
+        color: #6c757d;
+    }
+    
+    .step-indicator.active .step-number,
+    .step-indicator.completed .step-number {
+        color: white;
+    }
+    
+    .step-line {
+        border: 2px solid #dee2e6;
+        margin: 0 10px;
+    }
+    
+    .step-line.active {
+        border-color: #0d6efd;
+    }
+    
+    .step-content {
+        animation: fadeIn 0.3s ease-in;
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateX(20px); }
+        to { opacity: 1; transform: translateX(0); }
+    }
+    
+    .font-monospace {
+        font-family: 'Courier New', monospace;
+        font-size: 0.9rem;
+    }
+    
+    #step1-label.text-muted {
+        color: #6c757d !important;
+    }
+    
+    #step2-label {
+        color: #6c757d;
+    }
+    
+    #step2-label.text-primary {
+        color: #0d6efd !important;
+        font-weight: 600;
+    }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('repositoryForm');
+    const nextBtn = document.getElementById('nextBtn');
+    const backBtn = document.getElementById('backBtn');
+    const step1 = document.getElementById('step1');
+    const step2 = document.getElementById('step2');
+    const step1Indicator = document.getElementById('step1-indicator');
+    const step2Indicator = document.getElementById('step2-indicator');
+    const step1Label = document.getElementById('step1-label');
+    const step2Label = document.getElementById('step2-label');
+    const line1 = document.getElementById('line1');
+    
+    const registryUrl = 'localhost:5000';
+    
+    nextBtn.addEventListener('click', function() {
+        if (form.checkValidity()) {
+            const repoName = document.querySelector('[name="name"]').value;
+            const tag = document.getElementById('imageTag').value || 'latest';
+            
+            const fullImageName = `${registryUrl}/${repoName}:${tag}`;
+            
+            document.getElementById('buildCmd').value = `docker build -t ${repoName}:${tag} .`;
+            document.getElementById('tagCmd').value = `docker tag ${repoName}:${tag} ${fullImageName}`;
+            document.getElementById('pushCmd').value = `docker push ${fullImageName}`;
+            
+            const formData = new FormData(form);
+            
+            fetch(form.action || window.location.href, {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    step1.style.display = 'none';
+                    step2.style.display = 'block';
+                    
+                    step1Indicator.classList.remove('active');
+                    step1Indicator.classList.add('completed');
+                    step2Indicator.classList.add('active');
+                    
+                    step1Label.classList.remove('text-primary', 'fw-semibold');
+                    step1Label.classList.add('text-muted');
+                    step2Label.classList.add('text-primary', 'fw-semibold');
+                    
+                    line1.classList.add('active');
+                    
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                } else {
+                    alert('Error creating repository. Please check your input.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to create repository');
+            });
+        } else {
+            form.reportValidity();
+        }
+    });
+    
+    backBtn.addEventListener('click', function() {
+        step2.style.display = 'none';
+        step1.style.display = 'block';
+        
+        step1Indicator.classList.add('active');
+        step1Indicator.classList.remove('completed');
+        step2Indicator.classList.remove('active');
+        
+        step1Label.classList.add('text-primary', 'fw-semibold');
+        step1Label.classList.remove('text-muted');
+        step2Label.classList.remove('text-primary', 'fw-semibold');
+        
+        line1.classList.remove('active');
+        
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+    });
+});
+
+function copyCommand(inputId) {
+    const input = document.getElementById(inputId);
+    input.select();
+    
+    navigator.clipboard.writeText(input.value).then(() => {
+        const btn = event.target.closest('button');
+        const originalHTML = btn.innerHTML;
+        
+        btn.innerHTML = '<i class="bi bi-check"></i> Copied!';
+        btn.classList.remove('btn-outline-secondary');
+        btn.classList.add('btn-success');
+        
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-secondary');
+        }, 2000);
+    }).catch(err => {
+        console.error('Failed to copy:', err);
+        document.execCommand('copy');
+    });
+}
+</script>
 {% endblock %}

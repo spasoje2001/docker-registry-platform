@@ -1,25 +1,37 @@
-import requests
 from typing import List, Dict, Optional
 from requests.auth import HTTPBasicAuth
 import logging
+import requests
+from django.conf import settings
 
 logger = logging.getLogger(__name__)
 
 
 class RegistryClient:
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
     
     def __init__(self):
-        self.registry_url = settings.REGISTRY_CONFIG["base_url"].rstrip('/')
-        self.auth = HTTPBasicAuth(settings.REGISTRY_CONFIG["username"], settings.REGISTRY_CONFIG["password"])
-        self.session = requests.Session()
-        self.session.auth = self.auth
-    
-    def get_all_repositories(self) -> List[Dict]:
+        if not RegistryClient._initialized:
+            self.auth = HTTPBasicAuth(
+                settings.REGISTRY_CONFIG["username"], 
+                settings.REGISTRY_CONFIG["password"]
+            )
+            self.registry_url = settings.REGISTRY_CONFIG["base_url"].rstrip('/')
+            self.session = requests.Session()
+            self.session.auth = self.auth
+            RegistryClient._initialized = True
+        
+    def get_all_repositories(self) -> List[str]:
         try:
             url = f"{self.registry_url}/v2/_catalog"
             response = self.session.get(url)
             response.raise_for_status()
-            
             repositories = response.json().get('repositories', [])
             return repositories
             
@@ -28,29 +40,7 @@ class RegistryClient:
             raise Exception(f"Failed to fetch repositories: {str(e)}")
     
     def get_single_repository(self, repository: str) -> Dict:
-        """
-        Dobavi podatke o jednom repozitorijumu sa svim njegovim tagovima
-        
-        Args:
-            repository: Ime repozitorijuma (npr. 'mongo')
-            
-        Returns:
-            Dictionary sa podacima:
-            {
-                'name': 'mongo',
-                'tags': [
-                    {
-                        'name': 'latest',
-                        'digest': 'sha256:abc123...',
-                        'full_name': 'localhost:5000/mongo:latest'
-                    },
-                    ...
-                ],
-                'tags_count': 2
-            }
-        """
         try:
-            # Dobavi sve tagove za repozitorijum
             url = f"{self.registry_url}/v2/{repository}/tags/list"
             response = self.session.get(url)
             response.raise_for_status()
@@ -58,7 +48,6 @@ class RegistryClient:
             tags_list = response.json().get('tags', [])
             tags_data = []
             
-            # Za svaki tag dobavi detaljne podatke
             for tag_name in tags_list:
                 try:
                     tag_data = self.get_single_tag(repository, tag_name)
@@ -83,22 +72,6 @@ class RegistryClient:
             raise Exception(f"Failed to fetch repository {repository}: {str(e)}")
     
     def get_single_tag(self, repository: str, tag: str) -> Dict:
-        """
-        Dobavi podatke o jednom tagu
-        
-        Args:
-            repository: Ime repozitorijuma (npr. 'mongo')
-            tag: Ime taga (npr. 'latest')
-            
-        Returns:
-            Dictionary sa podacima:
-            {
-                'name': 'latest',
-                'digest': 'sha256:abc123...',
-                'full_name': 'localhost:5000/mongo:latest',
-                'repository': 'mongo'
-            }
-        """
         try:
             url = f"{self.registry_url}/v2/{repository}/manifests/{tag}"
             headers = {
@@ -123,12 +96,6 @@ class RegistryClient:
             raise Exception(f"Failed to fetch tag {repository}:{tag}: {str(e)}")
     
     def check_health(self) -> bool:
-        """
-        Proveri da li je registry dostupan
-        
-        Returns:
-            True ako je registry dostupan
-        """
         try:
             url = f"{self.registry_url}/v2/"
             response = self.session.get(url)
