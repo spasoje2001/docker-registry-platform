@@ -151,7 +151,7 @@ def change_password(request):
             messages.success(request, "Password successfully changed.")
             return redirect("accounts:profile")
         else:
-            messages.error(request, "Current password wasn't correct.")
+            messages.success(request, "Current password wasn't correct.")
     else:
         form = ChangePasswordForm(user=request.user)
 
@@ -182,7 +182,7 @@ def email_change(request):
             send_mail(
                 subject="Confirm your email change",
                 message=f"Your verification code is: {code}",
-                from_email=None,
+                from_email="no-reply@uks-team.com",
                 recipient_list=[user.email_change_new_email],
             )
 
@@ -191,6 +191,15 @@ def email_change(request):
                 "Verification code sent to new email address."
             )
             return redirect("accounts:email_change_confirm")
+        else:
+            if "old_email" in form.errors:
+                messages.success(request, "Invalid current email address.")
+            elif "password" in form.errors:
+                messages.success(request, "Invalid password.")
+            elif "new-email" in form.errors:
+                messages.success(request, "New email is already in use.")
+            elif "new_email" in form.errors:
+                messages.success(request, "New email is already in use.")
     else:
         form = RequestEmailChangeForm(request.user)
 
@@ -257,4 +266,4 @@ def cancel_email_change(request):
     )
 
     messages.info(request, "Email change request has been canceled.")
-    return redirect("accounts:profile")
+    return redirect("accounts:edit_profile")

@@ -4,6 +4,7 @@ from django.test import TestCase
 from django.urls import reverse
 from django.utils import timezone
 from django.contrib.auth import get_user_model
+from django.core import mail
 
 User = get_user_model()
 
@@ -99,24 +100,57 @@ class EmailChangeTest(TestCase):
             "Verification code has expired. Please request a new one."
         )
 
+    def test_cancel_email_change_clears_code(self):
+        self.client.login(username="testuser", password="StrongPass123!")
 
-def test_cancel_email_change_clears_code(self):
-    self.client.login(username="testuser", password="StrongPass123!")
+        self.user.email_change_code = "123456"
+        self.user.email_change_new_email = "new@example.com"
+        self.user.email_change_requested_at = timezone.now()
+        self.user.save()
 
-    self.user.email_change_code = "123456"
-    self.user.email_change_new_email = "new@example.com"
-    self.user.email_change_requested_at = timezone.now()
-    self.user.save()
+        response = self.client.post(
+            reverse("accounts:email_change_cancel"),
+            follow=True
+        )
 
-    response = self.client.post(
-        reverse("accounts:cancel_email_change"),
-        follow=True
-    )
+        self.user.refresh_from_db()
 
-    self.user.refresh_from_db()
+        self.assertIsNone(self.user.email_change_code)
+        self.assertIsNone(self.user.email_change_new_email)
+        self.assertIsNone(self.user.email_change_requested_at)
 
-    self.assertIsNone(self.user.email_change_code)
-    self.assertIsNone(self.user.email_change_new_email)
-    self.assertIsNone(self.user.email_change_requested_at)
+        self.assertRedirects(response, reverse("accounts:edit_profile"))
 
-    self.assertRedirects(response, reverse("accounts:profile"))
+    def test_email_change_sends_verification_email(self):
+        self.client.login(username="testuser", password="StrongPass123!")
+
+        self.client.post(
+            reverse("accounts:email_change"),
+            {
+                "old_email": "old@example.com",
+                "new_email": "new@example.com",
+                "password": "StrongPass123!",
+            }
+        )
+
+        # how many emails is sent, 1? subject od mail?
+        # who gets email? is there code?
+        self.assertEqual(len(mail.outbox), 1)
+        email = mail.outbox[0]
+        self.assertEqual(email.subject, "Confirm your email change")
+        self.assertEqual(email.to, ["new@example.com"])
+        self.assertIn("verification code", email.body.lower())
+
+    def test_email_not_sent_if_form_invalid(self):
+        self.client.login(username="testuser", password="StrongPass123!")
+
+        self.client.post(
+            reverse("accounts:email_change"),
+            {
+                "old_email": "WRONG@example.com",
+                "new_email": "new@example.com",
+                "password": "StrongPass123!",
+            }
+        )
+
+        self.assertEqual(len(mail.outbox), 0)

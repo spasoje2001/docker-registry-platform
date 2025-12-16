@@ -8,28 +8,53 @@
         Enter the 6-digit verification code sent to your new email address.
     </p>
 
+    <!-- CONFIRM FORM -->
     <form method="post">
         {% csrf_token %}
 
         <div class="mb-3">
             <label class="form-label">Verification code</label>
             {{ form.code }}
+
             {% if form.code.errors %}
-                <div class="text-danger">
+                <div class="text-danger small mt-1">
                     {{ form.code.errors.0 }}
                 </div>
             {% endif %}
         </div>
 
-        <button type="submit" class="btn btn-primary w-100">
+        <button
+            id="confirm-btn"
+            type="submit"
+            class="btn btn-primary w-100"
+            disabled
+        >
             Confirm
         </button>
-       <form method="post" action="{% url 'accounts:email_change_cancel' %}">
-            {% csrf_token %}
-            <button type="submit" class="btn btn-outline-secondary w-100">
-                Cancel
-            </button>
-        </form>
+    </form>
+
+    <!-- CANCEL FORM -->
+    <form
+        method="post"
+        action="{% url 'accounts:email_change_cancel' %}"
+        class="mt-2"
+    >
+        {% csrf_token %}
+        <button type="submit" class="btn btn-outline-secondary w-100">
+            Cancel
+        </button>
     </form>
 </div>
+
+<script>
+    const codeInput = document.getElementById("id_code");
+    const confirmBtn = document.getElementById("confirm-btn");
+
+    function validateCode() {
+        confirmBtn.disabled = !codeInput.value.trim();
+    }
+
+    codeInput.addEventListener("input", validateCode);
+    validateCode(); // initial check
+</script>
 {% endblock %}
