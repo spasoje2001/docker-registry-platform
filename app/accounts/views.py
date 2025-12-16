@@ -194,6 +194,10 @@ def email_change(request):
                 messages.success(request, "Invalid current email address.")
             elif "password" in form.errors:
                 messages.success(request, "Invalid password.")
+            elif "new-email" in form.errors:
+                messages.success(request, "New email is already in use.")
+            elif "new_email" in form.errors:
+                messages.success(request, "New email is already in use.")
     else:
         form = RequestEmailChangeForm(request.user)
 
