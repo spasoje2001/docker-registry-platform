@@ -1,9 +1,6 @@
-from tkinter.constants import YES
-
 from django.test import TestCase
 from django.urls import reverse
 from django.contrib.auth import get_user_model
-import json
 
 User = get_user_model()
 
@@ -31,15 +28,6 @@ class AdminPanelTest(TestCase):
             password="UserPass123!",
             role=User.Role.USER,
         )
-
-
-        # Unit test: admin can search users
-        #
-        # Unit test: admin can assign Verified Publisher
-        #
-        # Unit test: admin can assign Sponsored OSS
-        #
-        # Unit test: regular user cannot access
 
     def login_admin(self):
         self.client.login(username="admin", password=self.admin_password)
