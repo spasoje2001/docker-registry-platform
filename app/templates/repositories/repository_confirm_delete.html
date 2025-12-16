@@ -55,11 +55,19 @@
                                 <i class="bi bi-trash-fill"></i>
                                 Yes, delete this repository
                             </button>
-                            <a href="{% url 'repositories:detail' repository.owner.username repository.name %}" 
-                               class="btn btn-outline-secondary">
-                                <i class="bi bi-x-circle"></i>
-                                Cancel
-                            </a>
+                            {% if repository.is_official %}
+                                <a href="{% url 'repositories:detail_official' repository.name %}" 
+                                class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i>
+                                    Cancel
+                                </a>
+                            {% else %}
+                                <a href="{% url 'repositories:detail' repository.owner.username repository.name %}"
+                                    class="btn btn-outline-secondary">
+                                    <i class="bi bi-x-circle"></i>
+                                    Cancel
+                                </a>
+                            {% endif %}
                         </div>
                     </form>
                 </div>
