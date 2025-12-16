@@ -26,7 +26,7 @@ def repository_list(request):
 
 def repository_detail(request, owner_username, name):
     """Show repository details"""
-    repo = get_object_or_404(Repository, owner__username=owner_username, name=name)
+    repo = get_object_or_404(Repository, owner__username=owner_username, name=name, is_official=False)
 
     if repo.visibility == Repository.VisibilityChoices.PRIVATE:
         if not request.user.is_authenticated or request.user != repo.owner:
@@ -36,12 +36,26 @@ def repository_detail(request, owner_username, name):
     return render(request, "repositories/repository_detail.html", {"repository": repo, "tags": tags})
 
 
+def repository_detail_official(request, name):
+    """Show official repository details"""
+    repo = get_object_or_404(Repository, name=name, is_official=True)
+    tags = repo.tags.all()
+    
+    return render(request, "repositories/repository_detail.html", {
+        "repository": repo, 
+        "tags": tags
+    })
+
+
 @login_required
 def repository_create(request):
     """Create new repository (only authenticated users)"""
     if request.method == "POST":
         form = RepositoryForm(request.POST, request=request)
         if form.is_valid():
+            name = form.cleaned_data['name']
+            is_official = form.cleaned_data.get('is_official', False)
+
             repo = form.save(commit=False)
             repo.owner = request.user
             if not request.user.is_staff and repo.is_official:
@@ -53,7 +67,6 @@ def repository_create(request):
                     "form": form,
                     "title": "New Repository"
                 })
-
             repo.save()
             messages.success(
                 request, f'Repository "{repo.full_name}" successfully created!'
@@ -72,7 +85,11 @@ def repository_create(request):
 @login_required
 def repository_update(request, owner_username, name):
     """Edit repository (only owner)"""
-    repo = get_object_or_404(Repository, owner__username=owner_username, name=name)
+    repo = None
+    if owner_username == 'official':
+        repo = get_object_or_404(Repository, name=name, is_official=True)
+    else:
+        repo = get_object_or_404(Repository, owner__username=owner_username, name=name, is_official=False)
 
     if repo.owner != request.user:
         messages.error(request, "You cannot edit this repository.")
@@ -81,19 +98,25 @@ def repository_update(request, owner_username, name):
         )
 
     if request.method == "POST":
-        form = RepositoryForm(request.POST, instance=repo)
+        form = RepositoryForm(request.POST, instance=repo, request=request)
         if form.is_valid():
             form.save()
             messages.success(
                 request, f'Repository "{repo.full_name}" updated successfully!'
             )
-            return redirect(
-                "repositories:detail",
-                owner_username=repo.owner.username,
-                name=repo.name,
-            )
+            if repo.is_official:
+                return redirect(
+                    "repositories:detail_official",
+                    name=repo.name,
+                )
+            else:
+                return redirect(
+                    "repositories:detail",
+                    owner_username=repo.owner.username,
+                    name=repo.name,
+                )
     else:
-        form = RepositoryForm(instance=repo)
+        form = RepositoryForm(instance=repo, request=request)
 
     return render(
         request,
@@ -105,7 +128,11 @@ def repository_update(request, owner_username, name):
 @login_required
 def repository_delete(request, owner_username, name):
     """Delete repository (only owner)"""
-    repo = get_object_or_404(Repository, owner__username=owner_username, name=name)
+    repo = None
+    if owner_username == 'official':
+        repo = get_object_or_404(Repository, name=name, is_official=True)
+    else:
+        repo = get_object_or_404(Repository, owner__username=owner_username, name=name, is_official=False)
 
     if repo.owner != request.user:
         messages.error(request, "You cannot delete this repository.")
@@ -150,6 +177,9 @@ def tag_create(request, owner_username, name):
                     request,
                     f'Tag "{tag.name}" created successfully!'
                 )
+            if repository.is_official:
+                return redirect('repositories:detail_official', name=repository.name)
+            else:
                 return redirect('repositories:detail', owner_username=owner_username, name=name)
     else:
         form = TagForm()
@@ -175,9 +205,14 @@ def tag_delete(request, owner_username, name, tag_name):
     if request.method == "POST":
         tag.delete()
         messages.success(request, f'Tag "{tag_name}" deleted from repository "{repo.full_name}".')
-        return redirect(
-            "repositories:detail", owner_username=repo.owner.username, name=repo.name
-        )
+        if repo.is_official:
+            return redirect(
+                "repositories:detail_official", name=repo.name
+            )
+        else:
+            return redirect(
+                "repositories:detail", owner_username=repo.owner.username, name=repo.name
+            )
 
     return render(
         request,
@@ -207,6 +242,9 @@ def tag_update(request, owner_username, name, tag_name):
                 request,
                 f'Tag "{tag.name}" updated successfully!'
             )
+        if repository.is_official:
+            return redirect('repositories:detail_official', name=repository.name)
+        else:
             return redirect('repositories:detail', owner_username=owner_username, name=name)
     else:
         form = TagForm(instance=tag)
