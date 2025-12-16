@@ -3,6 +3,9 @@ from django.contrib import messages
 from django.contrib.auth import login, logout
 from django.contrib.auth import views as auth_views
 from django.urls import reverse_lazy
+from django.db.models import Q
+from django.contrib.auth import get_user_model
+from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth import update_session_auth_hash
 from django.utils import timezone
@@ -12,7 +15,51 @@ from django.core.mail import send_mail
 from .forms import ChangePasswordForm, RequestEmailChangeForm
 from .forms import ConfirmEmailChangeForm, EditProfileForm
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
 
+User = get_user_model()
+
+
+def admin_panel(request):
+    if not request.user.is_authenticated:
+        return redirect("accounts:login")
+
+    if request.user.role not in ["admin", "super_admin"]:
+        messages.warning(
+            request,
+            "You do not have permission to access this page."
+        )
+        return redirect("core:home")
+
+    q = request.GET.get("q", "").strip()
+    users = User.objects.filter(role=User.Role.USER).order_by("username")
+    if q:
+        users = users.filter(
+            Q(username__icontains=q) | Q(email__icontains=q)
+        )
+    return render(request, "accounts/admin_panel.html", {"users": users, "q": q})
+
+@login_required
+@require_POST
+def update_badges(request, user_id):
+    if request.user.role not in ["admin", "super_admin"]:
+        return JsonResponse({"ok": False, "error": "forbidden"}, status=403)
+
+    target = get_object_or_404(User, id=user_id)
+
+    badge = request.POST.get("badge")
+    value = request.POST.get("value")
+
+    if badge not in ["is_verified_publisher", "is_sponsored_oss"]:
+        return JsonResponse({"ok": False, "error": "bad badge"}, status=400)
+
+    bool_value = str(value).lower() in ["1", "true", "on", "yes"]
+
+    setattr(target, badge, bool_value)
+    target.save(update_fields=[badge])
+
+    return JsonResponse({"ok": True, "user_id": target.id, "badge": badge, "value": bool_value})
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -48,7 +95,6 @@ def login_view(request):
             {"form": form, "next": next_url},
         )
 
-
 def logout_view(request):
     logout(request)
 
@@ -57,7 +103,6 @@ def logout_view(request):
         "You have successfully logged out!"
     )
     return redirect("core:home")
-
 
 def register(request):
     if request.user.is_authenticated:
