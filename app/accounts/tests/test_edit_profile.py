@@ -83,10 +83,10 @@ class EditProfileTest(TestCase):
         self.user.refresh_from_db()
         self.other_user.refresh_from_db()
 
-        # Samo ulogovani korisnik je izmenjen
+        # first user is changed
         self.assertEqual(self.user.first_name, "Hacked")
         self.assertEqual(self.user.last_name, "User")
 
-        # Drugi korisnik NIJE dirnut
+        # other user is not changed
         self.assertEqual(self.other_user.first_name, "")
         self.assertEqual(self.other_user.last_name, "")
