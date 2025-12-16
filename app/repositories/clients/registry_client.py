@@ -6,7 +6,7 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-class DockerRegistryClient:
+class RegistryClient:
     
     def __init__(self):
         self.registry_url = settings.REGISTRY_CONFIG["base_url"].rstrip('/')
@@ -14,54 +14,14 @@ class DockerRegistryClient:
         self.session = requests.Session()
         self.session.auth = self.auth
     
-    def get_all_repositories_with_tags(self) -> List[Dict]:
-        """
-        Dobavi sve repozitorijume sa svim njihovim tagovima
-        
-        Returns:
-            Lista dict objekata:
-            [
-                {
-                    'name': 'mongo',
-                    'tags': [
-                        {
-                            'name': 'latest',
-                            'digest': 'sha256:abc123...',
-                            'full_name': 'localhost:5000/mongo:latest'
-                        },
-                        {
-                            'name': '5.0',
-                            'digest': 'sha256:def456...',
-                            'full_name': 'localhost:5000/mongo:5.0'
-                        }
-                    ],
-                    'tags_count': 2
-                },
-                ...
-            ]
-        """
+    def get_all_repositories(self) -> List[Dict]:
         try:
             url = f"{self.registry_url}/v2/_catalog"
             response = self.session.get(url)
             response.raise_for_status()
             
             repositories = response.json().get('repositories', [])
-            result = []
-            
-            for repo_name in repositories:
-                try:
-                    repo_data = self.get_single_repository(repo_name)
-                    result.append(repo_data)
-                except Exception as e:
-                    logger.warning(f"Could not fetch data for repository {repo_name}: {e}")
-                    result.append({
-                        'name': repo_name,
-                        'tags': [],
-                        'tags_count': 0,
-                        'error': str(e)
-                    })
-            
-            return result
+            return repositories
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching repositories: {e}")
