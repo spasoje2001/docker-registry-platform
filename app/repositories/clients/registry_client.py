@@ -39,33 +39,13 @@ class RegistryClient:
             logger.error(f"Error fetching repositories: {e}")
             raise Exception(f"Failed to fetch repositories: {str(e)}")
     
-    def get_single_repository(self, repository: str) -> Dict:
+    def get_single_repository_tags(self, repository: str) -> List[str]:
         try:
             url = f"{self.registry_url}/v2/{repository}/tags/list"
             response = self.session.get(url)
             response.raise_for_status()
-            
             tags_list = response.json().get('tags', [])
-            tags_data = []
-            
-            for tag_name in tags_list:
-                try:
-                    tag_data = self.get_single_tag(repository, tag_name)
-                    tags_data.append(tag_data)
-                except Exception as e:
-                    logger.warning(f"Could not fetch data for tag {repository}:{tag_name}: {e}")
-                    tags_data.append({
-                        'name': tag_name,
-                        'digest': None,
-                        'full_name': f"{self.registry_url.replace('http://', '').replace('https://', '')}/{repository}:{tag_name}",
-                        'error': str(e)
-                    })
-            
-            return {
-                'name': repository,
-                'tags': tags_data,
-                'tags_count': len(tags_data)
-            }
+            return tags_list
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching repository {repository}: {e}")

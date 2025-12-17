@@ -13,16 +13,6 @@ def repository_list(request):
     user = request.user
     service = RepositoryService()
     repositories = service.list_repositories(request.user)
-    
-    # if user.is_authenticated:
-    #     repositories = Repository.objects.filter(
-    #         models.Q(visibility=Repository.VisibilityChoices.PUBLIC)
-    #         | models.Q(owner=user)
-    #     )
-    # else:
-    #     repositories = Repository.objects.filter(
-    #         visibility=Repository.VisibilityChoices.PUBLIC
-    #     )
     return render(
         request, "repositories/repository_list.html", {"repositories": repositories}
     )

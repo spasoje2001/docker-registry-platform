@@ -149,9 +149,17 @@ Do not edit file manually. Encode it to UTF-8 LF.
 
 ```docker login localhost:5000```
 
-Then, in command prompt
+Enter the credentials:
+Username: admin
+Password: Admin123
+
+Then, in command prompt, to get all repositories:
 
 ```curl -i -u admin:Admin123 http://localhost:5000/v2/_catalog```
+
+or in Powershell:
+
+```(Invoke-WebRequest -Uri "http://localhost:5000/v2/_catalog" -Headers @{Authorization = "Basic $([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('admin:Admin123')))"}).Content```
 
 ### Running Tests Locally
 
