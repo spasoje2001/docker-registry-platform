@@ -5,6 +5,7 @@ from django.http import Http404
 from django.db import models
 from .models import Repository, Tag
 from .forms import RepositoryForm, TagForm
+from django.urls import reverse
 
 
 def repository_list(request):
@@ -38,7 +39,8 @@ def repository_detail(request, owner_username, name):
 
 @login_required
 def repository_create(request):
-    """Create new repository (only authenticated users)"""
+    from_profile = request.POST.get("from_profile")
+
     if request.method == "POST":
         form = RepositoryForm(request.POST, request=request)
         if form.is_valid():
@@ -49,19 +51,33 @@ def repository_create(request):
                     "is_official",
                     "Only staff users can create official repositories."
                 )
-                return render(request, "repositories/repository_form.html", {
-                    "form": form,
-                    "title": "New Repository"
-                })
 
-            repo.save()
-            messages.success(
-                request, f'Repository "{repo.full_name}" successfully created!'
-            )
-            return redirect("repositories:list")
-    else:
-        form = RepositoryForm(request=request)
+            else:
+                repo.save()
+                messages.success(
+                    request,
+                    f'Repository "{repo.full_name}" successfully created!'
+                )
 
+                if from_profile:
+                    return redirect("accounts:profile")
+
+                return redirect("repositories:list")
+
+        # form isn't valid
+        if from_profile:
+            request.session["repo_form_data"] = request.POST
+            request.session["repo_form_errors"] = form.errors
+            return redirect("accounts:profile")
+
+        return render(
+            request,
+            "repositories/repository_form.html",
+            {"form": form, "title": "New Repository"},
+        )
+
+    # GET
+    form = RepositoryForm(request=request)
     return render(
         request,
         "repositories/repository_form.html",

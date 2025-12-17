@@ -13,6 +13,8 @@ from .forms import ChangePasswordForm, RequestEmailChangeForm
 from .forms import ConfirmEmailChangeForm, EditProfileForm
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 
+from repositories.forms import RepositoryForm
+
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -115,7 +117,27 @@ class CustomPasswordChangeView(auth_views.PasswordChangeView):
 
 @login_required
 def profile_view(request):
-    return render(request, "accounts/profile.html", {"user": request.user})
+    active_tab = "repos"
+    form_data = request.session.pop("repo_form_data", None)
+    form_errors = request.session.pop("repo_form_errors", None)
+
+    if form_data:
+        repo_form = RepositoryForm(form_data, request=request)
+        repo_form._errors = form_errors
+        active_tab = "new_repo"
+    else:
+        repo_form = RepositoryForm(request=request)
+        active_tab = "repos"
+
+    return render(
+        request,
+        "accounts/profile.html",
+        {
+            "user": request.user,
+            "repo_form": repo_form,
+            "active_tab": active_tab,
+        }
+    )
 
 
 @login_required
