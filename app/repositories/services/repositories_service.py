@@ -8,7 +8,13 @@ class RepositoryService():
         self.registry_client = registry_client or RegistryClient()
 
     def list_repositories(self, user) -> List[Repository]:
-        repositories = self.registry_client.get_all_repositories()
+        repositories = []
+        try:
+            repositories = self.registry_client.get_all_repositories()
+        except Exception as e:
+            print(f"Error fetching repositories from registry: {e}")
+            raise
+
         db_list = []
 
         if user.is_authenticated:
@@ -35,3 +41,6 @@ class RepositoryService():
                 combined.append(db_dict[repo_name])
 
         return combined
+
+    def health_check(self) -> bool:
+        return self.registry_client.check_health()

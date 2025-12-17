@@ -9,17 +9,24 @@ from .services.repositories_service import RepositoryService
 
 
 def repository_list(request):
-    """List of all public repositories + user's private repositories"""
     user = request.user
     service = RepositoryService()
-    repositories = service.list_repositories(request.user)
+    repositories = []
+
+    if not service.health_check():
+        messages.warning(request, "Registry is unavailable at this moment. Please try again later.")
+    else:
+        try:
+            repositories = service.list_repositories(request.user)
+        except Exception as e:
+            messages.warning(request, "Error fetching repositories from registry.")
+            
     return render(
         request, "repositories/repository_list.html", {"repositories": repositories}
     )
 
 
 def repository_detail(request, owner_username, name):
-    """Show repository details"""
     repo = get_object_or_404(Repository, owner__username=owner_username, name=name, is_official=False)
 
     if repo.visibility == Repository.VisibilityChoices.PRIVATE:
@@ -31,7 +38,6 @@ def repository_detail(request, owner_username, name):
 
 
 def repository_detail_official(request, name):
-    """Show official repository details"""
     repo = get_object_or_404(Repository, name=name, is_official=True)
     tags = repo.tags.all()
     
@@ -43,7 +49,6 @@ def repository_detail_official(request, name):
 
 @login_required
 def repository_create(request):
-    """Create new repository (only authenticated users)"""
     if request.method == "POST":
         form = RepositoryForm(request.POST, request=request)
         if form.is_valid():
@@ -78,7 +83,6 @@ def repository_create(request):
 
 @login_required
 def repository_update(request, owner_username, name):
-    """Edit repository (only owner)"""
     repo = None
     if owner_username == 'official':
         repo = get_object_or_404(Repository, name=name, is_official=True)
@@ -121,7 +125,6 @@ def repository_update(request, owner_username, name):
 
 @login_required
 def repository_delete(request, owner_username, name):
-    """Delete repository (only owner)"""
     repo = None
     if owner_username == 'official':
         repo = get_object_or_404(Repository, name=name, is_official=True)
@@ -146,7 +149,6 @@ def repository_delete(request, owner_username, name):
 
 @login_required
 def tag_create(request, owner_username, name):
-    """Create new tag for repository (only owner)"""
     repository = get_object_or_404(
         Repository,
         owner__username=owner_username,
@@ -185,7 +187,6 @@ def tag_create(request, owner_username, name):
     })
 
 def tag_delete(request, owner_username, name, tag_name):
-    """Delete tag from repository"""
     repo = get_object_or_404(Repository, owner__username=owner_username, name=name)
 
     if repo.owner != request.user:
@@ -215,12 +216,7 @@ def tag_delete(request, owner_username, name, tag_name):
     )
 
 def tag_update(request, owner_username, name, tag_name):
-    """Edit tag for repository (only owner)"""
-    repository = get_object_or_404(
-        Repository,
-        owner__username=owner_username,
-        name=name
-    )
+    repository = get_object_or_404(Repository, owner__username=owner_username, name=name)
     
     if repository.owner != request.user:
         messages.error(request, 'You cannot edit tags for this repository.')
@@ -232,10 +228,7 @@ def tag_update(request, owner_username, name, tag_name):
         form = TagForm(request.POST, instance=tag)
         if form.is_valid():
             form.save()
-            messages.success(
-                request,
-                f'Tag "{tag.name}" updated successfully!'
-            )
+            messages.success(request, f'Tag "{tag.name}" updated successfully!')
         if repository.is_official:
             return redirect('repositories:detail_official', name=repository.name)
         else:
@@ -247,5 +240,5 @@ def tag_update(request, owner_username, name, tag_name):
         'form': form,
         'repository': repository,
         'tag': tag,
-        'title': f'Edit Tag {tag.name} for {repository.full_name}'
+        'title': f'Editing {tag.name} for {repository.name}'
     })

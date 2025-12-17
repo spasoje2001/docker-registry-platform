@@ -3,6 +3,7 @@ from requests.auth import HTTPBasicAuth
 import logging
 import requests
 from django.conf import settings
+import os
 
 logger = logging.getLogger(__name__)
 
@@ -19,10 +20,10 @@ class RegistryClient:
     def __init__(self):
         if not RegistryClient._initialized:
             self.auth = HTTPBasicAuth(
-                settings.REGISTRY_CONFIG["username"], 
-                settings.REGISTRY_CONFIG["password"]
+                os.environ.get("REGISTRY_USERNAME", "admin"),
+                os.environ.get("REGISTRY_PASSWORD", "Admin123")
             )
-            self.registry_url = settings.REGISTRY_CONFIG["base_url"].rstrip('/')
+            self.registry_url = os.environ.get("REGISTRY_URL", "http://localhost:5000").rstrip('/')
             self.session = requests.Session()
             self.session.auth = self.auth
             RegistryClient._initialized = True
@@ -81,6 +82,7 @@ class RegistryClient:
             response = self.session.get(url)
             return response.status_code == 200
         except:
+            logger.warning(f"Registry health check failed for {self.registry_url}")
             return False
 
     
