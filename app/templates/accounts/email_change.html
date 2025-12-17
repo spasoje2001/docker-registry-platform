@@ -1,0 +1,127 @@
+{% extends "base.html" %}
+{% block title %}Change Email{% endblock %}
+
+{% block content %}
+<div class="container mt-5" style="max-width: 500px;">
+    <h3 class="mb-4">Change Email Address</h3>
+
+    <form method="post" novalidate>
+        {% csrf_token %}
+
+        <div class="mb-3">
+            <label class="form-label">Current email</label>
+            {{ form.old_email }}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">New email</label>
+            {{ form.new_email }}
+        </div>
+
+        <div class="mb-3">
+            <label class="form-label">Password</label>
+            <div class="input-group">
+                {{ form.password }}
+                <button
+                    type="button"
+                    class="btn btn-outline-secondary"
+                    onclick="togglePassword(this)"
+                >
+                    <i class="bi bi-eye-slash"></i>
+                </button>
+            </div>
+        </div>
+
+        {% if form.non_field_errors %}
+        <script>
+            const errorBox = document.getElementById("input-error");
+            errorBox.textContent = "{{ form.non_field_errors.0|escapejs }}";
+            errorBox.classList.remove("d-none");
+        </script>
+        {% endif %}
+
+        <div
+            id="input-error"
+            class="text-danger small mt-2 d-none"
+        ></div>
+
+        <div class="d-grid gap-2">
+            <button
+                type="submit"
+                id="submitBtn"
+                class="btn btn-primary w-100"
+                disabled
+            >
+                Send verification code
+            </button>
+            <a href="{% url 'accounts:edit_profile' %}" class="btn btn-outline-secondary">
+                Cancel
+            </a>
+        </div>
+    </form>
+</div>
+
+<script>
+    const oldEmail = document.getElementById("id_old_email");
+    const newEmail = document.getElementById("id_new_email");
+    const password = document.getElementById("id_password");
+    const submitBtn = document.getElementById("submitBtn");
+    const errorBox = document.getElementById("input-error");
+
+    function isValidEmail(email) {
+        return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+    }
+
+    function validateForm() {
+        errorBox.classList.add("d-none");
+        errorBox.textContent = "";
+        submitBtn.disabled = true;
+
+        if (!oldEmail.value.trim() && !newEmail.value.trim() && !password.value.trim())
+            errorBox.textContent = "Password, current and new email must have value.";
+        else if (!oldEmail.value.trim()) {
+            errorBox.textContent = "Current email must have value.";
+        }
+        else if (!isValidEmail(oldEmail.value)) {
+            errorBox.textContent = "Current email is not valid.";
+        }
+        else if (!newEmail.value.trim()) {
+            errorBox.textContent = "New email must have value.";
+        }
+        else if (!isValidEmail(newEmail.value)) {
+            errorBox.textContent = "New email is not valid.";
+        }
+        else if (oldEmail.value === newEmail.value) {
+            errorBox.textContent = "New email must be different from current email.";
+        }
+        else if (!password.value.trim()) {
+            errorBox.textContent = "Password must have value.";
+        }
+        else {
+            submitBtn.disabled = false;
+            return;
+        }
+
+        errorBox.classList.remove("d-none");
+    }
+
+    oldEmail.addEventListener("input", validateForm);
+    newEmail.addEventListener("input", validateForm);
+    password.addEventListener("input", validateForm);
+
+    validateForm();
+
+    function togglePassword(button) {
+        const input = button.previousElementSibling;
+        const icon = button.querySelector("i");
+
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace("bi-eye-slash", "bi-eye");
+        } else {
+            input.type = "password";
+            icon.classList.replace("bi-eye", "bi-eye-slash");
+        }
+    }
+</script>
+{% endblock %}

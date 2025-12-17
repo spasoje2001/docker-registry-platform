@@ -19,7 +19,27 @@ urlpatterns = [
         name='password_change_done'
     ),
     path("register/", views.register, name="register"),
+    path("profile/", views.profile_view, name="profile"),
+    path("profile/edit/", views.edit_profile, name="edit_profile"),
+    path("profile/change-password/", views.change_password, name="change_password"),
+    path(
+        "profile/change-email/",
+        views.email_change,
+        name="email_change"
+    ),
+    path(
+        "profile/change-email/confirm/",
+        views.email_change_confirm,
+        name="email_change_confirm"
+    ),
+    path(
+        "profile/email-change/cancel/",
+        views.cancel_email_change,
+        name="email_change_cancel",
+    ),
     path('login/', views.login_view, name='login'),
     path('logout/', views.logout_view, name='logout'),
+    path('admin_panel/', views.admin_panel, name='admin_panel'),
+    path('admin_panel/<int:user_id>/badges/', views.update_badges, name="update_badges"),
     # path('profile/', views.profile, name='profile'),
 ]

@@ -9,8 +9,16 @@ urlpatterns = [
     path("", views.repository_list, name="list"),
     path("new/", views.repository_create, name="create"),
     path("<str:owner_username>/<str:name>/", views.repository_detail, name="detail"),
+    path('<str:name>/', views.repository_detail_official, name='detail_official'),
     path(
-        "<str:owner_username>/<str:name>/edit/", views.repository_update, name="update"
+        "<str:owner_username>/<str:name>/edit/",
+        views.repository_update,
+        name="update"
+    ),
+    path(
+        "<str:name>/edit/official/",
+        views.repository_update,
+        name="update"
     ),
     path(
         "<str:owner_username>/<str:name>/delete/",

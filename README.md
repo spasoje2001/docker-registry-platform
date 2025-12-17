@@ -89,6 +89,7 @@ Open in browser:
 - Application: http://localhost
 - Elasticsearch: http://localhost:9200 (should return JSON)
 - Registry: http://localhost:5000/v2/ (should return `{}`)
+- MailHog: http://localhost:8025 (inbox for emails)
 
 Login at http://localhost/admin with credentials from `admin_password.txt`.
 

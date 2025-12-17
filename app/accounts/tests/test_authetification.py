@@ -4,16 +4,11 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
-class AuthetificationTest(TestCase):
+class AuthentificationTest(TestCase):
     def setUp(self):
         self.login_url = reverse('accounts:login')
         self.logout_url = reverse('accounts:logout')
         self.home_url = reverse('core:home')
-
-    # Unit test: valid credentials log user in
-    # Unit test: invalid credentials show error
-    # Unit test: logout clears session
-
 
     def test_login_valid_credentials(self):
         User.objects.create_user(

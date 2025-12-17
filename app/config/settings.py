@@ -86,6 +86,19 @@ DATABASES = {
     )
 }
 
+REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0')
+
+CACHES = {
+    'default': {
+        'BACKEND': 'django_redis.cache.RedisCache',
+        'LOCATION': REDIS_URL,
+        'OPTIONS': {
+            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+        },
+        'KEY_PREFIX': 'docker_registry',
+    }
+}
+
 AUTH_USER_MODEL = "accounts.User"
 
 # Password validation
@@ -186,3 +199,20 @@ LOGGING = {
         "level": "INFO",
     },
 }
+
+# EMAIL
+# ================================================================================
+# this solution sent emails to terminal
+# EMAIL_BACKEND = "django.core.mail.backends.console.EmailBackend"
+
+# this solution sent emails to fakeSMTP on local windows/mac machine
+# EMAIL_HOST = "host.docker.internal"
+# EMAIL_PORT = 2525
+
+# this solution sent emails to localhost:8025 (mailhog in docker container)
+EMAIL_BACKEND = "django.core.mail.backends.smtp.EmailBackend"
+EMAIL_HOST = os.environ.get("EMAIL_HOST", "localhost")
+EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 1025))
+EMAIL_USE_TLS = False
+EMAIL_USE_SSL = False
+DEFAULT_FROM_EMAIL = "no-reply@usk-team.com"
