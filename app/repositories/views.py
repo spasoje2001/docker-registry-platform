@@ -21,7 +21,10 @@ def repository_list(request):
             visibility=Repository.VisibilityChoices.PUBLIC
         )
     return render(
-        request, "repositories/repository_list.html", {"repositories": repositories}
+        request, "repositories/repository_list.html", {
+            "repositories": repositories,
+            "from_profile": False, 
+            }
     )
 
 
@@ -84,37 +87,50 @@ def repository_create(request):
         {"form": form, "title": "New Repository"},
     )
 
-
 @login_required
 def repository_update(request, owner_username, name):
-    """Edit repository (only owner)"""
     repo = get_object_or_404(Repository, owner__username=owner_username, name=name)
 
     if repo.owner != request.user:
         messages.error(request, "You cannot edit this repository.")
         return redirect(
-            "repositories:detail", owner_username=repo.owner.username, name=repo.name
+            "repositories:detail",
+            owner_username=repo.owner.username,
+            name=repo.name,
         )
 
-    if request.method == "POST":
-        form = RepositoryForm(request.POST, instance=repo)
-        if form.is_valid():
-            form.save()
-            messages.success(
-                request, f'Repository "{repo.full_name}" updated successfully!'
-            )
-            return redirect(
-                "repositories:detail",
-                owner_username=repo.owner.username,
-                name=repo.name,
-            )
-    else:
-        form = RepositoryForm(instance=repo)
+    from_profile = request.POST.get("from_profile")
+
+    form = RepositoryForm(
+        request.POST or None,
+        instance=repo,
+        request=request,
+    )
+
+    if request.method == "POST" and form.is_valid():
+        form.save()
+
+        url = reverse(
+            "repositories:detail",
+            kwargs={
+                "owner_username": repo.owner.username,
+                "name": repo.name,
+            },
+        )
+
+        if from_profile:
+            url += "?from_profile=1"
+
+        return redirect(url)
 
     return render(
         request,
         "repositories/repository_form.html",
-        {"form": form, "repository": repo, "title": f"Edit {repo.full_name}"},
+        {
+            "form": form,
+            "repository": repo,
+            "title": f"Edit {repo.full_name}",
+        },
     )
 
 
@@ -122,6 +138,7 @@ def repository_update(request, owner_username, name):
 def repository_delete(request, owner_username, name):
     """Delete repository (only owner)"""
     repo = get_object_or_404(Repository, owner__username=owner_username, name=name)
+    from_profile = request.GET.get("from_profile")
 
     if repo.owner != request.user:
         messages.error(request, "You cannot delete this repository.")
@@ -132,7 +149,10 @@ def repository_delete(request, owner_username, name):
     if request.method == "POST":
         repo_name = repo.full_name
         repo.delete()
-        messages.success(request, f'Repository "{repo_name}" deleted.')
+        messages.success(request, f'Repository "{repo_name}" deleted.')     
+        if from_profile:
+            return redirect("accounts:profile")
+
         return redirect("repositories:list")
 
     return render(

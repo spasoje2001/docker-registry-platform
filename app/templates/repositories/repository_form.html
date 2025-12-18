@@ -10,9 +10,18 @@
                         <i class="bi bi-{% if repository %}pencil-square{% else %}folder-plus{% endif %} text-primary"></i>
                         {{ title }}
                     </h3>
-                    <a href="{% url 'repositories:list' %}" class="btn btn-link text-decoration-none">
-                        <i class="bi bi-arrow-left"></i> Go Back
-                    </a>
+                    <!-- if you update repo, you need to go back to page repository_detail.html -->
+                     {% if repository %}
+                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}" 
+                        class="btn btn-link text-decoration-none">
+                            <i class="bi bi-x-circle"></i>
+                            Go Back
+                        </a>
+                    {% else %}
+                        <a href="{% url 'repositories:list' %}" class="btn btn-link text-decoration-none">
+                            <i class="bi bi-arrow-left"></i> Go Back
+                        </a>
+                    {% endif %}
                 </div>
                 {% include "repositories/_repository_template.html" %}
             </div>

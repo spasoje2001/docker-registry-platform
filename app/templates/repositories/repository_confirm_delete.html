@@ -55,8 +55,8 @@
                                 <i class="bi bi-trash-fill"></i>
                                 Yes, delete this repository
                             </button>
-                            <a href="{% url 'repositories:detail' repository.owner.username repository.name %}" 
-                               class="btn btn-outline-secondary">
+                           <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}" 
+                            class="btn btn-outline-secondary">
                                 <i class="bi bi-x-circle"></i>
                                 Cancel
                             </a>

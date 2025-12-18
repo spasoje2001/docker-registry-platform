@@ -70,10 +70,8 @@
     <div class="tab-pane fade {% if active_tab == 'repos' %}show active{% endif %}"
         id="repos">
         <div class="col-12 text-center text-muted py-5">
-            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
-            <p class="mb-0">No repositories yet.</p>
+            {% include "repositories/_repository_list_template.html" %}
         </div>
-
     </div>
 
     <!-- Lajkovani repo-i -->

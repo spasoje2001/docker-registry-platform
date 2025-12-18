@@ -14,6 +14,7 @@ from .forms import ConfirmEmailChangeForm, EditProfileForm
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 
 from repositories.forms import RepositoryForm
+from repositories.models import Repository
 
 
 def login_view(request):
@@ -120,6 +121,7 @@ def profile_view(request):
     active_tab = "repos"
     form_data = request.session.pop("repo_form_data", None)
     form_errors = request.session.pop("repo_form_errors", None)
+    repositories = Repository.objects.filter(owner=request.user)
 
     if form_data:
         repo_form = RepositoryForm(form_data, request=request)
@@ -136,6 +138,8 @@ def profile_view(request):
             "user": request.user,
             "repo_form": repo_form,
             "active_tab": active_tab,
+            "repositories": repositories,
+            "from_profile": True, 
         }
     )
 
