@@ -10,9 +10,17 @@
                         <i class="bi bi-tag text-primary"></i>
                         {{ title }}
                     </h3>
-                    <a href="{% url 'repositories:detail' repository.owner.username repository.name %}" class="btn btn-link text-decoration-none">
-                        <i class="bi bi-arrow-left"></i> Go Back
-                    </a>
+
+                    {% if request.GET.from_profile %}
+                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}" 
+                        class="btn btn-link text-decoration-none">
+                            <i class="bi bi-arrow-left"></i> Go Back
+                        </a>
+                    {% else %}
+                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}" class="btn btn-link text-decoration-none">
+                            <i class="bi bi-arrow-left"></i> Go Back
+                        </a>
+                    {% endif %}
                 </div>
                 <div class="card-body p-4">
                     <form method="post">
@@ -23,11 +31,13 @@
                                 Name <span class="text-danger">*</span>
                             </label>
                             <div class="input-group">
-                                {% if tag %}
                                 <span class="input-group-text">
                                     <i class="bi bi-tag"></i>
                                 </span>
-                                {{ form.name }}
+                                {% if tag and tag.name %}
+                                    {{form.name }}
+                                {% else %}
+                                    {{ form.name }}
                                 {% endif %}
                             </div>
                             {% if form.name.errors %}
