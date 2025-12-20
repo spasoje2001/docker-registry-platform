@@ -22,18 +22,59 @@ class RepositoryForm(forms.ModelForm):
             "is_official": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
-    def clean_name(self):
-        name = self.cleaned_data.get("name")
+    def clean_is_official(self):
+        is_official = self.cleaned_data.get('is_official')
+        
+        if is_official and self.request and not self.request.user.is_staff:
+            raise forms.ValidationError(
+                "Only staff users can create official repositories."
+            )
+        
+        return is_official
+
+    def clean(self):
+        cleaned_data = super().clean()
+        name = cleaned_data.get('name')
+        is_official = cleaned_data.get('is_official', False)
+        
+        if not name:
+            return cleaned_data
+        
         if self.instance.pk:
-            return name
-
-        if (
-            self.request
-            and Repository.objects.filter(owner=self.request.user, name=name).exists()
-        ):
-            raise forms.ValidationError("Repository with this name already exists!")
-
-        return name
+            if is_official:
+                duplicates = Repository.objects.exclude(pk=self.instance.pk).filter(
+                    name=name, 
+                    is_official=True
+                )
+                if duplicates.exists():
+                    self.add_error('name', 'Official repository with this name already exists.')
+            else:
+                duplicates = Repository.objects.exclude(pk=self.instance.pk).filter(
+                    name=name, 
+                    is_official=False, 
+                    owner=self.instance.owner
+                )
+                if duplicates.exists():
+                    self.add_error('name', 'You already have a repository with this name.')
+        
+        else:
+            if not self.request:
+                return cleaned_data
+            
+            if is_official:
+                duplicates = Repository.objects.filter(name=name, is_official=True)
+                if duplicates.exists():
+                    self.add_error('name', 'Official repository with this name already exists.')
+            else:
+                duplicates = Repository.objects.filter(
+                    name=name, 
+                    is_official=False, 
+                    owner=self.request.user
+                )
+                if duplicates.exists():
+                    self.add_error('name', 'You already have a repository with this name.')
+        
+        return cleaned_data
 
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop("request", None)

@@ -13,6 +13,7 @@ class RepositoryModelTests(TestCase):
         self.client = Client()
         self.user1 = User.objects.create_user(username="user1", password="testpass123")
         self.user2 = User.objects.create_user(username="user2", password="testpass123")
+        self.user3 = User.objects.create_user(username="user3", password="testpass123", is_staff=True)
 
     def test_create_repository(self):
         """Test creating a repository."""
@@ -190,3 +191,15 @@ class RepositoryModelTests(TestCase):
         self.assertFalse(
             Repository.objects.filter(name="official-repo", is_official=True).exists()
         )
+
+    def test_duplicate_official_repo_name(self):
+        """Test that creating an official repo with duplicate name validation"""
+        repo = Repository.objects.create(
+            name="django-best-practices",
+            is_official=True,
+            visibility=Repository.VisibilityChoices.PUBLIC,
+            owner=self.user3
+        )
+
+        with self.assertRaises(IntegrityError):
+            Repository.objects.create(name="django-best-practices", owner=self.user3, is_official=True)

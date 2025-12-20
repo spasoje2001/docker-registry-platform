@@ -23,9 +23,9 @@
             <div class="input-group">
                 {{ form.password }}
                 <button
-                    class="btn btn-outline-secondary"
                     type="button"
-                    onclick="togglePassword('{{ form.password.id_for_label }}', this)"
+                    class="btn btn-outline-secondary"
+                    onclick="togglePassword(this)"
                 >
                     <i class="bi bi-eye-slash"></i>
                 </button>
@@ -110,5 +110,18 @@
     password.addEventListener("input", validateForm);
 
     validateForm();
+
+    function togglePassword(button) {
+        const input = button.previousElementSibling;
+        const icon = button.querySelector("i");
+
+        if (input.type === "password") {
+            input.type = "text";
+            icon.classList.replace("bi-eye-slash", "bi-eye");
+        } else {
+            input.type = "password";
+            icon.classList.replace("bi-eye", "bi-eye-slash");
+        }
+    }
 </script>
 {% endblock %}

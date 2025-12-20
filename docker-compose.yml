@@ -24,12 +24,16 @@ services:
         - REGISTRY_URL=http://registry:5000
         - REGISTRY_USERNAME=admin
         - REGISTRY_PASSWORD=Admin123
+        - EMAIL_HOST=smtp
+        - EMAIL_PORT=1025
       env_file:
         - .env
       depends_on:
         db:
           condition: service_healthy
         redis:
+          condition: service_started
+        smtp:
           condition: service_started
       restart: unless-stopped
 
@@ -52,6 +56,14 @@ services:
       image: redis:7-alpine
       volumes:
         - redis_data:/data
+      restart: unless-stopped
+
+    smtp:
+      image: mailhog/mailhog
+      container_name: smtp
+      ports:
+        - "1025:1025"   # SMTP
+        - "8025:8025"   # Web UI
       restart: unless-stopped
 
     elasticsearch:

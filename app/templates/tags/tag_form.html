@@ -10,10 +10,13 @@
                         <i class="bi bi-tag text-primary"></i>
                         {{ title }}
                     </h3>
-
                     {% if request.GET.from_profile %}
                         <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}" 
                         class="btn btn-link text-decoration-none">
+                            <i class="bi bi-arrow-left"></i> Go Back
+                        </a>
+                    {% elif repository.is_official %}
+                        <a href="{% url 'repositories:detail_official' repository.name %}" class="btn btn-link text-decoration-none">
                             <i class="bi bi-arrow-left"></i> Go Back
                         </a>
                     {% else %}
@@ -34,11 +37,7 @@
                                 <span class="input-group-text">
                                     <i class="bi bi-tag"></i>
                                 </span>
-                                {% if tag and tag.name %}
-                                    {{form.name }}
-                                {% else %}
-                                    {{ form.name }}
-                                {% endif %}
+                                {{ form.name }}
                             </div>
                             {% if form.name.errors %}
                                 <div class="text-danger mt-2">

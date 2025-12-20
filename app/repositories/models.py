@@ -1,6 +1,7 @@
 from django.db import models
 from django.core.validators import RegexValidator
 from django.contrib.auth import get_user_model
+from django.db.models import Q
 
 User = get_user_model()
 
@@ -34,7 +35,16 @@ class Repository(models.Model):
     class Meta:
         verbose_name_plural = "repositories"
         constraints = [
-            models.UniqueConstraint(fields=["owner", "name"], name="unique_owner_name")
+            models.UniqueConstraint(
+                fields=["owner", "name"],
+                condition=Q(is_official=False),
+                name="unique_owner_name"
+            ),
+            models.UniqueConstraint(
+                fields=['name'],
+                condition=models.Q(is_official=True),
+                name='unique_official_repo_name'
+            )
         ]
 
     @property
@@ -70,7 +80,6 @@ class Tag(models.Model):
 
     @property
     def size_display(self):
-        """Human-readable size"""
         size = self.size
         for unit in ["B", "KB", "MB", "GB"]:
             if size < 1024.0:
@@ -80,7 +89,6 @@ class Tag(models.Model):
 
     @property
     def short_digest(self):
-        """Returns truncated digest for display"""
         if not self.digest:
             return ""
         if self.digest.startswith("sha256:"):

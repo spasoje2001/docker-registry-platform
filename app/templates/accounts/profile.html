@@ -9,14 +9,14 @@
     <!-- HEADER -->
     <div class="row align-items-center mb-4">
 
-        <!-- IKONICA -->
+        <!-- icon -->
         <div class="col-auto">
             <img src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/icons/person-circle.svg"
                 class="rounded-circle border"
                 width="90" height="90"
                 alt="user icon">
         </div>
-        <!-- Korisnicke informacije -->
+        <!-- user info -->
         <div class="col">
             <h2 class="mb-1">{{ user.username }}</h2>
             {% if user.is_verified_publisher %}
@@ -31,7 +31,7 @@
 
         </div>
 
-        <!-- Dugme izmena profila -->
+        <!-- button change profile -->
         <div class="col-auto">
             <a href="{% url 'accounts:edit_profile' %}" class="btn btn-outline-secondary">
                 <i class="bi bi-gear me-1"></i>Edit profile
@@ -40,33 +40,34 @@
 
     </div>
 
-<!-- Dva taba za repo i lajkove -->
-<ul class="nav nav-tabs mb-4" id="profileTabs" role="tablist">
-    <li class="nav-item" role="presentation">
-       <button class="nav-link {% if active_tab == 'repos' %}active{% endif %}"
-            data-bs-toggle="tab" data-bs-target="#repos">
-            <i class="bi bi-box-seam me-1"></i>Repositories
-        </button>
-    </li>
+    <!-- 3 tabs for user repos and starred repos and new repo -->
+    <ul class="nav nav-tabs mb-4" id="profileTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'repos' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#repos">
+                <i class="bi bi-box-seam me-1"></i>Repositories
+            </button>
+        </li>
 
-    <li class="nav-item" role="presentation">
-        <button class="nav-link" data-bs-toggle="tab" data-bs-target="#starred">
-            <i class="bi bi-star me-1"></i>Starred
-        </button>
-    </li>
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#starred">
+                <i class="bi bi-star me-1"></i>Starred
+            </button>
+        </li>
+        
+        <li class="nav-item ms-auto" role="presentation">
+        <button class="nav-link {% if active_tab == 'new_repo' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#new_repo">
+                <i class="bi bi-box-seam me-1"></i>Create new repository
+            </button>
+        </li>
+    </ul>
     
-    <li class="nav-item ms-auto" role="presentation">
-       <button class="nav-link {% if active_tab == 'new_repo' %}active{% endif %}"
-            data-bs-toggle="tab" data-bs-target="#new_repo">
-            <i class="bi bi-box-seam me-1"></i>Create new repository
-        </button>
-    </li>
-</ul>
 
-<!-- Sta ide u polja tabova -->
-<div class="tab-content">
+    <!-- what goes to tasb fieled -->
+    <div class="tab-content">
 
-    <!-- Repo-i ulogovanog korisnika -->
+    <!-- users repos -->
     <div class="tab-pane fade {% if active_tab == 'repos' %}show active{% endif %}"
         id="repos">
         <div class="col-12 text-center text-muted py-5">
@@ -74,7 +75,7 @@
         </div>
     </div>
 
-    <!-- Lajkovani repo-i -->
+    <!-- starred repos -->
     <div class="tab-pane fade" id="starred">
         <div class="col-12 text-center text-muted py-5">
             <i class="bi bi-inbox fs-1 d-block mb-3"></i>
@@ -93,5 +94,4 @@
         </div>
     </div>
 </div>
-
 {% endblock %}

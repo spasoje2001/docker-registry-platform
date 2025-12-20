@@ -26,17 +26,24 @@ class ProfileRepoTabTests(TestCase):
 
         self.assertTrue(Repository.objects.filter(name="my-repo", owner=self.user).exists())
 
-    def test_create_new_repository_name_exists(self):
-        Repository.objects.create(name="existing-repo", owner=self.user)
+def test_create_new_repository_name_exists(self):
+    Repository.objects.create(name="existing-repo", owner=self.user)
 
-        url = reverse("repositories:create")
-        data = {
-            "name": "existing-repo",
-            "description": "Another repo",
-            "visibility": "PUBLIC",
-            "from_profile": "1",
-        }
+    url = reverse("repositories:create")
+    data = {
+        "name": "existing-repo",
+        "description": "Another repo",
+        "visibility": "PUBLIC",
+        "from_profile": "1",
+    }
 
-        response = self.client.post(url, data, follow=True)
-        self.assertContains(response, 'data-bs-target="#new_repo"')
-        self.assertContains(response, "Repository with this name already exists!")
+    response = self.client.post(url, data)
+
+    self.assertRedirects(response, reverse("accounts:profile"))
+    session = self.client.session
+    self.assertIn("repo_form_errors", session)
+    self.assertIn("name", session["repo_form_errors"])
+    self.assertIn(
+        "Repository with this name already exists!",
+        session["repo_form_errors"]["name"][0],
+    )
