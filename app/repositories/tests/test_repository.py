@@ -198,7 +198,7 @@ class RepositoryModelTests(TestCase):
 
     def test_duplicate_official_repo_name(self):
         """Test that creating an official repo with duplicate name validation"""
-        repo = Repository.objects.create(
+        Repository.objects.create(
             name="django-best-practices",
             is_official=True,
             visibility=Repository.VisibilityChoices.PUBLIC,
@@ -206,7 +206,11 @@ class RepositoryModelTests(TestCase):
         )
 
         with self.assertRaises(IntegrityError):
-            Repository.objects.create(name="django-best-practices", owner=self.user3, is_official=True)
+            Repository.objects.create(
+                name="django-best-practices",
+                owner=self.user3,
+                is_official=True)
+
 
 class OfficialRepositoryTests(TestCase):
     """Tests for official repository functionality"""
@@ -282,7 +286,7 @@ class OfficialRepositoryTests(TestCase):
 
     def test_official_repo_detail_url(self):
         """Test: official repo accessible via /repositories/<name>/"""
-        repo = Repository.objects.create(
+        Repository.objects.create(
             name="postgres",
             is_official=True,
             visibility=Repository.VisibilityChoices.PUBLIC,
@@ -358,7 +362,7 @@ class OfficialRepositoryTests(TestCase):
         self.client.login(username="admin1", password="testpass123")
         url = reverse("repositories:update_official", kwargs={"name": "ubuntu"})
 
-        response = self.client.post(url, {
+        self.client.post(url, {
             "name": "ubuntu",
             "description": "Ubuntu image",
             "visibility": Repository.VisibilityChoices.PUBLIC,

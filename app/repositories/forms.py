@@ -24,7 +24,7 @@ class RepositoryForm(forms.ModelForm):
 
     def clean_is_official(self):
         is_official = self.cleaned_data.get('is_official')
-        
+
         if is_official and self.request and not self.request.user.is_admin:
             raise forms.ValidationError(
                 "Only admin users can create official repositories."
@@ -36,9 +36,10 @@ class RepositoryForm(forms.ModelForm):
             # Prevent downgrade: official → personal
             if was_official and not is_official:
                 raise forms.ValidationError(
-                    "Cannot convert official repository back to personal. Delete and recreate if needed."
+                    "Cannot convert official repository back to personal. "
+                    "Delete and recreate if needed."
                 )
-        
+
         return is_official
 
     def clean(self):
@@ -46,7 +47,7 @@ class RepositoryForm(forms.ModelForm):
         name = cleaned_data.get('name')
         is_official = cleaned_data.get('is_official', False)
         visibility = cleaned_data.get('visibility')
-        
+
         if not name:
             return cleaned_data
 
@@ -55,41 +56,45 @@ class RepositoryForm(forms.ModelForm):
                 'is_official',
                 'Official repositories must be public.'
             )
-        
+
         if self.instance.pk:
             if is_official:
                 duplicates = Repository.objects.exclude(pk=self.instance.pk).filter(
-                    name=name, 
+                    name=name,
                     is_official=True
                 )
                 if duplicates.exists():
-                    self.add_error('name', 'Official repository with this name already exists.')
+                    self.add_error(
+                        'name', 'Official repository with this name already exists.')
             else:
                 duplicates = Repository.objects.exclude(pk=self.instance.pk).filter(
-                    name=name, 
-                    is_official=False, 
+                    name=name,
+                    is_official=False,
                     owner=self.instance.owner
                 )
                 if duplicates.exists():
-                    self.add_error('name', 'You already have a repository with this name.')
-        
+                    self.add_error(
+                        'name', 'You already have a repository with this name.')
+
         else:
             if not self.request:
                 return cleaned_data
-            
+
             if is_official:
                 duplicates = Repository.objects.filter(name=name, is_official=True)
                 if duplicates.exists():
-                    self.add_error('name', 'Official repository with this name already exists.')
+                    self.add_error(
+                        'name', 'Official repository with this name already exists.')
             else:
                 duplicates = Repository.objects.filter(
-                    name=name, 
-                    is_official=False, 
+                    name=name,
+                    is_official=False,
                     owner=self.request.user
                 )
                 if duplicates.exists():
-                    self.add_error('name', 'You already have a repository with this name.')
-        
+                    self.add_error(
+                        'name', 'You already have a repository with this name.')
+
         return cleaned_data
 
     def __init__(self, *args, **kwargs):
@@ -101,7 +106,9 @@ class RepositoryForm(forms.ModelForm):
 
             if self.instance.is_official:
                 self.fields["is_official"].disabled = True
-                self.fields["is_official"].help_text = "Official repositories cannot be converted back to personal"
+                self.fields["is_official"].help_text =\
+                    "Official repositories cannot be converted back to personal"
+
 
 class TagForm(forms.ModelForm):
     class Meta:
@@ -130,26 +137,28 @@ class TagForm(forms.ModelForm):
     def clean_name(self):
         """Validate tag name format"""
         name = self.cleaned_data.get('name')
-        
+
         if not re.match(r'^[a-zA-Z0-9._-]+$', name):
             raise forms.ValidationError(
-                'Tag name can only contain letters, numbers, dots, hyphens, and underscores.'
+                'Tag name can only contain letters, '
+                'numbers, dots, hyphens, and underscores.'
             )
-        
+
         return name
-    
+
     def clean_digest(self):
         """Validate digest format"""
         digest = self.cleaned_data.get('digest')
-        
+
         if not digest.startswith('sha256:'):
             raise forms.ValidationError('Digest must start with "sha256:"')
-        
+
         if not re.match(r'^sha256:[a-f0-9]{64}$', digest):
             raise forms.ValidationError(
-                'Invalid digest format. Must be sha256: followed by 64 hexadecimal characters.'
+                'Invalid digest format. Must be sha256: '
+                'followed by 64 hexadecimal characters.'
             )
-        
+
         return digest
 
     def __init__(self, *args, **kwargs):

@@ -5,6 +5,7 @@ from repositories.models import Repository
 
 User = get_user_model()
 
+
 class ProfileRepoTabTests(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
@@ -24,7 +25,11 @@ class ProfileRepoTabTests(TestCase):
         response = self.client.post(url, data)
         self.assertRedirects(response, reverse("accounts:profile"))
 
-        self.assertTrue(Repository.objects.filter(name="my-repo", owner=self.user).exists())
+        self.assertTrue(
+            Repository.objects.filter(
+                name="my-repo",
+                owner=self.user).exists())
+
 
 def test_create_new_repository_name_exists(self):
     Repository.objects.create(name="existing-repo", owner=self.user)

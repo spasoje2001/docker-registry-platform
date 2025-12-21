@@ -4,6 +4,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
 class AuthentificationTest(TestCase):
     def setUp(self):
         self.login_url = reverse('accounts:login')
@@ -25,7 +26,6 @@ class AuthentificationTest(TestCase):
         self.assertTrue(user_in_context.is_authenticated)
         self.assertEqual(response.request["PATH_INFO"], self.home_url)
 
-
     def test_login_wrong_credentials(self):
         User.objects.create_user(
             username="test",
@@ -46,7 +46,6 @@ class AuthentificationTest(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-
     def test_logout_clears_session(self):
         User.objects.create_user(
             username="test",
@@ -65,7 +64,6 @@ class AuthentificationTest(TestCase):
             self.logout_url,
             follow=True,
         )
-
 
         self.assertFalse(response.context["user"].is_authenticated)
 

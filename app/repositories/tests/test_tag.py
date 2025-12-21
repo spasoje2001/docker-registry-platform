@@ -6,6 +6,7 @@ from django.contrib.auth import get_user_model
 
 User = get_user_model()
 
+
 class TagModelTests(TestCase):
     def setUp(self):
         """Prepare test users"""
@@ -88,14 +89,13 @@ class TagModelTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(repo.tags.filter(name="v1.0").exists())
 
-
     def test_delete_tag(self):
         """Test: delete tag view"""
         repo = Repository.objects.create(
             name="tag-repo",
             owner=self.user1,
         )
-        tag = repo.tags.create(
+        repo.tags.create(
             name="v1.0",
             digest="sha256:" + "e" * 64,
             size=2048,
@@ -118,37 +118,37 @@ class TagModelTests(TestCase):
             owner=self.user1,
             visibility=Repository.VisibilityChoices.PUBLIC
         )
-        
-        tag1 = Tag.objects.create(
+
+        Tag.objects.create(
             repository=repo,
             name='v1.0.0',
             digest='sha256:' + 'a' * 64,
             size=100000000
         )
-        tag2 = Tag.objects.create(
+        Tag.objects.create(
             repository=repo,
             name='latest',
             digest='sha256:' + 'b' * 64,
             size=105000000
         )
-        tag3 = Tag.objects.create(
+        Tag.objects.create(
             repository=repo,
             name='dev',
             digest='sha256:' + 'c' * 64,
             size=110000000
         )
-        
+
         url = reverse(
             'repositories:detail',
             kwargs={'owner_username': 'user1', 'name': 'my-repo'}
         )
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, 200)
         self.assertIn('tags', response.context)
         tags = response.context['tags']
         self.assertEqual(tags.count(), 3)
-        
+
         self.assertContains(response, 'v1.0.0')
         self.assertContains(response, 'latest')
         self.assertContains(response, 'dev')
@@ -245,7 +245,7 @@ class OfficialRepoTagTests(TestCase):
 
     def test_delete_official_repo_tag(self):
         """Test: admin can delete tag from official repository"""
-        tag = Tag.objects.create(
+        Tag.objects.create(
             repository=self.official_repo,
             name="old-version",
             digest="sha256:" + "e" * 64,

@@ -85,6 +85,7 @@ def repository_create(request):
         {"form": form, "title": "New Repository"},
     )
 
+
 def repository_detail(request, owner_username, name):
     """Show user repository details"""
     repo = get_object_or_404(
@@ -362,7 +363,9 @@ def tag_create_official(request, name):
 
     # Permission check - only admins can create tags for official repos
     if not request.user.is_admin():
-        messages.error(request, 'Only admins can create tags for official repositories.')
+        messages.error(
+            request,
+            'Only admins can create tags for official repositories.')
         return redirect('repositories:detail_official', name=name)
 
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
@@ -555,7 +558,9 @@ def tag_delete_official(request, name, tag_name):
 
     # Permission check - only admins can delete tags from official repos
     if not request.user.is_admin():
-        messages.error(request, "Only admins can delete tags from official repositories.")
+        messages.error(
+            request,
+            "Only admins can delete tags from official repositories.")
         return redirect("repositories:detail_official", name=repo.name)
 
     tag = get_object_or_404(repo.tags, name=tag_name)

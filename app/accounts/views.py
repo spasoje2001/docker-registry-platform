@@ -15,8 +15,12 @@ from .forms import ConfirmEmailChangeForm, EditProfileForm
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from .utils import generate_verification_code, store_email_change_request, delete_email_change_request, \
-    get_email_change_request
+from .utils import (
+        generate_verification_code,
+        store_email_change_request,
+        delete_email_change_request,
+        get_email_change_request
+    )
 
 from repositories.forms import RepositoryForm
 from repositories.models import Repository
@@ -44,6 +48,7 @@ def admin_panel(request):
         )
     return render(request, "accounts/admin_panel.html", {"users": users, "q": q})
 
+
 @login_required
 @require_POST
 def update_badges(request, user_id):
@@ -63,7 +68,8 @@ def update_badges(request, user_id):
     setattr(target, badge, bool_value)
     target.save(update_fields=[badge])
 
-    return JsonResponse({"ok": True, "user_id": target.id, "badge": badge, "value": bool_value})
+    return JsonResponse({"ok": True, "user_id": target.id,
+                        "badge": badge, "value": bool_value})
 
 
 def login_view(request):
@@ -95,10 +101,11 @@ def login_view(request):
         form = CustomAuthenticationForm(request)
 
     return render(
-            request,
-            "accounts/login.html",
-            {"form": form, "next": next_url},
-        )
+        request,
+        "accounts/login.html",
+        {"form": form, "next": next_url},
+    )
+
 
 def logout_view(request):
     logout(request)
@@ -108,6 +115,7 @@ def logout_view(request):
         "You have successfully logged out!"
     )
     return redirect("core:home")
+
 
 def register(request):
     if request.user.is_authenticated:
@@ -191,7 +199,7 @@ def profile_view(request):
             "repo_form": repo_form,
             "active_tab": active_tab,
             "repositories": repositories,
-            "from_profile": True, 
+            "from_profile": True,
         }
     )
 
@@ -272,7 +280,7 @@ def email_change(request):
                     f'Please check your inbox.'
                 )
                 return redirect('accounts:email_change_confirm')
-            except Exception as e:
+            except Exception:
                 messages.error(
                     request,
                     'Failed to send verification email. Please try again.'
