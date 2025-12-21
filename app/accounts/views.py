@@ -16,17 +16,18 @@ from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from .utils import (
-        generate_verification_code,
-        store_email_change_request,
-        delete_email_change_request,
-        get_email_change_request
-    )
+    generate_verification_code,
+    store_email_change_request,
+    delete_email_change_request,
+    get_email_change_request
+)
 
 from repositories.forms import RepositoryForm
 from repositories.models import Repository
 
 
 User = get_user_model()
+
 
 @login_required
 def admin_panel(request):
@@ -164,6 +165,7 @@ def create_admin_success(request):
         'username': username,
         'password': password
     })
+
 
 def login_view(request):
     if request.user.is_authenticated:

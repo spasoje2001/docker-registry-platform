@@ -44,5 +44,7 @@ urlpatterns = [
          views.update_badges,
          name="update_badges"),
     path('admin_panel/create-admin/', views.create_admin, name='create_admin'),
-    path('admin_panel/create-admin/success/', views.create_admin_success, name='create_admin_success'),
+    path('admin_panel/create-admin/success/',
+         views.create_admin_success,
+         name='create_admin_success'),
 ]

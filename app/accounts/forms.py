@@ -249,7 +249,10 @@ class CreateAdminForm(forms.ModelForm):
             try:
                 validate_password(password)
             except forms.ValidationError as e:
-                raise forms.ValidationError(f'Password validation failed: {", ".join(e.messages)}')
+                raise forms.ValidationError(
+                    f'Password validation failed: {
+                        ", ".join(
+                            e.messages)}')
 
         return cleaned_data
 
