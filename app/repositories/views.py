@@ -43,7 +43,7 @@ def repository_create(request):
             repo.owner = request.user
 
             # Safety check - should be caught by form validation, but double-check
-            if repo.is_official and not request.user.is_admin():
+            if repo.is_official and not request.user.is_admin:
                 form.add_error(
                     'is_official',
                     'Only admins can create official repositories.'
@@ -184,7 +184,7 @@ def repository_update_official(request, name):
     repo = get_object_or_404(Repository, name=name, is_official=True)
 
     # Permission check - only admins can edit official repos
-    if not request.user.is_admin():
+    if not request.user.is_admin:
         messages.error(request, "Only admins can edit official repositories.")
         return redirect("repositories:detail_official", name=repo.name)
 
@@ -269,7 +269,7 @@ def repository_delete_official(request, name):
     repo = get_object_or_404(Repository, name=name, is_official=True)
 
     # Permission check - only admins can delete official repos
-    if not request.user.is_admin():
+    if not request.user.is_admin:
         messages.error(request, "Only admins can delete official repositories.")
         return redirect("repositories:detail_official", name=repo.name)
 
@@ -362,7 +362,7 @@ def tag_create_official(request, name):
     repository = get_object_or_404(Repository, name=name, is_official=True)
 
     # Permission check - only admins can create tags for official repos
-    if not request.user.is_admin():
+    if not request.user.is_admin:
         messages.error(
             request,
             'Only admins can create tags for official repositories.')
@@ -467,7 +467,7 @@ def tag_update_official(request, name, tag_name):
     repository = get_object_or_404(Repository, name=name, is_official=True)
 
     # Permission check - only admins can edit tags for official repos
-    if not request.user.is_admin():
+    if not request.user.is_admin:
         messages.error(request, 'Only admins can edit tags for official repositories.')
         return redirect('repositories:detail_official', name=name)
 
@@ -557,7 +557,7 @@ def tag_delete_official(request, name, tag_name):
     repo = get_object_or_404(Repository, name=name, is_official=True)
 
     # Permission check - only admins can delete tags from official repos
-    if not request.user.is_admin():
+    if not request.user.is_admin:
         messages.error(
             request,
             "Only admins can delete tags from official repositories.")
