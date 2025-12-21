@@ -25,10 +25,19 @@ class RepositoryForm(forms.ModelForm):
     def clean_is_official(self):
         is_official = self.cleaned_data.get('is_official')
         
-        if is_official and self.request and not self.request.user.is_staff:
+        if is_official and self.request and not self.request.user.is_admin:
             raise forms.ValidationError(
-                "Only staff users can create official repositories."
+                "Only admin users can create official repositories."
             )
+
+        if self.instance.pk:
+            was_official = self.instance.is_official
+
+            # Prevent downgrade: official → personal
+            if was_official and not is_official:
+                raise forms.ValidationError(
+                    "Cannot convert official repository back to personal. Delete and recreate if needed."
+                )
         
         return is_official
 
@@ -36,9 +45,16 @@ class RepositoryForm(forms.ModelForm):
         cleaned_data = super().clean()
         name = cleaned_data.get('name')
         is_official = cleaned_data.get('is_official', False)
+        visibility = cleaned_data.get('visibility')
         
         if not name:
             return cleaned_data
+
+        if is_official and visibility == Repository.VisibilityChoices.PRIVATE:
+            self.add_error(
+                'is_official',
+                'Official repositories must be public.'
+            )
         
         if self.instance.pk:
             if is_official:
@@ -82,6 +98,10 @@ class RepositoryForm(forms.ModelForm):
         if self.instance.pk:
             self.fields["name"].disabled = True
             self.fields["name"].help_text = "Repository name cannot be changed"
+
+            if self.instance.is_official:
+                self.fields["is_official"].disabled = True
+                self.fields["is_official"].help_text = "Official repositories cannot be converted back to personal"
 
 class TagForm(forms.ModelForm):
     class Meta:

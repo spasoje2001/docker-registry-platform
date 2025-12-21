@@ -70,9 +70,14 @@
     <!-- users repos -->
     <div class="tab-pane fade {% if active_tab == 'repos' %}show active{% endif %}"
         id="repos">
-        <div class="col-12 text-center text-muted py-5">
+        {% if repositories %}
             {% include "repositories/_repository_list_template.html" %}
-        </div>
+        {% else %}
+            <div class="col-12 text-center text-muted py-5">
+                <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                <p class="mb-0">No repositories yet.</p>
+            </div>
+        {% endif %}
     </div>
 
     <!-- starred repos -->
@@ -83,13 +88,13 @@
         </div>
     </div>
 
-    
+
     <!-- Create new repo -->
     <div class="tab-pane fade {% if active_tab == 'new_repo' %}show active{% endif %}"
         id="new_repo">
-        <div class="col-12 text-center text-muted py-5">
-            <div class="card shadow-sm w-50 mx-auto">
-                {% include "repositories/_repository_template.html"  with form=repo_form %}
+        <div class="col-12 py-4">
+            <div class="card shadow-sm mx-auto" style="max-width: 700px;">
+                {% include "repositories/_repository_template.html" with form=repo_form from_profile=True %}
             </div>
         </div>
     </div>

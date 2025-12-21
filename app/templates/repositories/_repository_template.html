@@ -1,7 +1,11 @@
 <div class="card-body p-4">
     <form method="post"
           action="{% if repository %}
-              {% url 'repositories:update' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}
+              {% if repository.is_official %}
+                  {% url 'repositories:update_official' repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}
+              {% else %}
+                  {% url 'repositories:update' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}
+              {% endif %}
           {% else %}
               {% url 'repositories:create' %}
           {% endif %}">
@@ -65,12 +69,42 @@
             </div>
         </div>
 
-        {% if user.is_staff %}
-            <div class="mb-2">
-                <label for="{{ form.is_official.id_for_label }}" class="form-label fw-semibold">
-                    Official <span class="text-danger">*</span>
-                </label>
-                <input type="checkbox" class="form-check-input" id="{{ form.is_official.id_for_label }}" name="{{ form.is_official.html_name }}" {% if form.is_official.value %}checked{% endif %}/>
+        {% if user.is_admin %}
+            <div class="mb-4">
+                <div class="form-check">
+                    <input type="checkbox"
+                           class="form-check-input"
+                           id="{{ form.is_official.id_for_label }}"
+                           name="{{ form.is_official.html_name }}"
+                           {% if form.is_official.value %}checked{% endif %}
+                           {% if repository.is_official %}disabled{% endif %}>
+                    <label class="form-check-label fw-semibold" for="{{ form.is_official.id_for_label }}">
+                        Official Repository
+                    </label>
+                </div>
+
+                {% if form.is_official.errors %}
+                    <div class="text-danger mt-2">
+                        <i class="bi bi-exclamation-circle"></i>
+                        {{ form.is_official.errors.0 }}
+                    </div>
+                {% endif %}
+
+                {% if form.non_field_errors %}
+                    <div class="text-danger mt-2">
+                        <i class="bi bi-exclamation-circle"></i>
+                        {{ form.non_field_errors.0 }}
+                    </div>
+                {% endif %}
+
+                <div class="form-text">
+                    <i class="bi bi-info-circle"></i>
+                    {% if repository.is_official %}
+                        <strong>Note:</strong> Official repositories cannot be converted back to personal repositories.
+                    {% else %}
+                        Official repositories are publicly available system-level images (e.g., python, nginx). They must be public.
+                    {% endif %}
+                </div>
             </div>
         {% endif %}
 

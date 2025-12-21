@@ -170,7 +170,10 @@ def profile_view(request):
     active_tab = "repos"
     form_data = request.session.pop("repo_form_data", None)
     form_errors = request.session.pop("repo_form_errors", None)
-    repositories = Repository.objects.filter(owner=request.user)
+    repositories = Repository.objects.filter(
+        owner=request.user,
+        is_official=False
+    ).order_by('-updated_at')
 
     if form_data:
         repo_form = RepositoryForm(form_data, request=request)
