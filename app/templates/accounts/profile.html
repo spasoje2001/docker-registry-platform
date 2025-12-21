@@ -1,0 +1,102 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ user.username }} - Profile{% endblock %}
+
+{% block content %}
+
+<div class="container mt-5">
+
+    <!-- HEADER -->
+    <div class="row align-items-center mb-4">
+
+        <!-- icon -->
+        <div class="col-auto">
+            <img src="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.10.5/icons/person-circle.svg"
+                class="rounded-circle border"
+                width="90" height="90"
+                alt="user icon">
+        </div>
+        <!-- user info -->
+        <div class="col">
+            <h2 class="mb-1">{{ user.username }}</h2>
+            {% if user.is_verified_publisher %}
+                <p class="text-muted mb-2">Verified Publisher</p>
+
+            {% elif user.is_sponsored_oss %}
+                <p class="text-muted mb-2">Sponsored OSS</p>
+
+            {% else %}
+                <p class="text-muted mb-2">Community User</p>
+            {% endif %}
+
+        </div>
+
+        <!-- button change profile -->
+        <div class="col-auto">
+            <a href="{% url 'accounts:edit_profile' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-gear me-1"></i>Edit profile
+            </a>
+        </div>
+
+    </div>
+
+    <!-- 3 tabs for user repos and starred repos and new repo -->
+    <ul class="nav nav-tabs mb-4" id="profileTabs" role="tablist">
+        <li class="nav-item" role="presentation">
+        <button class="nav-link {% if active_tab == 'repos' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#repos">
+                <i class="bi bi-box-seam me-1"></i>Repositories
+            </button>
+        </li>
+
+        <li class="nav-item" role="presentation">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#starred">
+                <i class="bi bi-star me-1"></i>Starred
+            </button>
+        </li>
+        
+        <li class="nav-item ms-auto" role="presentation">
+        <button class="nav-link {% if active_tab == 'new_repo' %}active{% endif %}"
+                data-bs-toggle="tab" data-bs-target="#new_repo">
+                <i class="bi bi-box-seam me-1"></i>Create new repository
+            </button>
+        </li>
+    </ul>
+    
+
+    <!-- what goes to tasb fieled -->
+    <div class="tab-content">
+
+    <!-- users repos -->
+    <div class="tab-pane fade {% if active_tab == 'repos' %}show active{% endif %}"
+        id="repos">
+        {% if repositories %}
+            {% include "repositories/_repository_list_template.html" %}
+        {% else %}
+            <div class="col-12 text-center text-muted py-5">
+                <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+                <p class="mb-0">No repositories yet.</p>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- starred repos -->
+    <div class="tab-pane fade" id="starred">
+        <div class="col-12 text-center text-muted py-5">
+            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
+            <p class="mb-0">No starred repositories.</p>
+        </div>
+    </div>
+
+
+    <!-- Create new repo -->
+    <div class="tab-pane fade {% if active_tab == 'new_repo' %}show active{% endif %}"
+        id="new_repo">
+        <div class="col-12 py-4">
+            <div class="card shadow-sm mx-auto" style="max-width: 700px;">
+                {% include "repositories/_repository_template.html" with form=repo_form from_profile=True %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

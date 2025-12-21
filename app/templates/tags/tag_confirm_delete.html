@@ -1,0 +1,51 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="d-flex justify-content-between card-header bg-white py-3">
+                    <h3 class="mb-0">
+                        <i class="bi bi-tag-fill text-danger"></i>
+                        Delete "{{ tag.name }}" from {{ repository.full_name }}
+                    </h3>
+                   
+                    {% if request.GET.from_profile %}
+                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}" 
+                        class="btn btn-link text-decoration-none">
+                            <i class="bi bi-arrow-left"></i> Go Back
+                        </a>
+                    {% else %}
+                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}" class="btn btn-link text-decoration-none">
+                            <i class="bi bi-arrow-left"></i> Go Back
+                        </a>
+                    {% endif %}
+                </div>
+                <div class="card-body p-4">
+                    <form method="post">
+                        {% csrf_token %}
+                        <p class="mb-4">
+                            Are you sure you want to delete the tag "<strong>{{ tag.name }}</strong>" from the repository "<strong>{{ repository.full_name }}</strong>"? This action cannot be undone.
+                        </p>
+                        <button type="submit" class="btn btn-danger">
+                            <i class="bi bi-trash-fill"></i> Delete
+                        </button>
+                       
+                    {% if request.GET.from_profile %}
+                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}" 
+                        class="btn btn-link text-decoration-none">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    {% else %}
+                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}" class="btn btn-link text-decoration-none">
+                            <i class="bi bi-x-circle"></i> Cancel
+                        </a>
+                    {% endif %}
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

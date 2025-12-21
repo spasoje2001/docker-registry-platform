@@ -1,0 +1,40 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="container">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="card shadow-sm">
+                <div class="d-flex justify-content-between card-header bg-white py-3">
+                    <h3 class="mb-0">
+                        <i class="bi bi-{% if repository %}pencil-square{% else %}folder-plus{% endif %} text-primary"></i>
+                        {{ title }}
+                    </h3>
+                    {% if repository %}
+                        {% if request.GET.from_profile %}
+                            <a href="{% url 'accounts:profile' %}#repos" class="btn btn-link text-decoration-none">
+                                <i class="bi bi-x-circle"></i> Go Back
+                            </a>
+                        {% else %}
+                            {% if repository.is_official %}
+                                <a href="{% url 'repositories:detail_official' repository.name %}" class="btn btn-link text-decoration-none">
+                                    <i class="bi bi-x-circle"></i> Go Back
+                                </a>
+                            {% else %}
+                                <a href="{% url 'repositories:detail' repository.owner.username repository.name %}" class="btn btn-link text-decoration-none">
+                                    <i class="bi bi-x-circle"></i> Go Back
+                                </a>
+                            {% endif %}
+                        {% endif %}
+                    {% else %}
+                        <a href="{% url 'repositories:list' %}" class="btn btn-link text-decoration-none">
+                            <i class="bi bi-arrow-left"></i> Go Back
+                        </a>
+                    {% endif %}
+                </div>
+                {% include "repositories/_repository_template.html" %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
