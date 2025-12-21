@@ -1,8 +1,5 @@
-from datetime import timedelta
-
 from django.test import TestCase
 from django.urls import reverse
-from django.contrib.auth import get_user_model
 from django.core import mail
 
 from ..models import User
@@ -11,6 +8,7 @@ from ..utils import (
     get_email_change_request,
     delete_email_change_request,
 )
+
 
 class EmailChangeTest(TestCase):
 

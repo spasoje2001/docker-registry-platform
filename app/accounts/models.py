@@ -4,8 +4,6 @@ Custom User model for the application.
 
 from django.contrib.auth.models import AbstractUser
 from django.db import models
-from django.utils import timezone
-from datetime import timedelta
 
 
 class User(AbstractUser):
@@ -41,3 +39,7 @@ class User(AbstractUser):
 
     def __str__(self):
         return self.username
+
+    def is_admin(self):
+        """Check if user is admin or super admin"""
+        return self.role in [self.Role.ADMIN, self.Role.SUPER_ADMIN]

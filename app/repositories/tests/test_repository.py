@@ -13,7 +13,11 @@ class RepositoryModelTests(TestCase):
         self.client = Client()
         self.user1 = User.objects.create_user(username="user1", password="testpass123")
         self.user2 = User.objects.create_user(username="user2", password="testpass123")
-        self.user3 = User.objects.create_user(username="user3", password="testpass123", is_staff=True)
+        self.user3 = User.objects.create_user(
+            username="admin1",
+            password="testpass123",
+            role=User.Role.ADMIN
+        )
 
     def test_create_repository(self):
         """Test creating a repository."""
@@ -194,7 +198,7 @@ class RepositoryModelTests(TestCase):
 
     def test_duplicate_official_repo_name(self):
         """Test that creating an official repo with duplicate name validation"""
-        repo = Repository.objects.create(
+        Repository.objects.create(
             name="django-best-practices",
             is_official=True,
             visibility=Repository.VisibilityChoices.PUBLIC,
@@ -202,4 +206,205 @@ class RepositoryModelTests(TestCase):
         )
 
         with self.assertRaises(IntegrityError):
-            Repository.objects.create(name="django-best-practices", owner=self.user3, is_official=True)
+            Repository.objects.create(
+                name="django-best-practices",
+                owner=self.user3,
+                is_official=True)
+
+
+class OfficialRepositoryTests(TestCase):
+    """Tests for official repository functionality"""
+
+    def setUp(self):
+        self.client = Client()
+        self.regular_user = User.objects.create_user(
+            username="user1",
+            password="testpass123",
+            role=User.Role.USER
+        )
+        self.admin = User.objects.create_user(
+            username="admin1",
+            password="testpass123",
+            role=User.Role.ADMIN
+        )
+        self.super_admin = User.objects.create_user(
+            username="superadmin",
+            password="testpass123",
+            role=User.Role.SUPER_ADMIN
+        )
+
+    def test_admin_can_create_official_repo(self):
+        """Test: admin can create official repository"""
+        self.client.login(username="admin1", password="testpass123")
+        url = reverse("repositories:create")
+
+        response = self.client.post(url, {
+            "name": "python",
+            "description": "Official Python image",
+            "visibility": Repository.VisibilityChoices.PUBLIC,
+            "is_official": True,
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            Repository.objects.filter(name="python", is_official=True).exists()
+        )
+
+    def test_super_admin_can_create_official_repo(self):
+        """Test: super admin can create official repository"""
+        self.client.login(username="superadmin", password="testpass123")
+        url = reverse("repositories:create")
+
+        response = self.client.post(url, {
+            "name": "nginx",
+            "description": "Official NGINX image",
+            "visibility": Repository.VisibilityChoices.PUBLIC,
+            "is_official": True,
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(
+            Repository.objects.filter(name="nginx", is_official=True).exists()
+        )
+
+    def test_official_repo_must_be_public(self):
+        """Test: official repository cannot be private"""
+        self.client.login(username="admin1", password="testpass123")
+        url = reverse("repositories:create")
+
+        response = self.client.post(url, {
+            "name": "redis",
+            "description": "Official Redis image",
+            "visibility": Repository.VisibilityChoices.PRIVATE,
+            "is_official": True,
+        })
+
+        self.assertEqual(response.status_code, 200)  # Form re-rendered with error
+        self.assertFalse(
+            Repository.objects.filter(name="redis", is_official=True).exists()
+        )
+
+    def test_official_repo_detail_url(self):
+        """Test: official repo accessible via /repositories/<name>/"""
+        Repository.objects.create(
+            name="postgres",
+            is_official=True,
+            visibility=Repository.VisibilityChoices.PUBLIC,
+            owner=self.admin
+        )
+
+        url = reverse("repositories:detail_official", kwargs={"name": "postgres"})
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+        self.assertContains(response, "postgres")
+        self.assertContains(response, "OFFICIAL")
+
+    def test_all_admins_can_edit_official_repo(self):
+        """Test: any admin can edit official repo (not just creator)"""
+        # Admin1 creates repo
+        repo = Repository.objects.create(
+            name="mongodb",
+            is_official=True,
+            visibility=Repository.VisibilityChoices.PUBLIC,
+            owner=self.admin,
+            description="Original description"
+        )
+
+        # Super admin edits it
+        self.client.login(username="superadmin", password="testpass123")
+        url = reverse("repositories:update_official", kwargs={"name": "mongodb"})
+
+        response = self.client.post(url, {
+            "name": "mongodb",
+            "description": "Updated by super admin",
+            "visibility": Repository.VisibilityChoices.PUBLIC,
+            "is_official": True,
+        })
+
+        self.assertEqual(response.status_code, 302)
+        repo.refresh_from_db()
+        self.assertEqual(repo.description, "Updated by super admin")
+
+    def test_regular_user_cannot_edit_official_repo(self):
+        """Test: regular user cannot edit official repository"""
+        repo = Repository.objects.create(
+            name="mysql",
+            is_official=True,
+            visibility=Repository.VisibilityChoices.PUBLIC,
+            owner=self.admin
+        )
+
+        self.client.login(username="user1", password="testpass123")
+        url = reverse("repositories:update_official", kwargs={"name": "mysql"})
+
+        response = self.client.post(url, {
+            "name": "mysql",
+            "description": "Hacked!",
+            "visibility": Repository.VisibilityChoices.PUBLIC,
+            "is_official": True,
+        })
+
+        # Should redirect with error
+        self.assertEqual(response.status_code, 302)
+        repo.refresh_from_db()
+        self.assertNotEqual(repo.description, "Hacked!")
+
+    def test_cannot_convert_official_to_personal(self):
+        """Test: cannot convert official repo back to personal"""
+        repo = Repository.objects.create(
+            name="ubuntu",
+            is_official=True,
+            visibility=Repository.VisibilityChoices.PUBLIC,
+            owner=self.admin
+        )
+
+        self.client.login(username="admin1", password="testpass123")
+        url = reverse("repositories:update_official", kwargs={"name": "ubuntu"})
+
+        self.client.post(url, {
+            "name": "ubuntu",
+            "description": "Ubuntu image",
+            "visibility": Repository.VisibilityChoices.PUBLIC,
+            "is_official": False,  # Trying to uncheck
+        })
+
+        # Form should reject or checkbox should be disabled
+        repo.refresh_from_db()
+        self.assertTrue(repo.is_official)  # Should still be official
+
+    def test_official_repo_full_name_no_prefix(self):
+        """Test: official repo full_name has no username prefix"""
+        repo = Repository.objects.create(
+            name="alpine",
+            is_official=True,
+            owner=self.admin
+        )
+
+        self.assertEqual(repo.full_name, "alpine")
+        self.assertNotIn("/", repo.full_name)
+
+    def test_official_repos_not_on_user_profile(self):
+        """Test: official repos don't appear on admin's profile"""
+        Repository.objects.create(
+            name="node",
+            is_official=True,
+            owner=self.admin,
+            visibility=Repository.VisibilityChoices.PUBLIC
+        )
+
+        Repository.objects.create(
+            name="personal-repo",
+            is_official=False,
+            owner=self.admin,
+            visibility=Repository.VisibilityChoices.PUBLIC
+        )
+
+        self.client.login(username="admin1", password="testpass123")
+        url = reverse("accounts:profile")
+        response = self.client.get(url)
+
+        # Should only see personal repo
+        repos = response.context['repositories']
+        self.assertEqual(repos.count(), 1)
+        self.assertEqual(repos[0].name, "personal-repo")

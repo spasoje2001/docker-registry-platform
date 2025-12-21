@@ -10,93 +10,29 @@
                         <i class="bi bi-{% if repository %}pencil-square{% else %}folder-plus{% endif %} text-primary"></i>
                         {{ title }}
                     </h3>
-                    <a href="{% url 'repositories:list' %}" class="btn btn-link text-decoration-none">
-                        <i class="bi bi-arrow-left"></i> Go Back
-                    </a>
-                </div>
-                <div class="card-body p-4">
-                    <form method="post">
-                        {% csrf_token %}
-
-                        <div class="mb-4">
-                            <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
-                                Name <span class="text-danger">*</span>
-                            </label>
-                            <div class="input-group">
-                                <span class="input-group-text">
-                                    <i class="bi bi-tag"></i>
-                                </span>
-                                {{ form.name }}
-                            </div>
-                            {% if form.name.errors %}
-                                <div class="text-danger mt-2">
-                                    {{ form.name.errors }}
-                                </div>
+                    {% if repository %}
+                        {% if request.GET.from_profile %}
+                            <a href="{% url 'accounts:profile' %}#repos" class="btn btn-link text-decoration-none">
+                                <i class="bi bi-x-circle"></i> Go Back
+                            </a>
+                        {% else %}
+                            {% if repository.is_official %}
+                                <a href="{% url 'repositories:detail_official' repository.name %}" class="btn btn-link text-decoration-none">
+                                    <i class="bi bi-x-circle"></i> Go Back
+                                </a>
                             {% else %}
-                                <i class="bi bi-info-circle"></i>
-                                Lowercase alphanumeric with hyphens (e.g., my-awesome-repo)
+                                <a href="{% url 'repositories:detail' repository.owner.username repository.name %}" class="btn btn-link text-decoration-none">
+                                    <i class="bi bi-x-circle"></i> Go Back
+                                </a>
                             {% endif %}
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="{{ form.description.id_for_label }}" class="form-label fw-semibold">
-                                Description
-                            </label>
-                            {{ form.description }}
-                            {% if form.description.errors %}
-                                <div class="text-danger mt-2">
-                                    {{ form.description.errors }}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">
-                                <i class="bi bi-chat-left-text"></i>
-                                A brief description of what this repository is about
-                            </div>
-                        </div>
-
-                        <div class="mb-4">
-                            <label for="{{ form.visibility.id_for_label }}" class="form-label fw-semibold">
-                                Visibility <span class="text-danger">*</span>
-                            </label>
-                            {{ form.visibility }}
-                            {% if form.visibility.errors %}
-                                <div class="text-danger mt-2">
-                                    {{ form.visibility.errors }}
-                                </div>
-                            {% endif %}
-                            <div class="form-text">
-                                <i class="bi bi-eye"></i>
-                                <strong>Public:</strong> Anyone can see this repository •
-                                <i class="bi bi-lock"></i>
-                                <strong>Private:</strong> Only you can see this repository
-                            </div>
-                        </div>
-
-                        {% if user.is_staff %}
-                        <div class="mb-2">
-                            <label for="{{ form.is_official.id_for_label }}" class="form-label fw-semibold">
-                                Official <span class="text-danger">*</span>
-                            </label>
-                            <input type="checkbox" class="form-check-input" id="{{ form.is_official.id_for_label }}" name="{{ form.is_official.html_name }}" {% if form.is_official.value %}checked{% endif %}/>
-                        </div>
                         {% endif %}
-
-                        <div class="d-flex gap-2 pt-3 border-top">
-                            <button type="submit" class="btn btn-success">
-                                <i class="bi bi-{% if repository %}check-circle{% else %}plus-circle{% endif %}"></i>
-                                {% if repository %}Update{% else %}Create{% endif %}
-                            </button>
-                            <button type="reset" class="btn btn-outline-secondary">
-                                <i class="bi bi-arrow-counterclockwise"></i> Reset
-                            </button>
-                        </div>
-                    </form>
+                    {% else %}
+                        <a href="{% url 'repositories:list' %}" class="btn btn-link text-decoration-none">
+                            <i class="bi bi-arrow-left"></i> Go Back
+                        </a>
+                    {% endif %}
                 </div>
-            </div>
-
-            <div class="alert alert-info mt-4" role="alert">
-                <i class="bi bi-lightbulb"></i>
-                <strong>Tip:</strong> Choose a descriptive name for your repository. You won't be able to change it later!
+                {% include "repositories/_repository_template.html" %}
             </div>
         </div>
     </div>
