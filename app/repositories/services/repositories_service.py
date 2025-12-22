@@ -29,8 +29,14 @@ class RepositoryService():
 
         result = self.combine_lists(user, repositories, db_list)
         return result
-
     
+    def get_manifest(self, repository: str, tag_name: str) -> Dict:
+        try:
+            manifest = self.registry_client.get_manifest(repository, tag_name)
+            return manifest
+        except Exception as e:
+            print(f"Error fetching manifest from registry: {e}")
+            raise
 
     def combine_lists(self, user, client_list: List[str], db_list: List[Repository]) -> List[Repository]:
         db_dict = {repo.name: repo for repo in db_list}

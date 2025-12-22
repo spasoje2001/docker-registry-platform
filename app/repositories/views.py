@@ -54,6 +54,9 @@ def repository_create(request):
         if form.is_valid():
             name = form.cleaned_data['name']
             is_official = form.cleaned_data.get('is_official', False)
+            tag_name = form.cleaned_data.get('initial_tag', 'latest')
+
+            print(f"JEBENI TAG NAME ----> {tag_name}")
 
             repo = form.save(commit=False)
             repo.owner = request.user
@@ -67,6 +70,16 @@ def repository_create(request):
                     "title": "New Repository"
                 })
             repo.save()
+
+            try:
+                Tag.objects.create(name=tag_name, repository=repo)
+            except Exception as e:
+                form.add_error(None, f"Error creating initial tag: {e}")
+                return render(request, "repositories/repository_form.html", {
+                    "form": form,
+                    "title": "New Repository"
+                })
+
             messages.success(
                 request, f'Repository "{repo.full_name}" successfully created!'
             )
@@ -119,7 +132,7 @@ def repository_update(request, owner_username, name):
     return render(
         request,
         "repositories/repository_form.html",
-        {"form": form, "repository": repo, "title": f"Edit {repo.full_name}"},
+        {"form": form, "repository": repo, "title": f"Edit repository"},
     )
 
 
@@ -159,27 +172,46 @@ def tag_create(request, owner_username, name):
         messages.error(request, 'You cannot create tags for this repository.')
         return redirect('repositories:detail', owner_username=owner_username, name=name)
     
+    print(f"DEBUG: Request method: {request.method}")
+    
     if request.method == 'POST':
+        print("DEBUG: POST request received")
         form = TagForm(request.POST)
+        print(f"DEBUG: Form data: {request.POST}")
+        print(f"DEBUG: Form is valid: {form.is_valid()}")
+        
         if form.is_valid():
+            print("DEBUG: Form is valid, processing...")
             tag = form.save(commit=False)
             tag.repository = repository
             
-            if Tag.objects.filter(repository=repository, name=tag.name).exists():
+            tag_exists = Tag.objects.filter(repository=repository, name=tag.name).exists()
+            print(f"DEBUG: Tag exists: {tag_exists}")
+            
+            if tag_exists:
+                print("DEBUG: Tag already exists, adding error")
                 form.add_error('name', f'Tag "{tag.name}" already exists for this repository.')
             else:
+                print("DEBUG: Saving tag...")
                 tag.save()
+                print("DEBUG: Tag saved successfully!")
                 messages.success(
                     request,
                     f'Tag "{tag.name}" created successfully!'
                 )
-            if repository.is_official:
-                return redirect('repositories:detail_official', name=repository.name)
-            else:
-                return redirect('repositories:detail', owner_username=owner_username, name=name)
+                
+                print("DEBUG: Redirecting...")
+                if repository.is_official:
+                    return redirect('repositories:detail_official', name=repository.name)
+                else:
+                    return redirect('repositories:detail', owner_username=owner_username, name=name)
+        else:
+            print(f"DEBUG: Form errors: {form.errors}")
     else:
+        print("DEBUG: GET request, creating empty form")
         form = TagForm()
     
+    print("DEBUG: Rendering template")
     return render(request, 'tags/tag_form.html', {
         'form': form,
         'repository': repository,
@@ -187,6 +219,7 @@ def tag_create(request, owner_username, name):
     })
 
 def tag_delete(request, owner_username, name, tag_name):
+    service = RepositoryService()
     repo = get_object_or_404(Repository, owner__username=owner_username, name=name)
 
     if repo.owner != request.user:
@@ -196,6 +229,13 @@ def tag_delete(request, owner_username, name, tag_name):
         )
 
     tag = get_object_or_404(repo.tags, name=tag_name)
+    
+    registry_url = service.registry_client.registry_url
+    commands = {
+        'delete': f"curl -X DELETE {registry_url}/v2/{repo}/manifests/{tag.digest}",
+        'gc': "docker exec registry bin/registry garbage-collect /etc/docker/registry/config.yml",
+        'restart': "docker restart registry"
+    }
 
     if request.method == "POST":
         tag.delete()
@@ -212,10 +252,11 @@ def tag_delete(request, owner_username, name, tag_name):
     return render(
         request,
         "tags/tag_confirm_delete.html",
-        {"repository": repo, "tag": tag},
+        {"repository": repo, "tag": tag, "commands": commands},
     )
 
 def tag_update(request, owner_username, name, tag_name):
+    service = RepositoryService()
     repository = get_object_or_404(Repository, owner__username=owner_username, name=name)
     
     if repository.owner != request.user:
@@ -223,6 +264,13 @@ def tag_update(request, owner_username, name, tag_name):
         return redirect('repositories:detail', owner_username=owner_username, name=name)
     
     tag = get_object_or_404(repository.tags, name=tag_name)
+    manifest = {}
+
+    try:
+        manifest = service.get_manifest(repository.name, tag.name)
+    except Exception as e:
+        messages.error(request, f'Error fetching manifest for tag "{tag.name}": {e}')
+        manifest = {}
     
     if request.method == 'POST':
         form = TagForm(request.POST, instance=tag)
@@ -240,5 +288,6 @@ def tag_update(request, owner_username, name, tag_name):
         'form': form,
         'repository': repository,
         'tag': tag,
-        'title': f'Editing {tag.name} for {repository.name}'
+        'manifest': manifest,
+        'title': f'Details for {tag.name}'
     })

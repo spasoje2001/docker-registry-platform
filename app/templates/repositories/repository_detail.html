@@ -137,49 +137,27 @@
                     {% for tag in tags %}
                         <div class="list-group-item">
                             <div class="row g-3 align-items-center">
-                                <div class="col-12 col-lg-2">
+                                <div class="col-12 col-lg-9">
                                     <h6 class="mb-0">
                                         <i class="bi bi-tag-fill text-primary"></i>
                                         <strong>{{ tag.name }}</strong>
                                     </h6>
                                 </div>
                                 
-                                <div class="col-12 col-lg-3">
-                                    <div>
-                                        <small class="text-muted d-block">
-                                            <i class="bi bi-fingerprint"></i> Digest
-                                        </small>
-                                        <code style="font-size: 0.85rem;">{{ tag.short_digest }}</code>
-                                    </div>
-                                </div>
-                                    
-                                <div class="col-6 col-lg-2">
-                                    <div>
-                                        <small class="text-muted d-block">
-                                            <i class="bi bi-hdd"></i> Size
-                                        </small>
-                                        <span class="badge bg-secondary">{{ tag.size_display }}</span>
-                                    </div>
-                                </div>
-                                
-                                <div class="col-6 col-lg-3">
-                                    <div>
-                                        <small class="text-muted d-block">
+                                <div class="col-12 col-lg-2">
+                                    <div class="d-flex flex-direction-row">
+                                        <small class="text-muted me-2">
                                             <i class="bi bi-calendar-plus"></i> Created
                                         </small>
                                         <small>{{ tag.created_at|date:"M d, Y" }}</small>
                                     </div>
                                 </div>
                                 
-                                <div class="col-12 col-lg-2 text-md-end">
+                                <div class="col-12 col-lg-1 text-md-end">
                                     {% if user == repository.owner %}
                                         <a href="{% url 'repositories:tag_update' repository.owner.username repository.name tag.name %}" 
                                             class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-trash"></i> Edit
-                                        </a>
-                                        <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name %}" 
-                                            class="btn btn-sm btn-outline-danger">
-                                            <i class="bi bi-trash"></i> Delete
+                                            <i class="bi bi-info-circle"></i> Detail
                                         </a>
                                     {% endif %}
                                 </div>

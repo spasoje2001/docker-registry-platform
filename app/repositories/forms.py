@@ -4,6 +4,18 @@ import re
 
 
 class RepositoryForm(forms.ModelForm):
+
+    initial_tag = forms.CharField(
+        max_length=255,
+        initial='latest',
+        required=False,
+        widget=forms.TextInput(attrs={
+            'class': 'form-control',
+            'placeholder': 'e.g., latest, v1.0.0'
+        }),
+        help_text='Initial tag name for the repository'
+    )
+
     class Meta:
         model = Repository
         fields = ["name", "description", "visibility", "is_official"]
@@ -19,7 +31,7 @@ class RepositoryForm(forms.ModelForm):
                 }
             ),
             "visibility": forms.Select(attrs={"class": "form-select"}),
-            "is_official": forms.CheckboxInput(attrs={"class": "form-check-input"}),
+            "is_official": forms.CheckboxInput(attrs={"class": "form-check-input"})
         }
 
     def clean_is_official(self):
@@ -86,7 +98,7 @@ class RepositoryForm(forms.ModelForm):
 class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
-        fields = ['name', 'digest', 'size']
+        fields = ['name', 'digest']
         widgets = {
             'name': forms.TextInput(attrs={
                 'class': 'form-control',
@@ -94,12 +106,8 @@ class TagForm(forms.ModelForm):
             }),
             'digest': forms.TextInput(attrs={
                 'class': 'form-control',
-                'placeholder': 'sha256:abc123...'
-            }),
-            'size': forms.NumberInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'Size in bytes'
-            }),
+                'placeholder': 'sha256:7da81a8...'
+            })
         }
         help_texts = {
             'name': 'Tag name (e.g., v1.0.0, latest)',
@@ -117,24 +125,10 @@ class TagForm(forms.ModelForm):
             )
         
         return name
-    
-    def clean_digest(self):
-        """Validate digest format"""
-        digest = self.cleaned_data.get('digest')
-        
-        if not digest.startswith('sha256:'):
-            raise forms.ValidationError('Digest must start with "sha256:"')
-        
-        if not re.match(r'^sha256:[a-f0-9]{64}$', digest):
-            raise forms.ValidationError(
-                'Invalid digest format. Must be sha256: followed by 64 hexadecimal characters.'
-            )
-        
-        return digest
 
     def __init__(self, *args, **kwargs):
         self.request = kwargs.pop("request", None)
         super().__init__(*args, **kwargs)
         if self.instance.pk:
             self.fields["name"].disabled = True
-            self.fields["name"].help_text = "Tag name cannot be changed"
+            self.fields["digest"].disabled = True

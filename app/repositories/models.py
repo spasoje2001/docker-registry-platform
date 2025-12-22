@@ -59,8 +59,8 @@ class Repository(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(max_length=100)
-    digest = models.CharField(max_length=256)
-    size = models.PositiveBigIntegerField()
+    digest = models.CharField(max_length=256, blank=True, null=True)
+    size = models.PositiveBigIntegerField(blank=True, null=True, default=0)
     repository = models.ForeignKey(
         Repository, on_delete=models.CASCADE, related_name="tags"
     )
