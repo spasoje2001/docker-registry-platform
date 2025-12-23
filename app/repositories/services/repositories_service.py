@@ -38,6 +38,13 @@ class RepositoryService():
             print(f"Error fetching manifest from registry: {e}")
             raise
 
+    def delete_image(self, registry_url, repo_name, tag_name, digest):
+        try:
+            self.registry_client.delete_tag_and_image(registry_url, repo_name, tag_name, digest)
+        except Exception as e:
+            print(f"Error deleting image: {e}")
+            raise
+
     def combine_lists(self, user, client_list: List[str], db_list: List[Repository]) -> List[Repository]:
         db_dict = {repo.name: repo for repo in db_list}
         combined = []

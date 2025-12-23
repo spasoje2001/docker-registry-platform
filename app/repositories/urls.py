@@ -36,6 +36,6 @@ urlpatterns = [
         name="tag_update"
     ),
     path(
-        "<str:owner_username>/<str:name>/tags/<str:tag_name>/delete/", views.tag_delete, name="tag_delete"
+        "<str:owner_username>/<str:name>/tags/<str:tag_name>/delete/<str:digest>", views.tag_delete, name="tag_delete"
     ),
 ]

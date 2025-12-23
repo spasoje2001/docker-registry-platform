@@ -22,36 +22,49 @@
                                 <label class="form-label"><strong>Step 1:</strong> Delete manifest</label>
                                 <div class="input-group">
                                     <input type="text" class="form-control font-monospace" 
-                                        id="cmd-delete" 
-                                        value="{{ commands.delete }}" 
+                                        id="cmd-delete-manifest" 
+                                        value="{{ commands.delete_manifest }}"
                                         readonly>
-                                    <button class="btn btn-outline-secondary" onclick="copyCmd('cmd-delete')">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('cmd-delete-manifest')">
+                                        <i class="bi bi-clipboard"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                             <div class="mb-3">
+                                <label class="form-label"><strong>Step 2:</strong> Delete tag reference</label>
+                                <div class="input-group">
+                                    <input type="text" class="form-control font-monospace" 
+                                        id="cmd-delete-tag" 
+                                        value="{{ commands.delete_tag }}"
+                                        readonly>
+                                    <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('cmd-delete-tag')">
                                         <i class="bi bi-clipboard"></i>
                                     </button>
                                 </div>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label"><strong>Step 2:</strong> Garbage collection</label>
+                                <label class="form-label"><strong>Step 3:</strong> Garbage collection</label>
                                 <div class="input-group">
                                     <input type="text" class="form-control font-monospace" 
                                         id="cmd-gc" 
                                         value="{{ commands.gc }}" 
                                         readonly>
-                                    <button class="btn btn-outline-secondary" onclick="copyCmd('cmd-gc')">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('cmd-gc')">
                                         <i class="bi bi-clipboard"></i>
                                     </button>
                                 </div>
                             </div>
 
                             <div class="mb-3">
-                                <label class="form-label"><strong>Step 3:</strong> Restart registry</label>
+                                <label class="form-label"><strong>Step 4:</strong> Restart registry</label>
                                 <div class="input-group">
                                     <input type="text" class="form-control font-monospace" 
                                         id="cmd-restart" 
                                         value="{{ commands.restart }}" 
                                         readonly>
-                                    <button class="btn btn-outline-secondary" onclick="copyCmd('cmd-restart')">
+                                    <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('cmd-restart')">
                                         <i class="bi bi-clipboard"></i>
                                     </button>
                                 </div>

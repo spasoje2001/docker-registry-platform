@@ -144,7 +144,7 @@
                                         Next <i class="bi bi-arrow-right"></i>
                                     </button>
                                 {% else %}
-                                    <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name %}" 
+                                    <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name manifest.digest %}" 
                                         class="btn btn-sm btn-danger">
                                         <i class="bi bi-trash"></i> Delete
                                     </a>
@@ -164,7 +164,7 @@
                                     </label>
                                     <div class="input-group">
                                         <input type="text" class="form-control font-monospace" id="tagCommand" readonly>
-                                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('tagCommand')">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('tagCommand')">
                                             <i class="bi bi-clipboard"></i>
                                         </button>
                                     </div>
@@ -179,7 +179,7 @@
                                     </label>
                                     <div class="input-group">
                                         <input type="text" class="form-control font-monospace" id="pushCommand" readonly>
-                                        <button class="btn btn-outline-secondary" type="button" onclick="copyToClipboard('pushCommand')">
+                                        <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('pushCommand')">
                                             <i class="bi bi-clipboard"></i>
                                         </button>
                                     </div>
@@ -281,24 +281,21 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 
-function copyToClipboard(elementId) {
-    const element = document.getElementById(elementId);
-    const text = element.value || element.textContent;
-    
-    navigator.clipboard.writeText(text).then(function() {
+function copyCmd(elementId) {
+    const input = document.getElementById(elementId);
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
         const btn = event.target.closest('button');
-        const originalContent = btn.innerHTML;
-        btn.innerHTML = '<i class="bi bi-check"></i> Copied!';
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check"></i>';
         btn.classList.add('btn-success');
-        btn.classList.remove('btn-outline-secondary', 'btn-outline-primary');
+        btn.classList.remove('btn-outline-secondary');
         
-        setTimeout(function() {
-            btn.innerHTML = originalContent;
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
             btn.classList.remove('btn-success');
             btn.classList.add('btn-outline-secondary');
         }, 2000);
-    }).catch(function(err) {
-        alert('Failed to copy: ' + err);
     });
 }
 </script>

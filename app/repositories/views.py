@@ -150,6 +150,12 @@ def repository_delete(request, owner_username, name):
             "repositories:detail", owner_username=repo.owner.username, name=repo.name
         )
 
+    commands = {
+        'delete_repo': f'docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}',
+        'gc': 'docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml',
+        'restart': 'docker restart docker-registry-platform-registry-1'
+    }
+
     if request.method == "POST":
         repo_name = repo.full_name
         repo.delete()
@@ -157,7 +163,7 @@ def repository_delete(request, owner_username, name):
         return redirect("repositories:list")
 
     return render(
-        request, "repositories/repository_confirm_delete.html", {"repository": repo}
+        request, "repositories/repository_confirm_delete.html", {"repository": repo, "commands": commands}
     )
 
 @login_required
@@ -172,53 +178,38 @@ def tag_create(request, owner_username, name):
         messages.error(request, 'You cannot create tags for this repository.')
         return redirect('repositories:detail', owner_username=owner_username, name=name)
     
-    print(f"DEBUG: Request method: {request.method}")
-    
     if request.method == 'POST':
-        print("DEBUG: POST request received")
         form = TagForm(request.POST)
-        print(f"DEBUG: Form data: {request.POST}")
-        print(f"DEBUG: Form is valid: {form.is_valid()}")
         
         if form.is_valid():
-            print("DEBUG: Form is valid, processing...")
             tag = form.save(commit=False)
             tag.repository = repository
             
             tag_exists = Tag.objects.filter(repository=repository, name=tag.name).exists()
-            print(f"DEBUG: Tag exists: {tag_exists}")
             
             if tag_exists:
-                print("DEBUG: Tag already exists, adding error")
                 form.add_error('name', f'Tag "{tag.name}" already exists for this repository.')
             else:
-                print("DEBUG: Saving tag...")
                 tag.save()
-                print("DEBUG: Tag saved successfully!")
                 messages.success(
                     request,
                     f'Tag "{tag.name}" created successfully!'
                 )
                 
-                print("DEBUG: Redirecting...")
                 if repository.is_official:
                     return redirect('repositories:detail_official', name=repository.name)
                 else:
                     return redirect('repositories:detail', owner_username=owner_username, name=name)
-        else:
-            print(f"DEBUG: Form errors: {form.errors}")
     else:
-        print("DEBUG: GET request, creating empty form")
         form = TagForm()
     
-    print("DEBUG: Rendering template")
     return render(request, 'tags/tag_form.html', {
         'form': form,
         'repository': repository,
         'title': f'New Tag for {repository.full_name}'
     })
 
-def tag_delete(request, owner_username, name, tag_name):
+def tag_delete(request, owner_username, name, tag_name, digest):
     service = RepositoryService()
     repo = get_object_or_404(Repository, owner__username=owner_username, name=name)
 
@@ -232,9 +223,10 @@ def tag_delete(request, owner_username, name, tag_name):
     
     registry_url = service.registry_client.registry_url
     commands = {
-        'delete': f"curl -X DELETE {registry_url}/v2/{repo}/manifests/{tag.digest}",
-        'gc': "docker exec registry bin/registry garbage-collect /etc/docker/registry/config.yml",
-        'restart': "docker restart registry"
+        'delete_manifest': f"curl -X DELETE -u admin:Admin123 http://localhost:5000/v2/{repo.name}/manifests/{digest}",
+        'delete_tag': f"docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}/_manifests/tags/{tag_name}",
+        'gc': "docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml",
+        'restart': "docker restart docker-registry-platform-registry-1"
     }
 
     if request.method == "POST":
