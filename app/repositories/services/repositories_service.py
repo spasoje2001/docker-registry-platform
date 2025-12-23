@@ -1,7 +1,7 @@
 from typing import List, Dict
 from django.db import models
 from ..clients.registry_client import RegistryClient
-from ..models import Repository
+from ..models import Repository, Tag
 
 class RepositoryService():
     def __init__(self, registry_client=None):
@@ -27,8 +27,21 @@ class RepositoryService():
                 models.Q(visibility=Repository.VisibilityChoices.PUBLIC)
             )
 
-        result = self.combine_lists(user, repositories, db_list)
-        return result
+        return self.combine_lists(repositories, db_list)
+
+    def list_tags(self, repository: str) -> List[Tag]:
+        tags = []
+        try:
+            tags = self.registry_client.get_tags_for_repository(repository)
+        except Exception as e:
+            print(f"Error fetching tags from registry: {e}")
+            raise
+
+        db_list = Tag.objects.filter(
+            models.Q(repository=repository)
+        )
+
+        return self.cobine_lists(tags, db_list)
     
     def get_manifest(self, repository: str, tag_name: str) -> Dict:
         try:
@@ -38,20 +51,13 @@ class RepositoryService():
             print(f"Error fetching manifest from registry: {e}")
             raise
 
-    def delete_image(self, registry_url, repo_name, tag_name, digest):
-        try:
-            self.registry_client.delete_tag_and_image(registry_url, repo_name, tag_name, digest)
-        except Exception as e:
-            print(f"Error deleting image: {e}")
-            raise
-
-    def combine_lists(self, user, client_list: List[str], db_list: List[Repository]) -> List[Repository]:
-        db_dict = {repo.name: repo for repo in db_list}
+    def combine_lists(self, client_list: List[str], db_list: List) -> List:
+        db_dict = {obj.name: obj for obj in db_list}
         combined = []
     
-        for repo_name in client_list:
-            if repo_name in db_dict:
-                combined.append(db_dict[repo_name])
+        for obj_name in client_list:
+            if obj_name in db_dict:
+                combined.append(db_dict[obj_name])
 
         return combined
 

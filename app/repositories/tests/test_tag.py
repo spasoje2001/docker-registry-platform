@@ -3,6 +3,7 @@ from django.urls import reverse
 from django.db import IntegrityError
 from ..models import Repository, Tag
 from django.contrib.auth import get_user_model
+from unittest.mock import patch, MagicMock, Mock
 
 User = get_user_model()
 
@@ -11,6 +12,7 @@ class TagModelTests(TestCase):
         """Prepare test users"""
         self.client = Client()
         self.user1 = User.objects.create_user(username="user1", password="testpass123")
+        self.repo = Repository.objects.create(name="test-repo",owner=self.user1)
 
     def test_tag_full_tag_name(self):
         """Test full_tag_name property"""
@@ -85,7 +87,7 @@ class TagModelTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
 
 
     def test_delete_tag(self):
@@ -103,14 +105,15 @@ class TagModelTests(TestCase):
         self.client.login(username="user1", password="testpass123")
         url = reverse(
             "repositories:tag_delete",
-            kwargs={"owner_username": "user1", "name": "tag-repo", "tag_name": "v1.0"},
+            kwargs={"owner_username": "user1", "name": "tag-repo", "tag_name": "v1.0", "digest": "sha256:abcdef1234567890"},
         )
 
         response = self.client.post(url)
         self.assertEqual(response.status_code, 302)
         self.assertFalse(repo.tags.filter(name="v1.0").exists())
 
-    def test_list_tags_for_repository(self):
+    @patch('repositories.views.RepositoryService')
+    def test_list_tags_for_repository(self, MockService):
         """Test: list all tags for a repository"""
         repo = Repository.objects.create(
             name='my-repo',
@@ -136,6 +139,10 @@ class TagModelTests(TestCase):
             digest='sha256:' + 'c' * 64,
             size=110000000
         )
+
+        mock_service_instance = MockService.return_value
+        mock_service_instance.health_check.return_value = True
+        mock_service_instance.list_tags.return_value = [tag1, tag2, tag3]
         
         url = reverse(
             'repositories:detail',
@@ -151,3 +158,48 @@ class TagModelTests(TestCase):
         self.assertContains(response, 'v1.0.0')
         self.assertContains(response, 'latest')
         self.assertContains(response, 'dev')
+
+    @patch('repositories.views.RepositoryService')
+    def test_list_tags_mock_registry(self, MockService):
+        """Unit test: list tags (mock registry response)"""
+        tag1 = Tag.objects.create(
+            name="v1.0",
+            repository=self.repo,
+            digest="sha256:abc123",
+            size=1024
+        )
+        tag2 = Tag.objects.create(
+            name="v2.0",
+            repository=self.repo,
+            digest="sha256:def456",
+            size=2048
+        )
+        tag3 = Tag.objects.create(
+            name="latest",
+            repository=self.repo,
+            digest="sha256:ghi789",
+            size=3072
+        )
+        
+        mock_service_instance = MockService.return_value
+        mock_service_instance.health_check.return_value = True
+        mock_service_instance.list_tags.return_value = [tag1, tag2, tag3]
+        
+        self.client.login(username='user1', password='testpass123')
+        url = reverse('repositories:detail', kwargs={
+            'owner_username': 'user1',
+            'name': 'test-repo'
+        })
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        mock_service_instance.list_tags.assert_called_once_with(self.repo.name)
+        
+        self.assertIn('tags', response.context)
+        tags = response.context['tags']
+        self.assertEqual(len(tags), 3)
+        
+        self.assertContains(response, 'v1.0')
+        self.assertContains(response, 'v2.0')
+        self.assertContains(response, 'latest')

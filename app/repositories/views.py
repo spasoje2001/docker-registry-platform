@@ -27,11 +27,18 @@ def repository_list(request):
 
 
 def repository_detail(request, owner_username, name):
+    tags_list = []
+    service = RepositoryService()
     repo = get_object_or_404(Repository, owner__username=owner_username, name=name, is_official=False)
 
     if repo.visibility == Repository.VisibilityChoices.PRIVATE:
         if not request.user.is_authenticated or request.user != repo.owner:
             raise Http404("Repository not found")
+
+    try:
+        tags_list = service.list_tags(repo.name)
+    except Exception as e:
+        messages.warning(request, "Error fetching tags from registry.")
 
     tags = repo.tags.all()
     return render(request, "repositories/repository_detail.html", {"repository": repo, "tags": tags})

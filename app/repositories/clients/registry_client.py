@@ -41,7 +41,7 @@ class RegistryClient:
             logger.error(f"Error fetching repositories: {e}")
             raise Exception(f"Failed to fetch repositories: {str(e)}")
     
-    def get_single_repository_tags(self, repository: str) -> List[str]:
+    def get_tags_for_repository(self, repository: str) -> List[str]:
         try:
             url = f"{self.registry_url}/v2/{repository}/tags/list"
             response = self.session.get(url)
@@ -68,9 +68,6 @@ class RegistryClient:
 
             manifest = response.json()
             media_type = manifest.get('mediaType', '')
-
-            print(f"Media type for {repository}:{tag_name} is {media_type}")
-            print(f"Manifest content: {manifest}")
             
             manifest["digest"] = response.headers.get('Docker-Content-Digest')
             
@@ -110,68 +107,6 @@ class RegistryClient:
             logger.error(f"Error fetching tag {repository}:{tag_name}: {e}")
             raise Exception(f"Failed to fetch tag {repository}:{tag_name}: {str(e)}")
 
-    def delete_tag_and_image(registry_url, repo_name, tag_name, digest, container_name='docker-registry-platform-registry-1', username='admin', password='Admin123'):
-        auth = HTTPBasicAuth(username, password)
-        
-        try:
-            # Remove tag reference
-            rm_tag_result = subprocess.run(
-                ['docker', 'exec', container_name, 
-                'rm', '-rf', f'/var/lib/registry/docker/registry/v2/repositories/{repo_name}/_manifests/tags/{tag_name}'],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            if rm_tag_result.returncode != 0:
-                raise Exception(f"Failed to remove tag reference: {rm_tag_result.stderr}")
-            
-            # Remove manifest
-            delete_response = requests.delete(
-                f'{registry_url}/v2/{repo_name}/manifests/{digest}',
-                auth=auth
-            )
-            
-            if delete_response.status_code not in [200, 202, 204, 404]:
-                raise Exception(f"Failed to delete manifest: {delete_response.status_code} - {delete_response.text}")
-            
-            # Garbage collection
-            gc_result = subprocess.run(
-                ['docker', 'exec', container_name, 
-                'bin/registry', 'garbage-collect', '/etc/docker/registry/config.yml'],
-                capture_output=True,
-                text=True,
-                timeout=60
-            )
-            
-            if gc_result.returncode != 0:
-                raise Exception(f"Garbage collection failed: {gc_result.stderr}")
-            
-            # Restart registry
-            restart_result = subprocess.run(
-                ['docker', 'restart', container_name],
-                capture_output=True,
-                text=True,
-                timeout=30
-            )
-            
-            if restart_result.returncode != 0:
-                raise Exception(f"Registry restart failed: {restart_result.stderr}")
-            
-            return {
-                'success': True,
-                'digest': digest,
-                'tag_removed': True,
-                'gc_output': gc_result.stdout,
-                'restart_output': restart_result.stdout
-            }
-            
-        except subprocess.TimeoutExpired:
-            raise Exception("Operation timed out")
-        except Exception as e:
-            raise Exception(f"Error during deletion: {str(e)}")
-
-    
     def check_health(self) -> bool:
         try:
             url = f"{self.registry_url}/v2/"
