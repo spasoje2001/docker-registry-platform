@@ -1,0 +1,70 @@
+<!-- Header with Create Button -->
+<div class="d-flex justify-content-between align-items-start mb-4">
+    <form method="get" class="flex-grow-1 me-3">
+        <input type="hidden" name="section" value="admins">
+        <div class="input-group">
+            <span class="input-group-text"><i class="bi bi-search"></i></span>
+            <input
+                type="text"
+                class="form-control"
+                name="q"
+                value="{{ q }}"
+                placeholder="Search admins by username or email..."
+            >
+            <button class="btn btn-primary" type="submit">Search</button>
+        </div>
+        {% if q %}
+            <div class="form-text">
+                Showing results for: <b>{{ q }}</b>
+            </div>
+        {% endif %}
+    </form>
+    <a href="{% url 'accounts:create_admin' %}" class="btn btn-success">
+        <i class="bi bi-plus-circle me-1"></i> Create Admin
+    </a>
+</div>
+
+<!-- Admins table -->
+<div class="card shadow-sm border-0">
+    <div class="card-body p-0">
+        <div class="table-responsive">
+            <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                    <tr>
+                        <th class="ps-3">Username</th>
+                        <th>Email</th>
+                        <th>Joined</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for admin in admins %}
+                    <tr>
+                        <td class="ps-3 fw-semibold">
+                            {{ admin.username }}
+                            {% if admin.username == request.user.username %}
+                                <span class="badge bg-primary ms-2">You</span>
+                            {% endif %}
+                        </td>
+                        <td>{{ admin.email }}</td>
+                        <td class="text-muted">
+                            {{ admin.date_joined|date:"M d, Y" }}
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="3" class="text-center text-muted py-4">
+                            No admins found.
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<div class="alert alert-info mt-4">
+    <i class="bi bi-info-circle me-2"></i>
+    <strong>Note:</strong> Only super administrators can create new admin users.
+    New admins will be required to change their password on first login.
+</div>

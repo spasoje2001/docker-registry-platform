@@ -70,3 +70,5 @@ admin_password.txt
 
 # ===== Queries ====
 queries/
+
+/auth/htpasswd

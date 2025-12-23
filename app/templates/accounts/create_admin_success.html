@@ -1,0 +1,80 @@
+{% extends "base.html" %}
+{% block title %}Admin Created Successfully{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 700px;">
+
+    <div class="text-center mb-4">
+        <div class="text-success mb-3">
+            <i class="bi bi-check-circle" style="font-size: 4rem;"></i>
+        </div>
+        <h2 class="h3">Admin User Created Successfully</h2>
+        <p class="text-muted">
+            The admin user <strong>{{ username }}</strong> has been created.
+        </p>
+    </div>
+
+    <div class="card shadow-sm border-0 mb-4">
+        <div class="card-header bg-warning text-dark">
+            <i class="bi bi-exclamation-triangle me-2"></i>
+            <strong>Important: Save These Credentials</strong>
+        </div>
+        <div class="card-body">
+            <p class="mb-3">
+                The password below will only be shown <strong>once</strong>.
+                Make sure to copy it and securely share it with the new admin.
+            </p>
+
+            <div class="alert alert-light border">
+                <div class="mb-2">
+                    <strong>Username:</strong>
+                    <code class="ms-2">{{ username }}</code>
+                </div>
+                <div class="d-flex align-items-center">
+                    <strong class="me-2">Password:</strong>
+                    <code id="password-display" class="flex-grow-1">{{ password }}</code>
+                    <button
+                        class="btn btn-sm btn-outline-primary ms-2"
+                        id="copy-btn"
+                        onclick="copyPassword()">
+                        <i class="bi bi-clipboard"></i> Copy
+                    </button>
+                </div>
+            </div>
+
+            <div class="alert alert-info mb-0">
+                <i class="bi bi-info-circle me-2"></i>
+                The admin will be required to change this password on their first login.
+            </div>
+        </div>
+    </div>
+
+    <div class="text-center">
+        <a href="{% url 'accounts:admin_panel' %}?section=admins"
+           class="btn btn-primary">
+            <i class="bi bi-arrow-left me-1"></i> Back to Admin Management
+        </a>
+    </div>
+
+</div>
+
+<script>
+function copyPassword() {
+    const password = document.getElementById('password-display').textContent;
+    const btn = document.getElementById('copy-btn');
+
+    navigator.clipboard.writeText(password).then(() => {
+        const originalHTML = btn.innerHTML;
+        btn.innerHTML = '<i class="bi bi-check"></i> Copied!';
+        btn.classList.remove('btn-outline-primary');
+        btn.classList.add('btn-success');
+
+        setTimeout(() => {
+            btn.innerHTML = originalHTML;
+            btn.classList.remove('btn-success');
+            btn.classList.add('btn-outline-primary');
+        }, 2000);
+    });
+}
+</script>
+{% endblock %}

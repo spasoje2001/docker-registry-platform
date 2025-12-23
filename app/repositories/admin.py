@@ -24,13 +24,23 @@ class RepositoryAdmin(admin.ModelAdmin):
         ),
     )
 
+
 @admin.register(Tag)
 class TagAdmin(admin.ModelAdmin):
-    list_display = ("full_tag_name", "digest", "size_display", "repository", "created_at")
+    list_display = (
+        "full_tag_name",
+        "digest",
+        "size_display",
+        "repository",
+        "created_at")
 
     list_filter = ("created_at",)
 
-    search_fields = ("name", "digest", "repository__name", "repository__owner__username")
+    search_fields = (
+        "name",
+        "digest",
+        "repository__name",
+        "repository__owner__username")
 
     readonly_fields = ("created_at",)
 

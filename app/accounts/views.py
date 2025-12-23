@@ -10,40 +10,72 @@ from django.contrib.auth import update_session_auth_hash
 from django.core.mail import send_mail
 from django.conf import settings
 
-from .forms import ChangePasswordForm, RequestEmailChangeForm
+from .forms import ChangePasswordForm, RequestEmailChangeForm, CreateAdminForm
 from .forms import ConfirmEmailChangeForm, EditProfileForm
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
 from django.http import JsonResponse
 from django.views.decorators.http import require_POST
-from .utils import generate_verification_code, store_email_change_request, delete_email_change_request, \
+from .utils import (
+    generate_verification_code,
+    store_email_change_request,
+    delete_email_change_request,
     get_email_change_request
+)
+
+from repositories.forms import RepositoryForm
+from repositories.models import Repository
+
 
 User = get_user_model()
 
 
+@login_required
 def admin_panel(request):
-    if not request.user.is_authenticated:
-        return redirect("accounts:login")
-
-    if request.user.role not in ["admin", "super_admin"]:
-        messages.warning(
-            request,
-            "You do not have permission to access this page."
-        )
+    """
+    Main admin panel with tabs for different management sections.
+    All admins see User Management.
+    Only super admins see Admin Management tab.
+    """
+    if not request.user.is_admin:
+        messages.warning(request, "You do not have permission to access this page.")
         return redirect("core:home")
 
+    section = request.GET.get('section', 'users')
+
+    if section == 'admins' and not request.user.is_super_admin:
+        messages.warning(request, "You do not have permission to access this section.")
+        return redirect("accounts:admin_panel")
+
     q = request.GET.get("q", "").strip()
-    users = User.objects.filter(role=User.Role.USER).order_by("username")
-    if q:
-        users = users.filter(
-            Q(username__icontains=q) | Q(email__icontains=q)
-        )
-    return render(request, "accounts/admin_panel.html", {"users": users, "q": q})
+
+    context = {
+        'current_section': section,
+        'is_super_admin': request.user.is_super_admin,
+        'q': q
+    }
+
+    if section == 'users':
+        users = User.objects.filter(role=User.Role.USER).order_by("username")
+        if q:
+            users = users.filter(Q(username__icontains=q) | Q(email__icontains=q))
+        context['users'] = users
+
+    elif section == 'admins':
+        admins = User.objects.filter(
+            role__in=[User.Role.ADMIN, User.Role.SUPER_ADMIN]
+        ).order_by('-role', 'username')  # Super admins first
+        if q:
+            admins = admins.filter(Q(username__icontains=q) | Q(email__icontains=q))
+        context['admins'] = admins
+
+    return render(request, "accounts/admin_panel.html", context)
+
 
 @login_required
 @require_POST
 def update_badges(request, user_id):
-    if request.user.role not in ["admin", "super_admin"]:
+    """Update user badges (Verified Publisher, Sponsored OSS)."""
+    if not request.user.is_admin:
         return JsonResponse({"ok": False, "error": "forbidden"}, status=403)
 
     target = get_object_or_404(User, id=user_id)
@@ -59,7 +91,81 @@ def update_badges(request, user_id):
     setattr(target, badge, bool_value)
     target.save(update_fields=[badge])
 
-    return JsonResponse({"ok": True, "user_id": target.id, "badge": badge, "value": bool_value})
+    return JsonResponse({
+        "ok": True,
+        "user_id": target.id,
+        "badge": badge,
+        "value": bool_value
+    })
+
+
+@login_required
+def create_admin(request):
+    """
+    Create a new admin user. Only accessible by super admin.
+    Displays form with option to generate random password.
+    """
+    if not request.user.is_super_admin:
+        messages.warning(request, "Only super administrators can create admin users.")
+        return redirect("accounts:admin_panel")
+
+    if request.method == 'POST':
+        form = CreateAdminForm(request.POST)
+        if form.is_valid():
+            admin = form.save(commit=False)
+            admin.role = User.Role.ADMIN
+            admin.must_change_password = True
+
+            # Handle password
+            if form.cleaned_data['generate_password']:
+                password = CreateAdminForm.generate_random_password()
+            else:
+                password = form.cleaned_data['password']
+
+            admin.set_password(password)
+            admin.save()
+
+            messages.success(
+                request,
+                f'Admin user "{admin.username}" created successfully.'
+            )
+
+            # Store password in session to display on next page
+            request.session['new_admin_password'] = password
+            request.session['new_admin_username'] = admin.username
+
+            return redirect('accounts:create_admin_success')
+        else:
+            messages.error(request, 'Please correct the errors below.')
+    else:
+        form = CreateAdminForm()
+
+    return render(request, 'accounts/create_admin.html', {
+        'form': form
+    })
+
+
+@login_required
+def create_admin_success(request):
+    """
+    Display success page with generated credentials.
+    Password is shown only once and cleared from session.
+    """
+    if not request.user.is_super_admin:
+        return redirect("accounts:admin_panel")
+
+    password = request.session.pop('new_admin_password', None)
+    username = request.session.pop('new_admin_username', None)
+
+    if not password or not username:
+        messages.info(request, "No new admin credentials to display.")
+        return redirect('accounts:admin_panel')
+
+    return render(request, 'accounts/create_admin_success.html', {
+        'username': username,
+        'password': password
+    })
+
 
 def login_view(request):
     if request.user.is_authenticated:
@@ -90,10 +196,11 @@ def login_view(request):
         form = CustomAuthenticationForm(request)
 
     return render(
-            request,
-            "accounts/login.html",
-            {"form": form, "next": next_url},
-        )
+        request,
+        "accounts/login.html",
+        {"form": form, "next": next_url},
+    )
+
 
 def logout_view(request):
     logout(request)
@@ -103,6 +210,7 @@ def logout_view(request):
         "You have successfully logged out!"
     )
     return redirect("core:home")
+
 
 def register(request):
     if request.user.is_authenticated:
@@ -162,7 +270,33 @@ class CustomPasswordChangeView(auth_views.PasswordChangeView):
 
 @login_required
 def profile_view(request):
-    return render(request, "accounts/profile.html", {"user": request.user})
+    active_tab = "repos"
+    form_data = request.session.pop("repo_form_data", None)
+    form_errors = request.session.pop("repo_form_errors", None)
+    repositories = Repository.objects.filter(
+        owner=request.user,
+        is_official=False
+    ).order_by('-updated_at')
+
+    if form_data:
+        repo_form = RepositoryForm(form_data, request=request)
+        repo_form._errors = form_errors
+        active_tab = "new_repo"
+    else:
+        repo_form = RepositoryForm(request=request)
+        active_tab = "repos"
+
+    return render(
+        request,
+        "accounts/profile.html",
+        {
+            "user": request.user,
+            "repo_form": repo_form,
+            "active_tab": active_tab,
+            "repositories": repositories,
+            "from_profile": True,
+        }
+    )
 
 
 @login_required
@@ -241,7 +375,7 @@ def email_change(request):
                     f'Please check your inbox.'
                 )
                 return redirect('accounts:email_change_confirm')
-            except Exception as e:
+            except Exception:
                 messages.error(
                     request,
                     'Failed to send verification email. Please try again.'
