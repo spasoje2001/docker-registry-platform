@@ -170,7 +170,7 @@ docker-compose exec db psql -U postgres -d dockerhub
 
 Create htpasswd file locally using Docker htpasswd image.
 
-```docker run --rm httpd:2.4-alpine htpasswd -Bbn admin Admin123 > auth/htpasswd```
+```docker run --rm --entrypoint htpasswd httpd:2 -Bbn admin Admin123 > auth/htpasswd```
 
 Do not edit file manually. Encode it to UTF-8 LF.
 

@@ -10,7 +10,6 @@ from django.urls import reverse
 
 
 def repository_list(request):
-    user = request.user
     service = RepositoryService()
     repositories = []
 
@@ -81,8 +80,8 @@ def repository_create(request):
 
         # Form invalid
         if from_profile:
-            request.session["repo_form_data"] = request.POST
-            request.session["repo_form_errors"] = form.errors
+            request.session["form_data"] = request.POST
+            request.session["form_errors"] = form.errors
             return redirect("accounts:profile")
 
         return render(
@@ -155,18 +154,15 @@ def repository_update(request, owner_username, name):
     form = RepositoryForm(request.POST or None, instance=repo, request=request)
 
     if request.method == "POST" and form.is_valid():
-        updated_repo = form.save()  # Save and get updated instance
+        updated_repo = form.save()
         messages.success(
             request,
             f'Repository "{updated_repo.full_name}" updated successfully!'
         )
 
-        # Check if repo became official after update
         if updated_repo.is_official:
-            # Redirect to official detail page
             return redirect("repositories:detail_official", name=updated_repo.name)
         else:
-            # Redirect to user detail page
             url = reverse(
                 "repositories:detail",
                 kwargs={
@@ -195,7 +191,6 @@ def repository_update_official(request, name):
     """Edit official repository (only admins)"""
     repo = get_object_or_404(Repository, name=name, is_official=True)
 
-    # Permission check - only admins can edit official repos
     if not request.user.is_admin:
         messages.error(request, "Only admins can edit official repositories.")
         return redirect("repositories:detail_official", name=repo.name)
@@ -210,9 +205,7 @@ def repository_update_official(request, name):
             f'Repository "{updated_repo.full_name}" updated successfully!'
         )
 
-        # Check if repo is no longer official after update
         if not updated_repo.is_official:
-            # Redirect to user detail page
             url = reverse(
                 "repositories:detail",
                 kwargs={
@@ -224,7 +217,6 @@ def repository_update_official(request, name):
                 url += "?from_profile=1"
             return redirect(url)
         else:
-            # Still official, redirect to official detail
             return redirect("repositories:detail_official", name=updated_repo.name)
 
     return render(
@@ -251,6 +243,12 @@ def repository_delete(request, owner_username, name):
             name=repo.name
         )
 
+    commands = {
+        'delete_repo': f'docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}',
+        'gc': 'docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml',
+        'restart': 'docker restart docker-registry-platform-registry-1'
+    }
+
     from_profile = request.GET.get("from_profile")
 
     if request.method == "POST":
@@ -265,7 +263,7 @@ def repository_delete(request, owner_username, name):
     return render(
         request,
         "repositories/repository_confirm_delete.html",
-        {"repository": repo}
+        {"repository": repo, "commands": commands}
     )
 
 
@@ -383,14 +381,6 @@ def tag_create_official(request, name):
         return redirect('repositories:detail_official', name=name)
 
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
-    
-    registry_url = service.registry_client.registry_url
-    commands = {
-        'delete_manifest': f"curl -X DELETE -u admin:Admin123 http://localhost:5000/v2/{repo.name}/manifests/{digest}",
-        'delete_tag': f"docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}/_manifests/tags/{tag_name}",
-        'gc': "docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml",
-        'restart': "docker restart docker-registry-platform-registry-1"
-    }
 
     if request.method == 'POST':
         form = TagForm(request.POST)
@@ -439,6 +429,12 @@ def tag_update(request, owner_username, name, tag_name):
     tag = get_object_or_404(repository.tags, name=tag_name)
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
 
+    manifest = {}
+    try:
+        manifest = service.get_manifest(repository.name, tag.name)
+    except Exception as e:
+        messages.error(request, f'Error fetching manifest for tag "{tag.name}": {e}')
+
     if request.method == 'POST':
         form = TagForm(request.POST, instance=tag)
         if form.is_valid():
@@ -468,6 +464,7 @@ def tag_update(request, owner_username, name, tag_name):
             'form': form,
             'repository': repository,
             'tag': tag,
+            'manifest': manifest,
             'title': f'Edit Tag {tag.name} for {repository.full_name}',
             'from_profile': from_profile,
         }
@@ -485,13 +482,13 @@ def tag_update_official(request, name, tag_name):
         return redirect('repositories:detail_official', name=name)
 
     tag = get_object_or_404(repository.tags, name=tag_name)
-    manifest = {}
 
+    manifest = {}
     try:
         manifest = service.get_manifest(repository.name, tag.name)
     except Exception as e:
         messages.error(request, f'Error fetching manifest for tag "{tag.name}": {e}')
-        manifest = {}
+
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
 
     if request.method == 'POST':
@@ -521,16 +518,14 @@ def tag_update_official(request, name, tag_name):
 
 
 @login_required
-def tag_delete(request, owner_username, name, tag_name):
+def tag_delete(request, owner_username, name, tag_name, digest):
     """Delete tag from user repository (only owner)"""
     repo = get_object_or_404(
         Repository,
         owner__username=owner_username,
-        name=name,
-        is_official=False
+        name=name
     )
 
-    # Permission check
     if repo.owner != request.user:
         messages.error(request, "You cannot delete tags from this repository.")
         return redirect(
@@ -538,9 +533,15 @@ def tag_delete(request, owner_username, name, tag_name):
             owner_username=repo.owner.username,
             name=repo.name,
         )
-
     tag = get_object_or_404(repo.tags, name=tag_name)
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
+
+    commands = {
+        'delete_manifest': f"curl -X DELETE -u admin:Admin123 http://localhost:5000/v2/{repo.name}/manifests/{digest}",
+        'delete_tag': f"docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}/_manifests/tags/{tag_name}",
+        'gc': "docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml",
+        'restart': "docker restart docker-registry-platform-registry-1"
+    }
 
     if request.method == "POST":
         tag.delete()
@@ -567,6 +568,7 @@ def tag_delete(request, owner_username, name, tag_name):
         {
             "repository": repo,
             "tag": tag,
+            "commands": commands,
             "from_profile": from_profile,
         },
     )
@@ -586,6 +588,12 @@ def tag_delete_official(request, name, tag_name):
 
     tag = get_object_or_404(repo.tags, name=tag_name)
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
+    commands = {
+        'delete_manifest': f"curl -X DELETE -u admin:Admin123 http://localhost:5000/v2/{repo.name}/manifests/{digest}",
+        'delete_tag': f"docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}/_manifests/tags/{tag_name}",
+        'gc': "docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml",
+        'restart': "docker restart docker-registry-platform-registry-1"
+    }
 
     if request.method == "POST":
         tag.delete()
@@ -601,6 +609,7 @@ def tag_delete_official(request, name, tag_name):
         {
             "repository": repo,
             "tag": tag,
+            "commands": commands,
             "from_profile": from_profile,
         },
     )

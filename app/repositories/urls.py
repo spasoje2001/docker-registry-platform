@@ -22,6 +22,10 @@ urlpatterns = [
         "<str:name>/tags/<str:tag_name>/edit/",
         views.tag_update_official,
         name="tag_update_official"),
+    
+    # ===== REGULAR REPOS =====
+    path("<str:owner_username>/<str:name>/", views.repository_detail, name="detail"),
+    path("<str:owner_username>/<str:name>/edit/", views.repository_update, name="update"),
     path(
         "<str:owner_username>/<str:name>/delete/",
         views.repository_delete,

@@ -4,7 +4,6 @@ import re
 
 
 class RepositoryForm(forms.ModelForm):
-
     initial_tag = forms.CharField(
         max_length=255,
         initial='latest',
@@ -57,11 +56,27 @@ class RepositoryForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         name = cleaned_data.get('name')
+        initial_tag = cleaned_data.get('initial_tag')
         is_official = cleaned_data.get('is_official', False)
         visibility = cleaned_data.get('visibility')
 
+        if name:
+            name = name.strip()
+            cleaned_data['name'] = name
+    
+        if initial_tag:
+            initial_tag = initial_tag.strip()
+            cleaned_data['initial_tag'] = initial_tag
+        
         if not name:
-            return cleaned_data
+            raise forms.ValidationError({
+                'name': 'Repository name is required.'
+            })
+        
+        if not self.instance.pk and not initial_tag:
+            raise forms.ValidationError({
+                'initial_tag': 'Initial tag is required.'
+            })
 
         if is_official and visibility == Repository.VisibilityChoices.PRIVATE:
             self.add_error(
