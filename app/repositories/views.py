@@ -304,7 +304,7 @@ def repository_delete_official(request, name):
 @login_required
 def tag_create(request, owner_username, name):
     """Create new tag for user repository (only owner)"""
-    repository = get_object_or_404(
+    repo = get_object_or_404(
         Repository,
         owner__username=owner_username,
         name=name,
@@ -312,7 +312,7 @@ def tag_create(request, owner_username, name):
     )
 
     # Permission check
-    if repository.owner != request.user:
+    if repo.owner != request.user:
         messages.error(request, 'You cannot create tags for this repository.')
         return redirect(
             'repositories:detail',
@@ -327,10 +327,10 @@ def tag_create(request, owner_username, name):
         
         if form.is_valid():
             tag = form.save(commit=False)
-            tag.repository = repository
+            tag.repository = repo
 
             # Check for duplicate tag name
-            if Tag.objects.filter(repository=repository, name=tag.name).exists():
+            if Tag.objects.filter(repository=repo, name=tag.name).exists():
                 form.add_error(
                     'name',
                     f'Tag "{tag.name}" already exists for this repository.'
@@ -361,8 +361,8 @@ def tag_create(request, owner_username, name):
         'tags/tag_form.html',
         {
             'form': form,
-            'repository': repository,
-            'title': f'New Tag for {repository.full_name}',
+            'repository': repo,
+            'title': f'New Tag for {repo.full_name}',
             'from_profile': from_profile,
         }
     )
@@ -371,7 +371,7 @@ def tag_create(request, owner_username, name):
 @login_required
 def tag_create_official(request, name):
     """Create new tag for official repository (only admins)"""
-    repository = get_object_or_404(Repository, name=name, is_official=True)
+    repo = get_object_or_404(Repository, name=name, is_official=True)
 
     # Permission check - only admins can create tags for official repos
     if not request.user.is_admin:
@@ -386,10 +386,10 @@ def tag_create_official(request, name):
         form = TagForm(request.POST)
         if form.is_valid():
             tag = form.save(commit=False)
-            tag.repository = repository
+            tag.repository = repo
 
             # Check for duplicate tag name
-            if Tag.objects.filter(repository=repository, name=tag.name).exists():
+            if Tag.objects.filter(repository=repo, name=tag.name).exists():
                 form.add_error(
                     'name',
                     f'Tag "{tag.name}" already exists for this repository.'
@@ -400,18 +400,19 @@ def tag_create_official(request, name):
                     request,
                     f'Tag "{tag.name}" created successfully!'
                 )
-                return redirect('repositories:detail_official', name=repository.name)
+                return redirect('repositories:detail_official', name=repo.name)
     else:
         form = TagForm()
 
     return render(
         request,
-        "tags/tag_confirm_delete.html",
+        "tags/tag_form.html",
         {
+            "form": form,
             "repository": repo,
-            "tag": tag,
-            "commands": commands,
-            'from_profile': from_profile},
+            "title": f"New Tag for {repo.full_name}",
+            'from_profile': from_profile
+        },
     )
 
 def tag_update(request, owner_username, name, tag_name):
@@ -550,17 +551,29 @@ def tag_delete(request, owner_username, name, tag_name, digest):
             f'Tag "{tag_name}" deleted from repository "{repo.full_name}".'
         )
 
-        url = reverse(
-            "repositories:detail",
-            kwargs={
-                "owner_username": repo.owner.username,
-                "name": repo.name,
-            },
-        )
-        if from_profile:
-            url += "?from_profile=1"
+        if repo.is_official:
+            url = reverse(
+                "repositories:detail_official",
+                kwargs={
+                    "name": repo.name,
+                },
+            )
+            if from_profile:
+                url += "?from_profile=1"
 
-        return redirect(url)
+            return redirect(url)
+        else:
+            url = reverse(
+                "repositories:detail",
+                kwargs={
+                    "owner_username": repo.owner.username,
+                    "name": repo.name,
+                },
+            )
+            if from_profile:
+                url += "?from_profile=1"
+
+            return redirect(url)
 
     return render(
         request,
