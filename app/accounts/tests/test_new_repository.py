@@ -19,7 +19,8 @@ class ProfileRepoTabTests(TestCase):
             "name": "my-repo",
             "description": "Test repository",
             "visibility": "PUBLIC",
-            "from_profile": "1"
+            "from_profile": "1",
+            "initial_tag": "latest",
         }
 
         response = self.client.post(url, data)
