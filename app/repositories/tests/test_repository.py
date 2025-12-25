@@ -309,6 +309,7 @@ class OfficialRepositoryTests(TestCase):
             "description": "Official Python image",
             "visibility": Repository.VisibilityChoices.PUBLIC,
             "is_official": True,
+            "initial_tag": "latest"
         })
 
         self.assertEqual(response.status_code, 302)
@@ -326,6 +327,7 @@ class OfficialRepositoryTests(TestCase):
             "description": "Official NGINX image",
             "visibility": Repository.VisibilityChoices.PUBLIC,
             "is_official": True,
+            "initial_tag": "latest"
         })
 
         self.assertEqual(response.status_code, 302)
@@ -350,14 +352,19 @@ class OfficialRepositoryTests(TestCase):
             Repository.objects.filter(name="redis", is_official=True).exists()
         )
 
-    def test_official_repo_detail_url(self):
+    @patch('repositories.views.RepositoryService')
+    def test_official_repo_detail_url(self, MockService):
         """Test: official repo accessible via /repositories/<name>/"""
-        Repository.objects.create(
+        repo = Repository.objects.create(
             name="postgres",
             is_official=True,
             visibility=Repository.VisibilityChoices.PUBLIC,
             owner=self.admin
         )
+
+        mock_service_instance = MockService.return_value
+        mock_service_instance.health_check.return_value = True
+        mock_service_instance.list_tags.return_value = []
 
         url = reverse("repositories:detail_official", kwargs={"name": "postgres"})
         response = self.client.get(url)

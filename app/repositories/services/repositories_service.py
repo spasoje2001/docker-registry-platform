@@ -29,23 +29,23 @@ class RepositoryService():
 
         return self.combine_lists(repositories, db_list)
 
-    def list_tags(self, repository: str) -> List[Tag]:
+    def list_tags(self, repo_name: str) -> List[Tag]:
         tags = []
         try:
-            tags = self.registry_client.get_tags_for_repository(repository)
+            tags = self.registry_client.get_tags_for_repository(repo_name)
         except Exception as e:
             print(f"Error fetching tags from registry: {e}")
             raise
 
         db_list = Tag.objects.filter(
-            models.Q(repository=repository)
+            models.Q(repository=repo_name)
         )
 
         return self.cobine_lists(tags, db_list)
     
-    def get_manifest(self, repository: str, tag_name: str) -> Dict:
+    def get_manifest(self, repo_name: str, tag_name: str) -> Dict:
         try:
-            manifest = self.registry_client.get_manifest(repository, tag_name)
+            manifest = self.registry_client.get_manifest(repo_name, tag_name)
             return manifest
         except Exception as e:
             print(f"Error fetching manifest from registry: {e}")

@@ -101,6 +101,7 @@ def repository_create(request):
 
 def repository_detail(request, owner_username, name):
     """Show user repository details"""
+    service = RepositoryService()
     repo = get_object_or_404(
         Repository,
         owner__username=owner_username,
@@ -114,6 +115,7 @@ def repository_detail(request, owner_username, name):
             raise Http404("Repository not found")
 
     tags = repo.tags.all()
+    tags_reg = service.list_tags(repo.name)
     return render(
         request,
         "repositories/repository_detail.html",
@@ -123,8 +125,10 @@ def repository_detail(request, owner_username, name):
 
 def repository_detail_official(request, name):
     """Show official repository details"""
+    service = RepositoryService()
     repo = get_object_or_404(Repository, name=name, is_official=True)
     tags = repo.tags.all()
+    tags_reg = service.list_tags(name)
 
     return render(
         request,
@@ -473,52 +477,6 @@ def tag_update(request, owner_username, name, tag_name):
 
 
 @login_required
-def tag_update_official(request, name, tag_name):
-    """Edit tag for official repository (only admins)"""
-    repository = get_object_or_404(Repository, name=name, is_official=True)
-
-    # Permission check - only admins can edit tags for official repos
-    if not request.user.is_admin:
-        messages.error(request, 'Only admins can edit tags for official repositories.')
-        return redirect('repositories:detail_official', name=name)
-
-    tag = get_object_or_404(repository.tags, name=tag_name)
-
-    manifest = {}
-    try:
-        manifest = service.get_manifest(repository.name, tag.name)
-    except Exception as e:
-        messages.error(request, f'Error fetching manifest for tag "{tag.name}": {e}')
-
-    from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
-
-    if request.method == 'POST':
-        form = TagForm(request.POST, instance=tag)
-        if form.is_valid():
-            form.save()
-            messages.success(
-                request,
-                f'Tag "{tag.name}" updated successfully!'
-            )
-            return redirect('repositories:detail_official', name=repository.name)
-    else:
-        form = TagForm(instance=tag)
-
-    return render(
-        request,
-        'tags/tag_form.html',
-        {
-            'form': form,
-            'repository': repository,
-            'tag': tag,
-            'manifest': manifest,
-            'title': f'Details for {tag.name}',
-            'from_profile': from_profile,
-        }
-    )
-
-
-@login_required
 def tag_delete(request, owner_username, name, tag_name, digest):
     """Delete tag from user repository (only owner)"""
     repo = get_object_or_404(
@@ -588,7 +546,7 @@ def tag_delete(request, owner_username, name, tag_name, digest):
 
 
 @login_required
-def tag_delete_official(request, name, tag_name):
+def tag_delete_official(request, name, tag_name, digest):
     """Delete tag from official repository (only admins)"""
     repo = get_object_or_404(Repository, name=name, is_official=True)
 

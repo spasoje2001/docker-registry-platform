@@ -88,8 +88,8 @@ class TagModelTests(TestCase):
             },
         )
 
-        self.assertEqual(response.status_code, 200)
-
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(repo.tags.filter(name="v1.0").exists())
 
     def test_delete_tag(self):
         """Test: delete tag view"""
@@ -126,24 +126,28 @@ class TagModelTests(TestCase):
             visibility=Repository.VisibilityChoices.PUBLIC
         )
 
-        Tag.objects.create(
+        tag1 = Tag.objects.create(
             repository=repo,
             name='v1.0.0',
             digest='sha256:' + 'a' * 64,
             size=100000000
         )
-        Tag.objects.create(
+        tag2 = Tag.objects.create(
             repository=repo,
             name='latest',
             digest='sha256:' + 'b' * 64,
             size=105000000
         )
-        Tag.objects.create(
+        tag3 = Tag.objects.create(
             repository=repo,
             name='dev',
             digest='sha256:' + 'c' * 64,
             size=110000000
         )
+
+        mock_service_instance = MockService.return_value
+        mock_service_instance.health_check.return_value = True
+        mock_service_instance.list_tags.return_value = [tag1, tag2, tag3]
         
         url = reverse(
             'repositories:detail',
@@ -159,3 +163,132 @@ class TagModelTests(TestCase):
         self.assertContains(response, 'v1.0.0')
         self.assertContains(response, 'latest')
         self.assertContains(response, 'dev')
+
+    @patch('repositories.views.RepositoryService')
+    def test_list_tags_mock_registry(self, MockService):
+        """Unit test: list tags (mock registry response)"""
+        tag1 = Tag.objects.create(
+            name="v1.0",
+            repository=self.repo,
+            digest="sha256:abc123",
+            size=1024
+        )
+        tag2 = Tag.objects.create(
+            name="v2.0",
+            repository=self.repo,
+            digest="sha256:def456",
+            size=2048
+        )
+        tag3 = Tag.objects.create(
+            name="latest",
+            repository=self.repo,
+            digest="sha256:ghi789",
+            size=3072
+        )
+        
+        mock_service_instance = MockService.return_value
+        mock_service_instance.health_check.return_value = True
+        mock_service_instance.list_tags.return_value = [tag1, tag2, tag3]
+        
+        self.client.login(username='user1', password='testpass123')
+        url = reverse('repositories:detail', kwargs={
+            'owner_username': 'user1',
+            'name': 'test-repo'
+        })
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        mock_service_instance.list_tags.assert_called_once_with(self.repo.name)
+        
+        self.assertIn('tags', response.context)
+        tags = response.context['tags']
+        self.assertEqual(len(tags), 3)
+        
+        self.assertContains(response, 'v1.0')
+        self.assertContains(response, 'v2.0')
+        self.assertContains(response, 'latest')
+
+
+class OfficialRepoTagTests(TestCase):
+    """Tests for tag operations on official repositories"""
+
+    def setUp(self):
+        self.client = Client()
+        self.admin = User.objects.create_user(
+            username="admin1",
+            password="testpass123",
+            role=User.Role.ADMIN
+        )
+        self.admin2 = User.objects.create_user(
+            username="admin2",
+            password="testpass123",
+            role=User.Role.ADMIN
+        )
+        self.regular_user = User.objects.create_user(
+            username="user1",
+            password="testpass123",
+            role=User.Role.USER
+        )
+
+        self.official_repo = Repository.objects.create(
+            name="python",
+            is_official=True,
+            visibility=Repository.VisibilityChoices.PUBLIC,
+            owner=self.admin
+        )
+
+    def test_admin_can_create_tag_for_official_repo(self):
+        """Test: admin can create tag for official repository"""
+        self.client.login(username="admin1", password="testpass123")
+        url = reverse(
+            "repositories:tag_create_official",
+            kwargs={"name": "python"}
+        )
+
+        response = self.client.post(url, {
+            "name": "3.12",
+            "digest": "sha256:" + "a" * 64,
+            "size": 100000000
+        })
+
+        self.assertEqual(response.status_code, 302)
+        self.assertTrue(self.official_repo.tags.filter(name="3.12").exists())
+
+    def test_regular_user_cannot_create_tag_for_official_repo(self):
+        """Test: regular user cannot create tag for official repository"""
+        self.client.login(username="user1", password="testpass123")
+        url = reverse(
+            "repositories:tag_create_official",
+            kwargs={"name": "python"}
+        )
+
+        response = self.client.post(url, {
+            "name": "3.10",
+            "digest": "sha256:" + "d" * 64,
+            "size": 100000000
+        })
+
+        # Should redirect with error
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(self.official_repo.tags.filter(name="3.10").exists())
+
+    def test_delete_official_repo_tag(self):
+        """Test: admin can delete tag from official repository"""
+        Tag.objects.create(
+            repository=self.official_repo,
+            name="old-version",
+            digest="sha256:" + "e" * 64,
+            size=100000000
+        )
+
+        self.client.login(username="admin2", password="testpass123")
+        url = reverse(
+            "repositories:tag_delete_official",
+            kwargs={"name": "python", "tag_name": "old-version", "digest": "sha256:" + "e" * 64}
+        )
+
+        response = self.client.post(url)
+
+        self.assertEqual(response.status_code, 302)
+        self.assertFalse(self.official_repo.tags.filter(name="old-version").exists())
