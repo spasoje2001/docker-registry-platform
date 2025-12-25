@@ -164,9 +164,35 @@ docker-compose exec db psql -U postgres -d dockerhub
 # \d tablename - describe table
 # \q           - quit
 ```
-## Running Tests
+### Registry configuration
 
-Run tests inside Docker container:
+### 1. Create htpasswd file
+
+Create htpasswd file locally using Docker htpasswd image.
+
+```docker run --rm --entrypoint htpasswd httpd:2 -Bbn admin Admin123 > auth/htpasswd```
+
+Do not edit file manually. Encode it to UTF-8 LF.
+
+### 2. Test login
+
+```docker login localhost:5000```
+
+Enter the credentials:
+Username: admin
+Password: Admin123
+
+Then, in command prompt, to get all repositories:
+
+```curl -i -u admin:Admin123 http://localhost:5000/v2/_catalog```
+
+or in Powershell:
+
+```(Invoke-WebRequest -Uri "http://localhost:5000/v2/_catalog" -Headers @{Authorization = "Basic $([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('admin:Admin123')))"}).Content```
+
+### Running Tests Locally
+
+**Option A: Inside Docker (recommended)**
 ```bash
 docker-compose exec web python manage.py test
 ```

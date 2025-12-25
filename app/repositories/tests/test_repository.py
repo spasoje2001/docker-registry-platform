@@ -3,6 +3,8 @@ from django.urls import reverse
 from django.db import IntegrityError
 from ..models import Repository
 from django.contrib.auth import get_user_model
+from unittest.mock import patch, MagicMock, Mock
+import requests
 
 User = get_user_model()
 
@@ -56,13 +58,18 @@ class RepositoryModelTests(TestCase):
         with self.assertRaises(IntegrityError):
             Repository.objects.create(name="duplicate-test", owner=self.user1)
 
-    def test_view_own_repository(self):
+    @patch('repositories.views.RepositoryService')
+    def test_view_own_repository(self, MockService):
         """Test: show user's repository"""
         Repository.objects.create(
             name="my-repo",
             owner=self.user1,
             visibility=Repository.VisibilityChoices.PRIVATE,
         )
+
+        mock_service_instance = MockService.return_value
+        mock_service_instance.health_check.return_value = True
+        mock_service_instance.list_tags.return_value = []
 
         self.client.login(username="user1", password="testpass123")
         url = reverse(
@@ -210,6 +217,65 @@ class RepositoryModelTests(TestCase):
                 name="django-best-practices",
                 owner=self.user3,
                 is_official=True)
+        
+    @patch('repositories.views.RepositoryService')
+    def test_list_repositories_mock_registry(self, MockService):
+        """Unit test: list repositories (mock registry response)"""
+        repo1 = Repository.objects.create(
+            name="test-repo-1",
+            owner=self.user1,
+            description="First test repository"
+        )
+        repo2 = Repository.objects.create(
+            name="test-repo-2",
+            owner=self.user1,
+            description="Second test repository"
+        )
+        repo3 = Repository.objects.create(
+            name="other-repo",
+            owner=self.user2,
+            description="Another user's repository"
+        )
+        
+        mock_service_instance = MockService.return_value
+        mock_service_instance.health_check.return_value = True
+        mock_service_instance.list_repositories.return_value = [repo1, repo2, repo3]
+        
+        self.client.login(username='user1', password='testpass123')
+        url = reverse('repositories:list')
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        mock_service_instance.health_check.assert_called_once()
+        mock_service_instance.list_repositories.assert_called_once_with(self.user1)
+        
+        self.assertIn('repositories', response.context)
+        repositories = response.context['repositories']
+        self.assertEqual(len(repositories), 3)
+        
+        self.assertContains(response, 'test-repo-1')
+        self.assertContains(response, 'test-repo-2')
+        self.assertContains(response, 'other-repo')
+        
+        self.assertTemplateUsed(response, 'repositories/repository_list.html')
+
+    @patch('repositories.views.RepositoryService')
+    def test_list_repositories_connection_error(self, MockService):
+        """Test: handle connection error when listing repositories"""
+        mock_service_instance = MockService.return_value
+        mock_service_instance.health_check.return_value = False
+        
+        self.client.login(username='user1', password='testpass123')
+        url = reverse('repositories:list')
+        response = self.client.get(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        messages_list = list(response.context['messages'])
+        self.assertTrue(any('unavailable' in str(msg).lower() or 'error' in str(msg).lower() 
+                           for msg in messages_list))
+
 
 
 class OfficialRepositoryTests(TestCase):
@@ -243,6 +309,7 @@ class OfficialRepositoryTests(TestCase):
             "description": "Official Python image",
             "visibility": Repository.VisibilityChoices.PUBLIC,
             "is_official": True,
+            "initial_tag": "latest"
         })
 
         self.assertEqual(response.status_code, 302)
@@ -260,6 +327,7 @@ class OfficialRepositoryTests(TestCase):
             "description": "Official NGINX image",
             "visibility": Repository.VisibilityChoices.PUBLIC,
             "is_official": True,
+            "initial_tag": "latest"
         })
 
         self.assertEqual(response.status_code, 302)
@@ -284,14 +352,19 @@ class OfficialRepositoryTests(TestCase):
             Repository.objects.filter(name="redis", is_official=True).exists()
         )
 
-    def test_official_repo_detail_url(self):
+    @patch('repositories.views.RepositoryService')
+    def test_official_repo_detail_url(self, MockService):
         """Test: official repo accessible via /repositories/<name>/"""
-        Repository.objects.create(
+        repo = Repository.objects.create(
             name="postgres",
             is_official=True,
             visibility=Repository.VisibilityChoices.PUBLIC,
             owner=self.admin
         )
+
+        mock_service_instance = MockService.return_value
+        mock_service_instance.health_check.return_value = True
+        mock_service_instance.list_tags.return_value = []
 
         url = reverse("repositories:detail_official", kwargs={"name": "postgres"})
         response = self.client.get(url)

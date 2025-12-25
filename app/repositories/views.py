@@ -5,22 +5,22 @@ from django.http import Http404
 from django.db import models
 from .models import Repository, Tag
 from .forms import RepositoryForm, TagForm
+from .services.repositories_service import RepositoryService
 from django.urls import reverse
 
 
 def repository_list(request):
-    """List of all public repositories + user's private repositories"""
-    user = request.user
-    if user.is_authenticated:
-        repositories = Repository.objects.filter(
-            models.Q(visibility=Repository.VisibilityChoices.PUBLIC)
-            | models.Q(owner=user)
-        ).order_by('-updated_at')
-    else:
-        repositories = Repository.objects.filter(
-            visibility=Repository.VisibilityChoices.PUBLIC
-        ).order_by('-updated_at')
+    service = RepositoryService()
+    repositories = []
 
+    if not service.health_check():
+        messages.error(request, "Registry is unavailable at this moment. Please try again later.")
+    else:
+        try:
+            repositories = service.list_repositories(request.user)
+        except Exception as e:
+            messages.error(request, "Error fetching repositories from registry.")
+            
     return render(
         request,
         "repositories/repository_list.html",
@@ -39,6 +39,10 @@ def repository_create(request):
     if request.method == "POST":
         form = RepositoryForm(request.POST, request=request)
         if form.is_valid():
+            name = form.cleaned_data['name']
+            is_official = form.cleaned_data.get('is_official', False)
+            tag_name = form.cleaned_data.get('initial_tag', 'latest')
+
             repo = form.save(commit=False)
             repo.owner = request.user
 
@@ -56,6 +60,15 @@ def repository_create(request):
 
             repo.save()
 
+            try:
+                Tag.objects.create(name=tag_name, repository=repo)
+            except Exception as e:
+                form.add_error(None, f"Error creating initial tag: {e}")
+                return render(
+                    request,
+                    "repositories/repository_form.html",
+                    {"form": form, "title": "New Repository"})
+
             messages.success(
                 request,
                 f'Repository "{repo.full_name}" successfully created!'
@@ -67,8 +80,8 @@ def repository_create(request):
 
         # Form invalid
         if from_profile:
-            request.session["repo_form_data"] = request.POST
-            request.session["repo_form_errors"] = form.errors
+            request.session["form_data"] = request.POST
+            request.session["form_errors"] = form.errors
             return redirect("accounts:profile")
 
         return render(
@@ -88,6 +101,7 @@ def repository_create(request):
 
 def repository_detail(request, owner_username, name):
     """Show user repository details"""
+    service = RepositoryService()
     repo = get_object_or_404(
         Repository,
         owner__username=owner_username,
@@ -101,6 +115,7 @@ def repository_detail(request, owner_username, name):
             raise Http404("Repository not found")
 
     tags = repo.tags.all()
+    # tags_reg = service.list_tags(repo.name)
     return render(
         request,
         "repositories/repository_detail.html",
@@ -110,8 +125,10 @@ def repository_detail(request, owner_username, name):
 
 def repository_detail_official(request, name):
     """Show official repository details"""
+    service = RepositoryService()
     repo = get_object_or_404(Repository, name=name, is_official=True)
     tags = repo.tags.all()
+    # tags_reg = service.list_tags(name)
 
     return render(
         request,
@@ -122,13 +139,11 @@ def repository_detail_official(request, name):
 
 @login_required
 def repository_update(request, owner_username, name):
-    """Edit user repository (only owner)"""
-    repo = get_object_or_404(
-        Repository,
-        owner__username=owner_username,
-        name=name,
-        is_official=False
-    )
+    repo = None
+    if owner_username == 'official':
+        repo = get_object_or_404(Repository, name=name, is_official=True)
+    else:
+        repo = get_object_or_404(Repository, owner__username=owner_username, name=name, is_official=False)
 
     # Permission check
     if repo.owner != request.user:
@@ -143,18 +158,15 @@ def repository_update(request, owner_username, name):
     form = RepositoryForm(request.POST or None, instance=repo, request=request)
 
     if request.method == "POST" and form.is_valid():
-        updated_repo = form.save()  # Save and get updated instance
+        updated_repo = form.save()
         messages.success(
             request,
             f'Repository "{updated_repo.full_name}" updated successfully!'
         )
 
-        # Check if repo became official after update
         if updated_repo.is_official:
-            # Redirect to official detail page
             return redirect("repositories:detail_official", name=updated_repo.name)
         else:
-            # Redirect to user detail page
             url = reverse(
                 "repositories:detail",
                 kwargs={
@@ -183,7 +195,6 @@ def repository_update_official(request, name):
     """Edit official repository (only admins)"""
     repo = get_object_or_404(Repository, name=name, is_official=True)
 
-    # Permission check - only admins can edit official repos
     if not request.user.is_admin:
         messages.error(request, "Only admins can edit official repositories.")
         return redirect("repositories:detail_official", name=repo.name)
@@ -198,9 +209,7 @@ def repository_update_official(request, name):
             f'Repository "{updated_repo.full_name}" updated successfully!'
         )
 
-        # Check if repo is no longer official after update
         if not updated_repo.is_official:
-            # Redirect to user detail page
             url = reverse(
                 "repositories:detail",
                 kwargs={
@@ -212,29 +221,22 @@ def repository_update_official(request, name):
                 url += "?from_profile=1"
             return redirect(url)
         else:
-            # Still official, redirect to official detail
             return redirect("repositories:detail_official", name=updated_repo.name)
 
     return render(
         request,
         "repositories/repository_form.html",
-        {
-            "form": form,
-            "repository": repo,
-            "title": f"Edit {repo.full_name}",
-        },
+        {"form": form, "repository": repo, "title": "Edit repository"},
     )
 
 
 @login_required
 def repository_delete(request, owner_username, name):
-    """Delete user repository (only owner)"""
-    repo = get_object_or_404(
-        Repository,
-        owner__username=owner_username,
-        name=name,
-        is_official=False
-    )
+    repo = None
+    if owner_username == 'official':
+        repo = get_object_or_404(Repository, name=name, is_official=True)
+    else:
+        repo = get_object_or_404(Repository, owner__username=owner_username, name=name, is_official=False)
 
     # Permission check
     if repo.owner != request.user:
@@ -244,6 +246,12 @@ def repository_delete(request, owner_username, name):
             owner_username=repo.owner.username,
             name=repo.name
         )
+
+    commands = {
+        'delete_repo': f'docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}',
+        'gc': 'docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml',
+        'restart': 'docker restart docker-registry-platform-registry-1'
+    }
 
     from_profile = request.GET.get("from_profile")
 
@@ -259,7 +267,7 @@ def repository_delete(request, owner_username, name):
     return render(
         request,
         "repositories/repository_confirm_delete.html",
-        {"repository": repo}
+        {"repository": repo, "commands": commands}
     )
 
 
@@ -275,6 +283,12 @@ def repository_delete_official(request, name):
 
     from_profile = request.GET.get("from_profile")
 
+    commands = {
+        'delete_repo': f'docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}',
+        'gc': 'docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml',
+        'restart': 'docker restart docker-registry-platform-registry-1'
+    }
+
     if request.method == "POST":
         repo_name = repo.full_name
         repo.delete()
@@ -287,14 +301,14 @@ def repository_delete_official(request, name):
     return render(
         request,
         "repositories/repository_confirm_delete.html",
-        {"repository": repo}
+        {"repository": repo, "commands": commands}
     )
 
 
 @login_required
 def tag_create(request, owner_username, name):
     """Create new tag for user repository (only owner)"""
-    repository = get_object_or_404(
+    repo = get_object_or_404(
         Repository,
         owner__username=owner_username,
         name=name,
@@ -302,7 +316,7 @@ def tag_create(request, owner_username, name):
     )
 
     # Permission check
-    if repository.owner != request.user:
+    if repo.owner != request.user:
         messages.error(request, 'You cannot create tags for this repository.')
         return redirect(
             'repositories:detail',
@@ -314,12 +328,13 @@ def tag_create(request, owner_username, name):
 
     if request.method == 'POST':
         form = TagForm(request.POST)
+        
         if form.is_valid():
             tag = form.save(commit=False)
-            tag.repository = repository
+            tag.repository = repo
 
             # Check for duplicate tag name
-            if Tag.objects.filter(repository=repository, name=tag.name).exists():
+            if Tag.objects.filter(repository=repo, name=tag.name).exists():
                 form.add_error(
                     'name',
                     f'Tag "{tag.name}" already exists for this repository.'
@@ -330,11 +345,12 @@ def tag_create(request, owner_username, name):
                     request,
                     f'Tag "{tag.name}" created successfully!'
                 )
-
+                
+    
                 url = reverse(
-                    'repositories:detail',
-                    kwargs={
-                        'owner_username': owner_username,
+                        'repositories:detail',
+                        kwargs={
+                            'owner_username': owner_username,
                         'name': name
                     }
                 )
@@ -349,8 +365,8 @@ def tag_create(request, owner_username, name):
         'tags/tag_form.html',
         {
             'form': form,
-            'repository': repository,
-            'title': f'New Tag for {repository.full_name}',
+            'repository': repo,
+            'title': f'New Tag for {repo.full_name}',
             'from_profile': from_profile,
         }
     )
@@ -359,7 +375,7 @@ def tag_create(request, owner_username, name):
 @login_required
 def tag_create_official(request, name):
     """Create new tag for official repository (only admins)"""
-    repository = get_object_or_404(Repository, name=name, is_official=True)
+    repo = get_object_or_404(Repository, name=name, is_official=True)
 
     # Permission check - only admins can create tags for official repos
     if not request.user.is_admin:
@@ -374,10 +390,10 @@ def tag_create_official(request, name):
         form = TagForm(request.POST)
         if form.is_valid():
             tag = form.save(commit=False)
-            tag.repository = repository
+            tag.repository = repo
 
             # Check for duplicate tag name
-            if Tag.objects.filter(repository=repository, name=tag.name).exists():
+            if Tag.objects.filter(repository=repo, name=tag.name).exists():
                 form.add_error(
                     'name',
                     f'Tag "{tag.name}" already exists for this repository.'
@@ -388,33 +404,25 @@ def tag_create_official(request, name):
                     request,
                     f'Tag "{tag.name}" created successfully!'
                 )
-                return redirect('repositories:detail_official', name=repository.name)
+                return redirect('repositories:detail_official', name=repo.name)
     else:
         form = TagForm()
 
     return render(
         request,
-        'tags/tag_form.html',
+        "tags/tag_form.html",
         {
-            'form': form,
-            'repository': repository,
-            'title': f'New Tag for {repository.full_name}',
-            'from_profile': from_profile,
-        }
+            "form": form,
+            "repository": repo,
+            "title": f"New Tag for {repo.full_name}",
+            'from_profile': from_profile
+        },
     )
 
-
-@login_required
 def tag_update(request, owner_username, name, tag_name):
-    """Edit tag for user repository (only owner)"""
-    repository = get_object_or_404(
-        Repository,
-        owner__username=owner_username,
-        name=name,
-        is_official=False
-    )
-
-    # Permission check
+    service = RepositoryService()
+    repository = get_object_or_404(Repository, owner__username=owner_username, name=name)
+    
     if repository.owner != request.user:
         messages.error(request, 'You cannot edit tags for this repository.')
         return redirect(
@@ -425,6 +433,15 @@ def tag_update(request, owner_username, name, tag_name):
 
     tag = get_object_or_404(repository.tags, name=tag_name)
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
+
+    manifest = {}
+    if service.health_check() == True:
+        try:
+            manifest = service.get_manifest(repository.name, tag.name)
+        except Exception as e:
+            messages.error(request, f'Error fetching manifest for tag "{tag.name}": Tag not found in registry.')
+    else:
+        messages.error("Registry service not available. Please try again later")
 
     if request.method == 'POST':
         form = TagForm(request.POST, instance=tag)
@@ -455,6 +472,7 @@ def tag_update(request, owner_username, name, tag_name):
             'form': form,
             'repository': repository,
             'tag': tag,
+            'manifest': manifest,
             'title': f'Edit Tag {tag.name} for {repository.full_name}',
             'from_profile': from_profile,
         }
@@ -462,54 +480,14 @@ def tag_update(request, owner_username, name, tag_name):
 
 
 @login_required
-def tag_update_official(request, name, tag_name):
-    """Edit tag for official repository (only admins)"""
-    repository = get_object_or_404(Repository, name=name, is_official=True)
-
-    # Permission check - only admins can edit tags for official repos
-    if not request.user.is_admin:
-        messages.error(request, 'Only admins can edit tags for official repositories.')
-        return redirect('repositories:detail_official', name=name)
-
-    tag = get_object_or_404(repository.tags, name=tag_name)
-    from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
-
-    if request.method == 'POST':
-        form = TagForm(request.POST, instance=tag)
-        if form.is_valid():
-            form.save()
-            messages.success(
-                request,
-                f'Tag "{tag.name}" updated successfully!'
-            )
-            return redirect('repositories:detail_official', name=repository.name)
-    else:
-        form = TagForm(instance=tag)
-
-    return render(
-        request,
-        'tags/tag_form.html',
-        {
-            'form': form,
-            'repository': repository,
-            'tag': tag,
-            'title': f'Edit Tag {tag.name} for {repository.full_name}',
-            'from_profile': from_profile,
-        }
-    )
-
-
-@login_required
-def tag_delete(request, owner_username, name, tag_name):
+def tag_delete(request, owner_username, name, tag_name, digest):
     """Delete tag from user repository (only owner)"""
     repo = get_object_or_404(
         Repository,
         owner__username=owner_username,
-        name=name,
-        is_official=False
+        name=name
     )
 
-    # Permission check
     if repo.owner != request.user:
         messages.error(request, "You cannot delete tags from this repository.")
         return redirect(
@@ -517,9 +495,15 @@ def tag_delete(request, owner_username, name, tag_name):
             owner_username=repo.owner.username,
             name=repo.name,
         )
-
     tag = get_object_or_404(repo.tags, name=tag_name)
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
+
+    commands = {
+        'delete_manifest': f"curl -X DELETE -u admin:Admin123 http://localhost:5000/v2/{repo.name}/manifests/{digest}",
+        'delete_tag': f"docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}/_manifests/tags/{tag_name}",
+        'gc': "docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml",
+        'restart': "docker restart docker-registry-platform-registry-1"
+    }
 
     if request.method == "POST":
         tag.delete()
@@ -528,17 +512,29 @@ def tag_delete(request, owner_username, name, tag_name):
             f'Tag "{tag_name}" deleted from repository "{repo.full_name}".'
         )
 
-        url = reverse(
-            "repositories:detail",
-            kwargs={
-                "owner_username": repo.owner.username,
-                "name": repo.name,
-            },
-        )
-        if from_profile:
-            url += "?from_profile=1"
+        if repo.is_official:
+            url = reverse(
+                "repositories:detail_official",
+                kwargs={
+                    "name": repo.name,
+                },
+            )
+            if from_profile:
+                url += "?from_profile=1"
 
-        return redirect(url)
+            return redirect(url)
+        else:
+            url = reverse(
+                "repositories:detail",
+                kwargs={
+                    "owner_username": repo.owner.username,
+                    "name": repo.name,
+                },
+            )
+            if from_profile:
+                url += "?from_profile=1"
+
+            return redirect(url)
 
     return render(
         request,
@@ -546,13 +542,14 @@ def tag_delete(request, owner_username, name, tag_name):
         {
             "repository": repo,
             "tag": tag,
+            "commands": commands,
             "from_profile": from_profile,
         },
     )
 
 
 @login_required
-def tag_delete_official(request, name, tag_name):
+def tag_delete_official(request, name, tag_name, digest):
     """Delete tag from official repository (only admins)"""
     repo = get_object_or_404(Repository, name=name, is_official=True)
 
@@ -565,6 +562,12 @@ def tag_delete_official(request, name, tag_name):
 
     tag = get_object_or_404(repo.tags, name=tag_name)
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
+    commands = {
+        'delete_manifest': f"curl -X DELETE -u admin:Admin123 http://localhost:5000/v2/{repo.name}/manifests/{digest}",
+        'delete_tag': f"docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}/_manifests/tags/{tag_name}",
+        'gc': "docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml",
+        'restart': "docker restart docker-registry-platform-registry-1"
+    }
 
     if request.method == "POST":
         tag.delete()
@@ -580,6 +583,7 @@ def tag_delete_official(request, name, tag_name):
         {
             "repository": repo,
             "tag": tag,
+            "commands": commands,
             "from_profile": from_profile,
         },
     )
