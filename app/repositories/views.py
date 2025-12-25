@@ -14,12 +14,12 @@ def repository_list(request):
     repositories = []
 
     if not service.health_check():
-        messages.warning(request, "Registry is unavailable at this moment. Please try again later.")
+        messages.error(request, "Registry is unavailable at this moment. Please try again later.")
     else:
         try:
             repositories = service.list_repositories(request.user)
         except Exception as e:
-            messages.warning(request, "Error fetching repositories from registry.")
+            messages.error(request, "Error fetching repositories from registry.")
             
     return render(
         request,
@@ -115,7 +115,7 @@ def repository_detail(request, owner_username, name):
             raise Http404("Repository not found")
 
     tags = repo.tags.all()
-    tags_reg = service.list_tags(repo.name)
+    # tags_reg = service.list_tags(repo.name)
     return render(
         request,
         "repositories/repository_detail.html",
@@ -128,7 +128,7 @@ def repository_detail_official(request, name):
     service = RepositoryService()
     repo = get_object_or_404(Repository, name=name, is_official=True)
     tags = repo.tags.all()
-    tags_reg = service.list_tags(name)
+    # tags_reg = service.list_tags(name)
 
     return render(
         request,
@@ -435,10 +435,13 @@ def tag_update(request, owner_username, name, tag_name):
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
 
     manifest = {}
-    try:
-        manifest = service.get_manifest(repository.name, tag.name)
-    except Exception as e:
-        messages.error(request, f'Error fetching manifest for tag "{tag.name}": {e}')
+    if service.health_check() == True:
+        try:
+            manifest = service.get_manifest(repository.name, tag.name)
+        except Exception as e:
+            messages.error(request, f'Error fetching manifest for tag "{tag.name}": Tag not found in registry.')
+    else:
+        messages.error("Registry service not available. Please try again later")
 
     if request.method == 'POST':
         form = TagForm(request.POST, instance=tag)
