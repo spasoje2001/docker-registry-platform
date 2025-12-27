@@ -34,8 +34,7 @@ class RegistryClient:
             url = f"{self.registry_url}/v2/_catalog"
             response = self.session.get(url)
             response.raise_for_status()
-            repositories = response.json().get('repositories', [])
-            return repositories
+            return response.json().get('repositories', [])
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching repositories: {e}")
@@ -106,6 +105,16 @@ class RegistryClient:
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching tag {repository}:{tag_name}: {e}")
             raise Exception(f"Failed to fetch tag {repository}:{tag_name}: {str(e)}")
+
+    def get_config_blob(self, repository: str, digest: str) -> Dict:
+        try:    
+            url = f"http://localhost:5000/v2/{repository}/blobs/{digest}"
+            response = self.session.get(url)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error fetching config blob for {repository}: {e}")
+            raise Exception(f"Failed to fetch config blob {repository}: {str(e)}")
 
     def check_health(self) -> bool:
         try:

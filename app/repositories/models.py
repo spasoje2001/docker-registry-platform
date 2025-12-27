@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import RegexValidator
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -65,6 +66,11 @@ class Tag(models.Model):
         Repository, on_delete=models.CASCADE, related_name="tags"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    last_synced = models.DateTimeField(default=timezone.now)
+    os = models.CharField(max_length=32, blank=True, default='')
+    arch = models.CharField(max_length=32, blank=True, default='')
+    image_type = models.CharField(max_length=32, blank=True, default='')
+
 
     class Meta:
         constraints = [
