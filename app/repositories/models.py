@@ -34,6 +34,7 @@ class Repository(models.Model):
     )
 
     class Meta:
+        db_table = "repositories"
         verbose_name_plural = "repositories"
         constraints = [
             models.UniqueConstraint(

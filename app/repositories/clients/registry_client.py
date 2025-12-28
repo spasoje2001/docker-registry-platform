@@ -67,7 +67,7 @@ class RegistryClient:
 
             manifest = response.json()
             media_type = manifest.get('mediaType', '')
-            
+
             manifest["digest"] = response.headers.get('Docker-Content-Digest')
             
             if media_type == 'application/vnd.docker.distribution.manifest.v2+json':
@@ -92,13 +92,13 @@ class RegistryClient:
                 
                 manifest["os"] = config_data.get('os', 'unknown')
                 manifest["arch"] = config_data.get('architecture', 'unknown')
-                manifest["compressed_size"] = self.convert_size(sum(layer['size'] for layer in manifest['layers']))
+                manifest["size"] = sum(layer['size'] for layer in manifest['layers'])
             else:
                 manifest["os"] = "multi-platform"
                 if 'manifests' in manifest:
-                    manifest["compressed_size"] = self.convert_size(sum(m.get('size', 0) for m in manifest['manifests']))
+                    manifest["size"] = sum(m.get('size', 0) for m in manifest['manifests'])
                 else:
-                    manifest["compressed_size"] = 0
+                    manifest["size"] = 0
 
             return manifest
             
@@ -108,7 +108,7 @@ class RegistryClient:
 
     def get_config_blob(self, repository: str, digest: str) -> Dict:
         try:    
-            url = f"http://localhost:5000/v2/{repository}/blobs/{digest}"
+            url = f"{self.registry_url}/v2/{repository}/blobs/{digest}"
             response = self.session.get(url)
             response.raise_for_status()
             return response.json()

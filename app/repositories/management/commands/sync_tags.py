@@ -10,8 +10,8 @@ import logging
 
 from django.core.management.base import BaseCommand, CommandError
 from django.db import DatabaseError
-from app.repositories.services import SyncService
-from app.repositories.models import Repository
+from repositories.services import SyncService
+from repositories.models import Repository
 
 logger = logging.getLogger(__name__)
 

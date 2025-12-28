@@ -6,11 +6,11 @@ import logging
 from typing import Dict, List, Tuple
 from dataclasses import dataclass
 
-from django.db import transaction
+from django.db import transaction, models
 from django.utils import timezone
 
-from app.repositories.models import Repository, Tag
-from app.repositories.clients.registry_client import RegistryClient
+from ..models import Repository, Tag
+from repositories.clients.registry_client import RegistryClient
 
 
 logger = logging.getLogger(__name__)
@@ -86,7 +86,7 @@ class SyncService:
             Tuple of (created_count, updated_count, deleted_count)
         """
         logger.info(f"Syncing tags for repository: {repository.name}")
-        
+
         try:
             registry_tags = self._fetch_registry_tags(repository.name)
         except Exception as e:
@@ -121,35 +121,30 @@ class SyncService:
             Dictionary mapping tag names to their manifest digests.
         """
         tags_list = self.registry_client.get_tags_for_repository(repo_name)
-        
         tags = {}
-        for tag_name in tags_list:
-            try:
-                manifest = self.registry_client.get_manifest(repo_name, tag_name)
-                
-                digest = manifest.get('config', {}).get('digest')
-                
-                size = manifest.get('config', {}).get('size', 0)
-                for layer in manifest.get('layers', []):
-                    size += layer.get('size', 0)
-                
-                config_blob = self.registry_client.get_config_blob(
-                    repo_name,
-                    manifest.get('config', {}).get('digest')
-                )
-                
-                tags[tag_name] = {
-                    'digest': digest,
-                    'size': size,
-                    'os': config_blob.get('os', ''),
-                    'arch': config_blob.get('architecture', ''),
-                    'image_type': manifest.get('mediaType', '').split('.')[-1]
-                }
-            except Exception as e:
-                logger.warning(
-                    f"Failed to get digest for {repo_name}:{tag_name}: {e}"
-                )
-                continue
+
+        if tags_list:
+            for tag_name in tags_list:
+                try:
+                    manifest = self.registry_client.get_manifest(repo_name, tag_name)   
+                    digest = manifest.get('digest')        
+                    size = manifest.get('size', 0)
+                    os = manifest.get('os', '')
+                    arch = manifest.get('arch', '')
+                    image_type = manifest.get('mediaType', '').split('.')[-3]
+                    
+                    tags[tag_name] = {
+                        'digest': digest,
+                        'size': size,
+                        'os': os,
+                        'arch': arch,
+                        'image_type': image_type
+                    }
+                except Exception as e:
+                    logger.warning(
+                        f"Failed to get digest for {repo_name}:{tag_name}: {e}"
+                    )
+                    continue
         
         return tags
 
@@ -181,54 +176,54 @@ class SyncService:
         registry_tag_names = set(registry_tags.keys())
         existing_tag_names = set(existing_tags.keys())
 
-        # Create new tags
-        new_tag_names = registry_tag_names - existing_tag_names
-        for tag_name in new_tag_names:
-            tag_data = registry_tags[tag_name]
+        if registry_tags:
+            new_tag_names = registry_tag_names - existing_tag_names
+            for tag_name in new_tag_names:
+                tag_data = registry_tags[tag_name]
 
-            Tag.objects.create(
-            repository=repository,
-                name=tag_name,
-                digest=tag_data.get('digest', ''),
-                size=tag_data.get('size', 0),
-                os=tag_data.get('os', ''),
-                arch=tag_data.get('arch', ''),
-                image_type=tag_data.get('image_type', ''),
-                last_synced=timezone.now()
-            )
-            created_count += 1
-            logger.debug(f"Created tag: {repository.name}:{tag_name}")
-
-        common_tag_names = registry_tag_names & existing_tag_names
-        for tag_name in common_tag_names:
-            tag = existing_tags[tag_name]
-            tag_data = registry_tags[tag_name]
-            new_digest = tag_data.get('digest', '')
-            
-            if tag.digest != new_digest:
-                tag.digest = new_digest
-                tag.size = tag_data.get('size', 0)
-                tag.os = tag_data.get('os', '')
-                tag.arch = tag_data.get('arch', '')
-                tag.image_type = tag_data.get('image_type', '')
-                tag.last_synced = timezone.now()
-                tag.save(update_fields=[
-                    'digest', 'size', 'os', 'arch', 'image_type',
-                    'last_synced'
-                ])
-                updated_count += 1
-                logger.debug(
-                    f"Updated tag: {repository.name}:{tag_name} "
-                    f"(digest changed)"
+                Tag.objects.create(
+                    repository=repository,
+                    name=tag_name,
+                    digest=tag_data.get('digest', ''),
+                    size=tag_data.get('size', 0),
+                    os=tag_data.get('os', ''),
+                    arch=tag_data.get('arch', ''),
+                    image_type=tag_data.get('image_type', ''),
+                    last_synced=timezone.now()
                 )
-            else:
-                tag.last_synced = timezone.now()
-                tag.save(update_fields=['last_synced'])
+                created_count += 1
+                logger.debug(f"Created tag: {repository.name}:{tag_name}")
+
+            common_tag_names = registry_tag_names & existing_tag_names
+            for tag_name in common_tag_names:
+                tag = existing_tags[tag_name]
+                tag_data = registry_tags[tag_name]
+                new_digest = tag_data.get('digest', '')
+                
+                if tag.digest != new_digest:
+                    tag.digest = new_digest
+                    tag.size = tag_data.get('size', 0)
+                    tag.os = tag_data.get('os', '')
+                    tag.arch = tag_data.get('arch', '')
+                    tag.image_type = tag_data.get('image_type', '')
+                    tag.last_synced = timezone.now()
+                    tag.save(update_fields=[
+                        'digest', 'size', 'os', 'arch', 'image_type',
+                        'last_synced'
+                    ])
+                    updated_count += 1
+                    logger.debug(
+                        f"Updated tag: {repository.name}:{tag_name} "
+                        f"(digest changed)"
+                    )
+                else:
+                    tag.last_synced = timezone.now()
+                    tag.save(update_fields=['last_synced'])
 
         deleted_tag_names = existing_tag_names - registry_tag_names
         for tag_name in deleted_tag_names:
             tag = existing_tags[tag_name]
-            Tag.objects.filter(repository=repository, name=name).delete()
+            Tag.objects.filter(repository=repository, name=tag_name).delete()
             deleted_count += 1
             logger.debug(f"Deleted tag: {repository.name}:{tag_name}")
 
