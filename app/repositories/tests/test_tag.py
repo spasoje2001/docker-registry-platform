@@ -2,8 +2,11 @@ from django.test import TestCase, Client
 from django.urls import reverse
 from django.db import IntegrityError
 from ..models import Repository, Tag
+from ..services import SyncService, SyncStats
 from django.contrib.auth import get_user_model
+from django.core.management import call_command as django_call_command
 from unittest.mock import patch, MagicMock, Mock
+from io import StringIO
 
 User = get_user_model()
 
@@ -292,3 +295,90 @@ class OfficialRepoTagTests(TestCase):
 
         self.assertEqual(response.status_code, 302)
         self.assertFalse(self.official_repo.tags.filter(name="old-version").exists())
+
+class SyncTagsCommandTest(TestCase):
+    def setUp(self):
+        """Set up test fixtures"""
+        self.user1 = User.objects.create_user(
+            username="user1",
+            password="testpass123"
+        )
+        self.repository = Repository.objects.create(
+            name='test-repo',
+            description='Test repository',
+            owner=self.user1
+        )
+
+        self.mock_client = Mock()
+        self.service = SyncService(registry_client=self.mock_client)
+
+    def _setup_mock_for_tags(self, tags_dict):
+        """
+        Helper to setup mock for multiple tags.
+        
+        Args:
+            tags_dict: Dict of tag_name -> digest
+            Example: {'v1.0.0': 'sha256:abc', 'v2.0.0': 'sha256:def'}
+        """
+        self.mock_client.get_tags_for_repository.return_value = list(tags_dict.keys())
+        
+        def get_manifest(repo_name, tag_name):
+            digest = tags_dict.get(tag_name, 'sha256:unknown')
+            return {
+                'config': {'digest': digest, 'size': 1000},
+                'layers': [],
+                'mediaType': 'application/vnd.docker.distribution.manifest.v2+json'
+            }
+        
+        self.mock_client.get_manifest.side_effect = get_manifest
+        
+        self.mock_client.get_config_blob.return_value = {
+            'os': 'linux',
+            'architecture': 'amd64'
+        }
+
+    def call_command(self, *args, **kwargs):
+        """Helper to call command and capture output"""
+        out = StringIO()
+        err = StringIO()
+        django_call_command('sync_tags', *args, stdout=out, stderr=err, **kwargs)
+        return out.getvalue(), err.getvalue()
+
+    @patch('repositories.management.commands.sync_tags.SyncService')
+    def test_sync_all_repositories(self, mock_service_class):
+        """Test syncing all repositories."""
+
+        mock_service = Mock()
+        mock_service_class.return_value = mock_service
+        
+        stats = SyncStats(
+            repos_processed=1,
+            tags_created=3,
+            tags_updated=1,
+            tags_deleted=0
+        )
+        mock_service.sync_all_tags.return_value = stats
+        
+        out, err = self.call_command()
+        
+        mock_service.sync_all_tags.assert_called_once()
+        self.assertIn('Synchronizing repositories...', out)
+        self.assertIn('Synchronization complete!', out)
+        self.assertIn('Tags created:           3', out)
+        self.assertIn('Tags updated:           1', out)
+
+    def test_orphan_tags_are_deleted(self):
+        """Test that orphan tags (not in registry) are deleted from database."""
+        Tag.objects.create(repository=self.repository, name='v1.0.0', digest='sha256:abc123')
+        Tag.objects.create(repository=self.repository, name='v2.0.0', digest='sha256:def456')
+        Tag.objects.create(repository=self.repository, name='orphan-tag', digest='sha256:orphan')
+        
+        self._setup_mock_for_tags({
+            'v1.0.0': 'sha256:abc123',
+            'v2.0.0': 'sha256:def456',
+        })
+        
+        created, updated, deleted = self.service.sync_repository_tags(self.repository)
+        
+        self.assertEqual(deleted, 1)
+        self.assertEqual(Tag.objects.filter(repository=self.repository).count(), 2)

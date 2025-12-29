@@ -60,14 +60,14 @@ def repository_create(request):
 
             repo.save()
 
-            try:
-                Tag.objects.create(name=tag_name, repository=repo)
-            except Exception as e:
-                form.add_error(None, f"Error creating initial tag: {e}")
-                return render(
-                    request,
-                    "repositories/repository_form.html",
-                    {"form": form, "title": "New Repository"})
+            # try:
+            #     Tag.objects.create(name=tag_name, repository=repo)
+            # except Exception as e:
+            #     form.add_error(None, f"Error creating initial tag: {e}")
+            #     return render(
+            #         request,
+            #         "repositories/repository_form.html",
+            #         {"form": form, "title": "New Repository"})
 
             messages.success(
                 request,

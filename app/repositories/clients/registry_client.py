@@ -34,8 +34,7 @@ class RegistryClient:
             url = f"{self.registry_url}/v2/_catalog"
             response = self.session.get(url)
             response.raise_for_status()
-            repositories = response.json().get('repositories', [])
-            return repositories
+            return response.json().get('repositories', [])
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching repositories: {e}")
@@ -68,7 +67,7 @@ class RegistryClient:
 
             manifest = response.json()
             media_type = manifest.get('mediaType', '')
-            
+
             manifest["digest"] = response.headers.get('Docker-Content-Digest')
             
             if media_type == 'application/vnd.docker.distribution.manifest.v2+json':
@@ -93,19 +92,29 @@ class RegistryClient:
                 
                 manifest["os"] = config_data.get('os', 'unknown')
                 manifest["arch"] = config_data.get('architecture', 'unknown')
-                manifest["compressed_size"] = self.convert_size(sum(layer['size'] for layer in manifest['layers']))
+                manifest["size"] = sum(layer['size'] for layer in manifest['layers'])
             else:
                 manifest["os"] = "multi-platform"
                 if 'manifests' in manifest:
-                    manifest["compressed_size"] = self.convert_size(sum(m.get('size', 0) for m in manifest['manifests']))
+                    manifest["size"] = sum(m.get('size', 0) for m in manifest['manifests'])
                 else:
-                    manifest["compressed_size"] = 0
+                    manifest["size"] = 0
 
             return manifest
             
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching tag {repository}:{tag_name}: {e}")
             raise Exception(f"Failed to fetch tag {repository}:{tag_name}: {str(e)}")
+
+    def get_config_blob(self, repository: str, digest: str) -> Dict:
+        try:    
+            url = f"{self.registry_url}/v2/{repository}/blobs/{digest}"
+            response = self.session.get(url)
+            response.raise_for_status()
+            return response.json()
+        except Exception as e:
+            logger.error(f"Error fetching config blob for {repository}: {e}")
+            raise Exception(f"Failed to fetch config blob {repository}: {str(e)}")
 
     def check_health(self) -> bool:
         try:

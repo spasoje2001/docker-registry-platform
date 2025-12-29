@@ -94,7 +94,18 @@ cat admin_password.txt
 
 **Important:** This command is idempotent (safe to run multiple times). Super admin will be forced to change password on first login.
 
-### 7. Verify Everything is Running
+### 7. Tags synchronization
+Synchronization all tags for all repositories:
+```bash
+docker-compose exec web python manage.py sync_tags
+```
+
+Synchronization all tags for single repository:
+```bash
+docker-compose exec web python manage.py sync_tags --repo myrepo
+```
+
+### 8. Verify Everything is Running
 
 Open in browser:
 
@@ -105,7 +116,7 @@ Open in browser:
 | Registry | http://localhost:5000/v2/ | `{}` |
 | MailHog | http://localhost:8025 | Email inbox UI |
 
-### 8. Verify Registry Authentication
+### 9. Verify Registry Authentication
 ```bash
 # Test docker login
 docker login localhost:5000
@@ -116,7 +127,7 @@ docker login localhost:5000
 curl -u admin:Admin123 http://localhost:5000/v2/_catalog
 ```
 
-### 9. Stop the Application
+### 10. Stop the Application
 
 Press `Ctrl+C` in the terminal, then:
 ```bash
