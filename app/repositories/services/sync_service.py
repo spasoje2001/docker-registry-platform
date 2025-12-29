@@ -231,16 +231,8 @@ class SyncService:
 
     def sync_repository_by_name(self, repo_name: str) -> Tuple[int, int, int]:
         """
-        Synchronize tags for a repository by name.
+        Synchronize tags for a repository by name
 
-        Args:
-            repo_name: Name of the repository to sync.
-
-        Returns:
-            Tuple of (created_count, updated_count, deleted_count)
-
-        Raises:
-            Repository.DoesNotExist: If repository not found in database.
         """
         repository = Repository.objects.get(name=repo_name)
         return self.sync_repository_tags(repository)
