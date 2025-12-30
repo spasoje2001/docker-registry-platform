@@ -386,7 +386,6 @@ document.addEventListener('DOMContentLoaded', function() {
             
             const formData = new FormData(form);
             const fromProfile = form.elements['from_profile']?.value === '1';
-            alert(fromProfile)
             fetch(form.action || window.location.href, {
                 method: 'POST',
                 body: formData,

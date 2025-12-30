@@ -140,7 +140,7 @@
             </h5>
             {% if repository.is_official %}
                 {% if user.is_admin %}
-                    <a href="{% url 'repositories:tag_create_official' repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}"
+                    <a href="{% url 'repositories:tag_create_official' repository.name %}"
                         class="btn btn-sm btn-primary">
                         <i class="bi bi-plus-circle"></i> New
                     </a>
@@ -178,7 +178,7 @@
                                 
                                 <div class="col-12 col-lg-1 text-md-end">
                                     {% if user == repository.owner %}
-                                        <a href="{% url 'repositories:tag_update' repository.owner.username repository.name tag.name %}" 
+                                        <a href="{% url 'repositories:tag_update' repository.owner.username repository.name tag.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}" 
                                             class="btn btn-sm btn-outline-primary">
                                             <i class="bi bi-info-circle"></i> Detail
                                         </a>

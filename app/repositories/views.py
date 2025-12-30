@@ -62,14 +62,14 @@ def repository_create(request):
 
             repo.save()
 
-            # try:
-            #     Tag.objects.create(name=tag_name, repository=repo)
-            # except Exception as e:
-            #     form.add_error(None, f"Error creating initial tag: {e}")
-            #     return render(
-            #         request,
-            #         "repositories/repository_form.html",
-            #         {"form": form, "title": "New Repository"})
+            try:
+                Tag.objects.create(name=tag_name, repository=repo)
+            except Exception as e:
+                form.add_error(None, f"Error creating initial tag: {e}")
+                return render(
+                    request,
+                    "repositories/repository_form.html",
+                    {"form": form, "title": "New Repository"})
 
             messages.success(
                 request,
@@ -443,7 +443,7 @@ def tag_update(request, owner_username, name, tag_name):
         except Exception as e:
             messages.error(request, f'Error fetching manifest for tag "{tag.name}": Tag not found in registry.')
     else:
-        messages.error("Registry service not available. Please try again later")
+        messages.error(request, "Registry service not available. Please try again later")
 
     if request.method == 'POST':
         form = TagForm(request.POST, instance=tag)
