@@ -31,7 +31,7 @@
         {% for repo in repositories %}
         <div class="col-lg-6 mb-2">
             {% if repo.is_official %}
-                <a href="{% url 'repositories:detail_official' repo.name %}{% if from_profile %}?from_profile=1{% endif %}" class="text-decoration-none">
+                <a href="{% url 'repositories:detail_official' repo.name %}" class="text-decoration-none">
             {% else %}
                 <a href="{% url 'repositories:detail' repo.owner.username repo.name %}{% if from_profile %}?from_profile=1{% endif %}" class="text-decoration-none">
             {% endif %}

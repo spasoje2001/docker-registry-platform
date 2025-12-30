@@ -23,6 +23,6 @@ urlpatterns = [
     path("repositories/", include("repositories.urls")),
     path("accounts/", include("accounts.urls")),
     # Apps (will be implemented in future sprints)
-    # path('explore/', include('explore.urls')),        # Sprint 2
+    path('explore/', include('explore.urls')),
     # path('analytics/', include('analytics.urls')),    # Sprint 3
 ]

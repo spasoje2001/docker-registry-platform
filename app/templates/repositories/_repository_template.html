@@ -32,15 +32,17 @@
         <div id="step1" class="step-content">
             <form method="post" id="repositoryForm" action="{% if repository %}
                     {% if repository.is_official %}
-                        {% url 'repositories:update_official' repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}
+                        {% url 'repositories:update_official' repository.name %}
                     {% else %}
                         {% url 'repositories:update' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}
                     {% endif %}
                 {% else %}
-                    {% url 'repositories:create' %}
+                    {% url 'repositories:create' %}{% if request.GET.from_profile %}?from_profile=1{% endif %}
                 {% endif %}">
                 {% csrf_token %}
-
+                {% if from_profile %}
+                    <input type="hidden" name="from_profile" value="1">
+                {% endif %}
                 <div class="mb-4">
                     <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
                         Name <span class="text-danger">*</span>
@@ -155,9 +157,28 @@
                 {% endif %}
 
                 <div class="d-flex justify-content-between gap-2 pt-3 border-top">
-                    <a href="{% url 'repositories:list' %}" class="btn btn-outline-secondary">
+                    {% if repository.is_official %}
+                    <a href="{% url 'repositories:detail_official' repository.name %}"
+                    class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Cancel
                     </a>
+                    {% elif repository %}
+                    <a href="{% url 'repositories:detail' repository.owner.username repository.name %}?from_profile={{ request.GET.from_profile|default_if_none:1 }}"
+                    class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancel
+                    </a>
+                    {% elif from_profile %}
+                    <a href="{% url 'accounts:profile' %}"
+                    class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancel
+                    </a>
+                    {% else %}
+                    <a href="{% url 'repositories:list' %}"
+                    class="btn btn-outline-secondary">
+                        <i class="bi bi-arrow-left"></i> Cancel
+                    </a>
+                    {% endif %}
+                    
                     {% if not repository %}
                         <button type="button" class="btn btn-primary" id="nextBtn">
                             Next <i class="bi bi-arrow-right"></i>
@@ -227,7 +248,12 @@
                 <button type="button" class="btn btn-outline-secondary" id="backBtn">
                     <i class="bi bi-arrow-left"></i> Back
                 </button>
-                <a href="{% url 'repositories:list' %}" class="btn btn-success">
+                <a href="{% if from_profile %}
+                            {% url 'accounts:profile' %}
+                        {% else %}
+                            {% url 'repositories:list' %}
+                        {% endif %}"
+                class="btn btn-success">
                     <i class="bi bi-check-lg"></i> Done
                 </a>
             </div>
@@ -323,7 +349,7 @@ document.addEventListener('DOMContentLoaded', function() {
     
     nextBtn.addEventListener('click', function() {
         const initialTag = document.getElementById('imageTag').value.trim();
-    
+
         if (!initialTag) {
             const imageTagInput = document.getElementById('imageTag');
             imageTagInput.classList.add('is-invalid');
@@ -359,12 +385,14 @@ document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('pushCmd').value = `docker push ${fullImageName}`;
             
             const formData = new FormData(form);
-            
+            const fromProfile = form.elements['from_profile']?.value === '1';
+            alert(fromProfile)
             fetch(form.action || window.location.href, {
                 method: 'POST',
                 body: formData,
                 headers: {
-                    'X-Requested-With': 'XMLHttpRequest'
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'from_profile': fromProfile
                 }
             })
             .then(response => {

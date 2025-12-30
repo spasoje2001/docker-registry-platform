@@ -51,7 +51,9 @@ def repository_create(request):
                 form.add_error(
                     'is_official',
                     'Only admins can create official repositories.'
-                )
+                ) 
+                if from_profile:
+                    return redirect("accounts:profile")
                 return render(
                     request,
                     "repositories/repository_form.html",
@@ -154,7 +156,7 @@ def repository_update(request, owner_username, name):
             name=repo.name,
         )
 
-    from_profile = request.POST.get("from_profile")
+    from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
     form = RepositoryForm(request.POST or None, instance=repo, request=request)
 
     if request.method == "POST" and form.is_valid():

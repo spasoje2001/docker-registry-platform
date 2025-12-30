@@ -382,6 +382,8 @@ def email_change(request):
                 )
                 # Clean up Redis if email fails
                 delete_email_change_request(request.user.id)
+        else:
+            messages.success(request, "Current email wasn't correct.")
     else:
         form = RequestEmailChangeForm(request.user)
 
