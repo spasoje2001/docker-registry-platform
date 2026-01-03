@@ -6,6 +6,10 @@
         <a href="{% url 'accounts:profile' %}#repos" class="btn btn-link text-decoration-none mb-4">
             <i class="bi bi-arrow-left"></i> Go Back
         </a>
+    {% elif request.GET.from_explore %}
+        <a href="{% url 'explore:search' %}" class="btn btn-link text-decoration-none mb-4">
+            <i class="bi bi-arrow-left"></i> Go Back
+        </a>
     {% else %}
         <a href="{% url 'repositories:list' %}" class="btn btn-link text-decoration-none mb-4">
             <i class="bi bi-arrow-left"></i> Go Back
@@ -16,9 +20,26 @@
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
                 <div>
-                    <h1 class="mb-2">
+                    <h1 class="mb-2 repo-title d-flex align-items-center gap-2">
                         <i class="bi bi-folder-fill text-primary"></i>
-                        {{ repository.full_name }}
+
+                        <span>{{ repository.full_name }}</span>
+
+                        {% if repository.owner.is_verified_publisher %}
+                            <i class="bi bi-patch-check-fill text-primary"
+                            title="Verified Publisher"
+                            data-bs-toggle="tooltip"
+                            style="font-size: medium;"></i>
+                            <span style="font-size: medium;">Verified Publisher</span>
+                        {% endif %}
+
+                        {% if repository.owner.is_sponsored_oss %}
+                            <i class="bi bi-cash-coin text-success"
+                            title="Sponsored OSS"
+                            data-bs-toggle="tooltip"
+                            style="font-size: medium;"></i>
+                            <span style="font-size: medium;">Sponsored OSS</span>
+                        {% endif %}
                     </h1>
                     <div class="d-flex gap-2 mb-3">
                         {% if repository.is_official %}
@@ -42,11 +63,11 @@
                 {% if repository.is_official %}
                     {% if user.is_admin %}
                         <div class="d-flex gap-2">
-                            <a href="{% url 'repositories:update_official' repository.name %}"
+                            <a href="{% url 'repositories:update_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                                 class="btn btn-outline-primary">
                                 <i class="bi bi-pencil-square"></i> Edit
                             </a>
-                            <a href="{% url 'repositories:delete_official' repository.name %}"
+                            <a href="{% url 'repositories:delete_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                                 class="btn btn-outline-danger">
                                 <i class="bi bi-trash-fill"></i> Delete
                             </a>
@@ -55,11 +76,11 @@
                 {% else %}
                     {% if user == repository.owner %}
                         <div class="d-flex gap-2">
-                            <a href="{% url 'repositories:update' repository.owner.username repository.name %}?from_profile={{ request.GET.from_profile|default_if_none:1 }}"
+                            <a href="{% url 'repositories:update' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                                 class="btn btn-outline-primary">
                                 <i class="bi bi-pencil-square"></i> Edit
                             </a>
-                            <a href="{% url 'repositories:delete' repository.owner.username repository.name %}?from_profile={{ request.GET.from_profile|default_if_none:1 }}"
+                            <a href="{% url 'repositories:delete' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                                 class="btn btn-outline-danger">
                                 <i class="bi bi-trash-fill"></i> Delete
                             </a>
@@ -140,14 +161,14 @@
             </h5>
             {% if repository.is_official %}
                 {% if user.is_admin %}
-                    <a href="{% url 'repositories:tag_create_official' repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}"
+                    <a href="{% url 'repositories:tag_create_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                         class="btn btn-sm btn-primary">
                         <i class="bi bi-plus-circle"></i> New
                     </a>
                 {% endif %}
             {% else %}
                 {% if user == repository.owner %}
-                    <a href="{% url 'repositories:tag_create' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}"
+                    <a href="{% url 'repositories:tag_create' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                         class="btn btn-sm btn-primary">
                         <i class="bi bi-plus-circle"></i> New
                     </a>
@@ -178,7 +199,7 @@
                                 
                                 <div class="col-12 col-lg-1 text-md-end">
                                     {% if user == repository.owner %}
-                                        <a href="{% url 'repositories:tag_update' repository.owner.username repository.name tag.name %}" 
+                                        <a href="{% url 'repositories:tag_update' repository.owner.username repository.name tag.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}" 
                                             class="btn btn-sm btn-outline-primary">
                                             <i class="bi bi-info-circle"></i> Detail
                                         </a>
@@ -195,14 +216,14 @@
                     <p class="text-muted">Create your first tag to version your Docker images.</p>
                         {% if repository.is_official %}
                             {% if user.is_admin %}
-                                <a href="{% url 'repositories:tag_create_official' repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}"
+                                <a href="{% url 'repositories:tag_create_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                                     class="btn btn-success mt-2">
                                     <i class="bi bi-plus-circle"></i> Create First Tag
                                 </a>
                             {% endif %}
                         {% else %}
                             {% if user == repository.owner %}
-                                <a href="{% url 'repositories:tag_create' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}"
+                                <a href="{% url 'repositories:tag_create' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                                     class="btn btn-success mt-2">
                                     <i class="bi bi-plus-circle"></i> Create First Tag
                                 </a>

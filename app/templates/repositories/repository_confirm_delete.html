@@ -97,13 +97,13 @@
                             </button>
 
                             {% if repository.is_official %}
-                                <a href="{% url 'repositories:detail_official' repository.name %}" 
+                                <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                                 class="btn btn-outline-secondary">
                                     <i class="bi bi-x-circle"></i>
                                     Cancel
                                 </a>
                             {% else %}
-                                <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}" 
+                                <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}" 
                                 class="btn btn-outline-secondary">
                                     <i class="bi bi-x-circle"></i>
                                     Cancel

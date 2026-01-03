@@ -72,7 +72,6 @@ class Tag(models.Model):
     arch = models.CharField(max_length=32, blank=True, default='')
     image_type = models.CharField(max_length=32, blank=True, default='')
 
-
     class Meta:
         constraints = [
             models.UniqueConstraint(
