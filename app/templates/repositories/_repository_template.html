@@ -32,9 +32,9 @@
         <div id="step1" class="step-content">
             <form method="post" id="repositoryForm" action="{% if repository %}
                     {% if repository.is_official %}
-                        {% url 'repositories:update_official' repository.name %}
+                        {% url 'repositories:update_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}
                     {% else %}
-                        {% url 'repositories:update' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}
+                        {% url 'repositories:update' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}
                     {% endif %}
                 {% else %}
                     {% url 'repositories:create' %}{% if request.GET.from_profile %}?from_profile=1{% endif %}
@@ -42,6 +42,8 @@
                 {% csrf_token %}
                 {% if from_profile %}
                     <input type="hidden" name="from_profile" value="1">
+                {% elif from_explore %}
+                    <input type="hidden" name="from_explore" value="1">
                 {% endif %}
                 <div class="mb-4">
                     <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
@@ -158,12 +160,12 @@
 
                 <div class="d-flex justify-content-between gap-2 pt-3 border-top">
                     {% if repository.is_official %}
-                    <a href="{% url 'repositories:detail_official' repository.name %}"
+                    <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                     class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Cancel
                     </a>
                     {% elif repository %}
-                    <a href="{% url 'repositories:detail' repository.owner.username repository.name %}?from_profile={{ request.GET.from_profile|default_if_none:1 }}"
+                    <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                     class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Cancel
                     </a>
@@ -250,6 +252,8 @@
                 </button>
                 <a href="{% if from_profile %}
                             {% url 'accounts:profile' %}
+                        {% elif from_explore %}
+                            {% url 'explore:search' %}
                         {% else %}
                             {% url 'repositories:list' %}
                         {% endif %}"

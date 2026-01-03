@@ -63,16 +63,16 @@ class RepositoryForm(forms.ModelForm):
         if name:
             name = name.strip()
             cleaned_data['name'] = name
-    
+
         if initial_tag:
             initial_tag = initial_tag.strip()
             cleaned_data['initial_tag'] = initial_tag
-        
+
         if not name:
             raise forms.ValidationError({
                 'name': 'Repository name is required.'
             })
-        
+
         if not self.instance.pk and not initial_tag:
             raise forms.ValidationError({
                 'initial_tag': 'Initial tag is required.'

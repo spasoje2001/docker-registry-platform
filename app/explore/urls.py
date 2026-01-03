@@ -7,4 +7,5 @@ app_name = "explore"
 
 urlpatterns = [
     path('', views.search, name='search'),
+    path("explore/", views.explore_repositories, name="explore")
 ]

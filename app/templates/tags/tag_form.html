@@ -10,17 +10,14 @@
                         <i class="bi bi-tag text-primary"></i>
                         {{ title }}
                     </h3>
-                    {% if request.GET.from_profile %}
-                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}" 
+                    {% if repository.is_official %}
+                        <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                         class="btn btn-link text-decoration-none">
                             <i class="bi bi-arrow-left"></i> Go Back
                         </a>
-                    {% elif repository.is_official %}
-                        <a href="{% url 'repositories:detail_official' repository.name %}" class="btn btn-link text-decoration-none">
-                            <i class="bi bi-arrow-left"></i> Go Back
-                        </a>
                     {% else %}
-                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}" class="btn btn-link text-decoration-none">
+                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
+                        class="btn btn-link text-decoration-none">
                             <i class="bi bi-arrow-left"></i> Go Back
                         </a>
                     {% endif %}
@@ -157,7 +154,7 @@
                                     </button>
                                 {% else %}
                                     {% if tag.digest %}
-                                        <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name tag.digest %}{% if request.GET.from_profile %}?from_profile=1{% endif %}" 
+                                        <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name tag.digest %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}" 
                                             class="btn btn-sm btn-danger">
                                             <i class="bi bi-trash"></i> Delete
                                         </a>

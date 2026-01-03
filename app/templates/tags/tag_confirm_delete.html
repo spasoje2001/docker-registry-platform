@@ -11,16 +11,10 @@
                         Delete "{{ tag.name }}" from {{ repository.full_name }}
                     </h3>
                    
-                    {% if request.GET.from_profile %}
-                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}" 
+                    <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                         class="btn btn-link text-decoration-none">
-                            <i class="bi bi-arrow-left"></i> Go Back
-                        </a>
-                    {% else %}
-                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}" class="btn btn-link text-decoration-none">
-                            <i class="bi bi-arrow-left"></i> Go Back
-                        </a>
-                    {% endif %}
+                        <i class="bi bi-arrow-left"></i> Go Back
+                    </a>
                 </div>
                 <div class="card-body p-4">
                     <form method="post">
@@ -89,12 +83,12 @@
                         </button>
                        
                         {% if repository.is_official %}
-                            <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}"
+                            <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                                 class="btn btn-link text-decoration-none">
                                 <i class="bi bi-x-circle"></i> Cancel
                             </a>
                         {% else %}
-                            <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}"
+                            <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
                                 class="btn btn-link text-decoration-none">
                                 <i class="bi bi-x-circle"></i> Cancel
                             </a>
