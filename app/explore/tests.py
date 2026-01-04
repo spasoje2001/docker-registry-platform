@@ -16,6 +16,8 @@ class ExploreRepositoriesTests(TestCase):
         self.user2 = User.objects.create_user(
             username="bob", password="password"
         )
+        self.user1.is_verified_publisher = True
+        self.user1.save()
 
         # Public repo – name match
         self.repo_name_match = Repository.objects.create(
@@ -24,6 +26,8 @@ class ExploreRepositoriesTests(TestCase):
             owner=self.user1,
             visibility="PUBLIC",
         )
+        self.repo_name_match.is_official = True
+        self.repo_name_match.save()
 
         # Public repo – description match
         self.repo_description_match = Repository.objects.create(
@@ -90,3 +94,71 @@ class ExploreRepositoriesTests(TestCase):
         page = response.context["repositories"]
 
         self.assertEqual(page.paginator.count, 3)
+
+    def test_official_filter_works(self):
+        response = self.client.get(self.url, {"filter": "official"})
+        repos = list(response.context["repositories"].object_list)
+
+        self.assertIn(self.repo_name_match, repos)
+        self.assertNotIn(self.repo_description_match, repos)
+        self.assertNotIn(self.repo_no_match, repos)
+        self.assertNotIn(self.private_repo, repos)
+
+    def test_verified_publisher_filter_works(self):
+        response = self.client.get(self.url, {"filter": "verified"})
+        repos = list(response.context["repositories"].object_list)
+
+        self.assertIn(self.repo_name_match, repos)   # owner = verified
+        self.assertIn(self.repo_no_match, repos)     # owner = verified
+
+        self.assertNotIn(self.repo_description_match, repos)  # bob NOT verified
+        self.assertNotIn(self.private_repo, repos)
+
+    def test_sort_by_name_ascending(self):
+        response = self.client.get(self.url, {"sort": "name_asc"})
+        repos = list(response.context["repositories"].object_list)
+
+        names = [r.name for r in repos]
+        self.assertEqual(names, sorted(names))
+
+    def test_sort_by_name_descending(self):
+        response = self.client.get(self.url, {"sort": "name_desc"})
+        repos = list(response.context["repositories"].object_list)
+
+        names = [r.name for r in repos]
+        self.assertEqual(names, sorted(names, reverse=True))
+
+    def test_sort_by_recently_updated(self):
+        response = self.client.get(self.url, {"sort": "updated"})
+        repos = list(response.context["repositories"].object_list)
+
+        dates = [r.updated_at for r in repos]
+        self.assertEqual(dates, sorted(dates, reverse=True))
+
+    def test_filters_combine_correctly(self):
+        response = self.client.get(
+            self.url,
+            {
+                "q": "nginx",
+                "filter": "verified",
+            }
+        )
+
+        repos = list(response.context["repositories"].object_list)
+
+        self.assertEqual(len(repos), 1)
+        self.assertEqual(repos[0], self.repo_name_match)
+
+    def test_explicit_sort_overrides_relevance(self):
+        response = self.client.get(
+            self.url,
+            {
+                "q": "nginx",
+                "sort": "name_desc",
+            }
+        )
+
+        repos = list(response.context["repositories"].object_list)
+        names = [r.name for r in repos]
+
+        self.assertEqual(names, sorted(names, reverse=True))
