@@ -50,6 +50,13 @@ class RepositoryService():
         except Exception as e:
             print(f"Error fetching manifest from registry: {e}")
             raise
+    
+    def delete_manifest(self, repo_name: str, tag_name: str) -> bool:
+        try:
+            return self.registry_client.delete_manifest(repo_name, tag_name)
+        except Exception as e:
+            print(f"Error deleting manifest from registry: {e}")
+            raise
 
     def combine_lists(self, client_list: List[str], db_list: List) -> List:
         db_dict = {obj.name: obj for obj in db_list}

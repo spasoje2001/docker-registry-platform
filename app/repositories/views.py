@@ -64,14 +64,14 @@ def repository_create(request):
 
             repo.save()
 
-            try:
-                Tag.objects.create(name=tag_name, repository=repo)
-            except Exception as e:
-                form.add_error(None, f"Error creating initial tag: {e}")
-                return render(
-                    request,
-                    "repositories/repository_form.html",
-                    {"form": form, "title": "New Repository"})
+            # try:
+            #     Tag.objects.create(name=tag_name, repository=repo)
+            # except Exception as e:
+            #     form.add_error(None, f"Error creating initial tag: {e}")
+            #     return render(
+            #         request,
+            #         "repositories/repository_form.html",
+            #         {"form": form, "title": "New Repository"})
 
             messages.success(
                 request,
@@ -537,7 +537,7 @@ def tag_update(request, owner_username, name, tag_name):
             'repository': repository,
             'tag': tag,
             'manifest': manifest,
-            'title': f'Edit Tag {tag.name} for {repository.full_name}',
+            'title': f'Details for {tag.name} from {repository.full_name}',
             'from_profile': from_profile,
             'from_explore': from_explore,
         }
@@ -547,6 +547,7 @@ def tag_update(request, owner_username, name, tag_name):
 @login_required
 def tag_delete(request, owner_username, name, tag_name, digest):
     """Delete tag from user repository (only owner)"""
+    service = RepositoryService()
     repo = get_object_or_404(
         Repository,
         owner__username=owner_username,
@@ -560,49 +561,48 @@ def tag_delete(request, owner_username, name, tag_name, digest):
             owner_username=repo.owner.username,
             name=repo.name,
         )
+    
     tag = get_object_or_404(repo.tags, name=tag_name)
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
     from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
 
     commands = {
-        'delete_manifest': f"curl -X DELETE -u admin:Admin123 http://localhost:5000/v2/{repo.name}/manifests/{digest}",
-        'delete_tag': f"docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}/_manifests/tags/{tag_name}",
         'gc': "docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml",
         'restart': "docker restart docker-registry-platform-registry-1"
     }
 
-    if request.method == "POST":
-        tag.delete()
-        messages.success(
-            request,
-            f'Tag "{tag_name}" deleted from repository "{repo.full_name}".'
-        )
+    step = None
+    deletion_success = False
+    error_message = None
 
-        if repo.is_official:
-            url = reverse(
-                "repositories:detail_official",
-                kwargs={
-                    "name": repo.name,
+    if request.method == "POST":
+        step = request.POST.get('step')
+        
+        if step == '1':
+            try:
+                if service.delete_manifest(repo.name, tag.digest):
+                    tag.delete()
+                    deletion_success = True
+                else:
+                    error_message = 'Failed to delete manifest from registry.'
+            except Exception as e:
+                logger.error(f"Error deleting tag: {e}")
+                error_message = str(e)
+            
+            return render(
+                request,
+                "tags/tag_confirm_delete.html",
+                {
+                    "repository": repo,
+                    "tag": tag,
+                    "commands": commands,
+                    "from_profile": from_profile,
+                    "from_explore": from_explore,
+                    "step": step,
+                    "deletion_success": deletion_success,
+                    "error_message": error_message,
                 },
             )
-            if from_profile:
-                url += "?from_profile=1"
-            elif from_explore:
-                url += '?from_explore=1'
-            return redirect(url)
-        else:
-            url = reverse(
-                "repositories:detail",
-                kwargs={
-                    "owner_username": repo.owner.username,
-                    "name": repo.name,
-                },
-            )
-            if from_profile:
-                url += "?from_profile=1"
-            elif from_explore:
-                url += '?from_explore=1'
-            return redirect(url)
 
     return render(
         request,
@@ -613,6 +613,9 @@ def tag_delete(request, owner_username, name, tag_name, digest):
             "commands": commands,
             "from_profile": from_profile,
             "from_explore": from_explore,
+            "step": step,
+            "deletion_success": deletion_success,
+            "error_message": error_message,
         },
     )
 
@@ -631,26 +634,43 @@ def tag_delete_official(request, name, tag_name, digest):
 
     tag = get_object_or_404(repo.tags, name=tag_name)
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
+    
     commands = {
-        'delete_manifest': f"curl -X DELETE -u admin:Admin123 http://localhost:5000/v2/{repo.name}/manifests/{digest}",
-        'delete_tag': f"docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}/_manifests/tags/{tag_name}",
         'gc': "docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml",
         'restart': "docker restart docker-registry-platform-registry-1"
     }
 
+    step = None
+    deletion_success = False
+    error_message = None
+
     if request.method == "POST":
-        tag.delete()
-        messages.success(
-            request,
-            f'Tag "{tag_name}" deleted from repository "{repo.full_name}".'
-        )
-        url = reverse(
-                'repositories:detail_official',
-                kwargs={'name': name}
-        )
-        if from_explore:
-            url += '?from_explore=1'
-        return redirect(url)
+        step = request.POST.get('step')
+        
+        if step == '1':
+            try:
+                if service.delete_manifest(repo.name, tag.digest):
+                    tag.delete()
+                    deletion_success = True
+                else:
+                    error_message = 'Failed to delete manifest from registry.'
+            except Exception as e:
+                logger.error(f"Error deleting tag: {e}")
+                error_message = str(e)
+            
+            return render(
+                request,
+                "tags/tag_confirm_delete.html",
+                {
+                    "repository": repo,
+                    "tag": tag,
+                    "commands": commands,
+                    "from_explore": from_explore,
+                    "step": step,
+                    "deletion_success": deletion_success,
+                    "error_message": error_message,
+                },
+            )
 
     return render(
         request,
@@ -660,5 +680,8 @@ def tag_delete_official(request, name, tag_name, digest):
             "tag": tag,
             "commands": commands,
             "from_explore": from_explore,
+            "step": step,
+            "deletion_success": deletion_success,
+            "error_message": error_message,
         },
     )

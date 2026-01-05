@@ -43,23 +43,14 @@ class SyncService:
     """Service for synchronizing registry tags with database."""
 
     def __init__(self, registry_client: RegistryClient = None):
-        """
-        Initialize the tag sync service.
+        """Initialize the tag sync service."""
 
-        Args:
-            registry_client: Optional registry client instance. If not provided,
-                           a new instance will be created.
-        """
         self.registry_client = registry_client or RegistryClient()
         self.stats = SyncStats()
 
     def sync_all_tags(self) -> SyncStats:
-        """
-        Synchronize tags for all repositories in the database.
+        """Synchronize tags for all repositories in the database."""
 
-        Returns:
-            SyncStats: Statistics about the synchronization operation.
-        """
         logger.info("Starting full tag synchronization")
         repositories = Repository.objects.all()
         
@@ -76,15 +67,8 @@ class SyncService:
         return self.stats
 
     def sync_repository_tags(self, repository: Repository) -> Tuple[int, int, int]:
-        """
-        Synchronize tags for a specific repository.
+        """Synchronize tags for a specific repository."""
 
-        Args:
-            repository: Repository instance to sync tags for.
-
-        Returns:
-            Tuple of (created_count, updated_count, deleted_count)
-        """
         logger.info(f"Syncing tags for repository: {repository.name}")
 
         try:
@@ -111,15 +95,8 @@ class SyncService:
         return created, updated, deleted
 
     def _fetch_registry_tags(self, repo_name: str) -> Dict[str, Dict]:
-        """
-        Fetch tags and their digests from the registry.
+        """Fetch tags and their digests from the registry."""
 
-        Args:
-            repo_name: Name of the repository.
-
-        Returns:
-            Dictionary mapping tag names to their manifest digests.
-        """
         tags_list = self.registry_client.get_tags_for_repository(repo_name)
         tags = {}
 
@@ -153,16 +130,8 @@ class SyncService:
         repository: Repository, 
         registry_tags: Dict[str, Dict]
     ) -> Tuple[int, int, int]:
-        """
-        Synchronize tags within a database transaction.
+        """Synchronize tags within a database transaction."""
 
-        Args:
-            repository: Repository instance.
-            registry_tags: Dict of tag names to digests from registry.
-
-        Returns:
-            Tuple of (created_count, updated_count, deleted_count)
-        """
         created_count = 0
         updated_count = 0
         deleted_count = 0
@@ -230,9 +199,6 @@ class SyncService:
         return created_count, updated_count, deleted_count
 
     def sync_repository_by_name(self, repo_name: str) -> Tuple[int, int, int]:
-        """
-        Synchronize tags for a repository by name
-
-        """
+        """Synchronize tags for a repository by name"""
         repository = Repository.objects.get(name=repo_name)
         return self.sync_repository_tags(repository)

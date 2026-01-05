@@ -116,6 +116,16 @@ class RegistryClient:
             logger.error(f"Error fetching config blob for {repository}: {e}")
             raise Exception(f"Failed to fetch config blob {repository}: {str(e)}")
 
+    def delete_manifest(self, repository: str, digest: str) -> bool:
+        try:
+            url = f'{self.registry_url}/v2/{repository}/manifests/{digest}'
+            response = self.session.delete(url)
+            response.raise_for_status()
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting manifest for {repository}: {e}")
+            return False
+
     def check_health(self) -> bool:
         try:
             url = f"{self.registry_url}/v2/"
