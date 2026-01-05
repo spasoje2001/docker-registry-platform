@@ -27,7 +27,7 @@ def explore_repositories(request):
     query = request.GET.get("q", "").strip()
     active_filter = request.GET.get("filter", "")
     sort = request.GET.get("sort", "relevance")
-
+    explore_queries = request.GET.urlencode()
 
     repositories = (
         Repository.objects
@@ -96,5 +96,6 @@ def explore_repositories(request):
             "sort": sort,
             "all_filters": all_filters,
             "from_explore": True,
+            "explore_queries": explore_queries,
         },
     )

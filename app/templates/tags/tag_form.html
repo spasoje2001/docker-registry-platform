@@ -11,12 +11,12 @@
                         {{ title }}
                     </h3>
                     {% if repository.is_official %}
-                        <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
+                        <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
                         class="btn btn-link text-decoration-none">
                             <i class="bi bi-arrow-left"></i> Go Back
                         </a>
                     {% else %}
-                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
+                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
                         class="btn btn-link text-decoration-none">
                             <i class="bi bi-arrow-left"></i> Go Back
                         </a>
@@ -54,6 +54,12 @@
 
                     <form method="post" id="tagForm">
                         {% csrf_token %}
+                        {% if from_explore %}
+                            <input type="hidden" name="from_explore" value="1">
+                            {% if explore_queries %}
+                                <input type="hidden" name="explore_queries" value="{{ explore_queries }}">
+                            {% endif %}
+                        {% endif %}
 
                         <div id="step1" class="form-step">
                             {% if not tag %}
@@ -154,7 +160,7 @@
                                     </button>
                                 {% else %}
                                     {% if tag.digest %}
-                                        <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name tag.digest %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}" 
+                                        <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name tag.digest %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}" 
                                             class="btn btn-sm btn-danger">
                                             <i class="bi bi-trash"></i> Delete
                                         </a>
