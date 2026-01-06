@@ -91,7 +91,11 @@ def repository_create(request):
         return render(
             request,
             "repositories/repository_form.html",
-            {"form": form, "title": "New Repository"},
+            {
+                "form": form,
+                "title": "New Repository",
+                "from_profile": from_profile,
+                },
         )
 
     # GET request
@@ -165,6 +169,7 @@ def repository_update(request, owner_username, name):
 
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
     from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
     form = RepositoryForm(request.POST or None, instance=repo, request=request)
 
     if request.method == "POST" and form.is_valid():
@@ -182,7 +187,9 @@ def repository_update(request, owner_username, name):
                 },
             )
             if from_explore:
-                url += '?from_explore=1'
+                url += "?from_explore=1"
+                if explore_queries:
+                    url += "&" + explore_queries
 
             return redirect(url)
         else:
@@ -196,7 +203,9 @@ def repository_update(request, owner_username, name):
             if from_profile:
                 url += "?from_profile=1"
             elif from_explore:
-                url += '?from_explore=1'
+                url += "?from_explore=1"
+                if explore_queries:
+                    url += "&" + explore_queries
 
             return redirect(url)
 
@@ -207,6 +216,9 @@ def repository_update(request, owner_username, name):
             "form": form,
             "repository": repo,
             "title": f"Edit {repo.full_name}",
+            "from_profile": from_profile,
+            "from_explore": from_explore,
+            "explore_queries": explore_queries,
         },
     )
 
@@ -222,6 +234,7 @@ def repository_update_official(request, name):
 
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
     form = RepositoryForm(request.POST or None, instance=repo, request=request)
 
     if request.method == "POST" and form.is_valid():
@@ -243,7 +256,9 @@ def repository_update_official(request, name):
             if from_profile:
                 url += "?from_profile=1"
             elif from_explore:
-                url += '?from_explore=1'
+                url += "?from_explore=1"
+                if explore_queries:
+                    url += "&" + explore_queries
             return redirect(url)
         else:
             url = reverse(
@@ -253,14 +268,22 @@ def repository_update_official(request, name):
                 },
             )
             if from_explore:
-                url += '?from_explore=1'
+                url += "?from_explore=1"
+                if explore_queries:
+                    url += "&" + explore_queries
 
             return redirect(url)
 
     return render(
         request,
         "repositories/repository_form.html",
-        {"form": form, "repository": repo, "title": "Edit repository"},
+        {
+            "form": form, "repository": repo,
+            "title": "Edit repository",
+            "from_profile": from_profile,
+            "from_explore": from_explore,
+            "explore_queries": explore_queries,
+            },
     )
 
 
@@ -294,6 +317,7 @@ def repository_delete(request, owner_username, name):
 
     from_profile = request.GET.get("from_profile")
     from_explore = request.GET.get("from_explore")
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
 
     if request.method == "POST":
         repo_name = repo.full_name
@@ -303,13 +327,25 @@ def repository_delete(request, owner_username, name):
         if from_profile:
             return redirect("accounts:profile")
         elif from_explore:
+            if explore_queries:
+                url = reverse(
+                    "explore:search",
+                )
+                url += "explore/?" + explore_queries
+                return redirect(url)
             return redirect("explore:search")
         return redirect("repositories:list")
 
     return render(
         request,
         "repositories/repository_confirm_delete.html",
-        {"repository": repo, "commands": commands}
+        {
+            "repository": repo,
+            "commands": commands,
+            "from_profile": from_profile,
+            "from_explore": from_explore,
+            "explore_queries": explore_queries,
+            }
     )
 
 
@@ -324,6 +360,7 @@ def repository_delete_official(request, name):
         return redirect("repositories:detail_official", name=repo.name)
 
     from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
 
     commands = {
         'delete_repo': f'docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}',
@@ -337,13 +374,24 @@ def repository_delete_official(request, name):
         messages.success(request, f'Repository "{repo_name}" deleted.')
 
         if from_explore:
+            if explore_queries:
+                url = reverse(
+                    "explore:search",
+                )
+                url += "explore/?" + explore_queries
+                return redirect(url)
             return redirect("explore:search")
         return redirect("repositories:list")
 
     return render(
         request,
         "repositories/repository_confirm_delete.html",
-        {"repository": repo, "commands": commands}
+        {
+            "repository": repo,
+            "commands": commands,
+            "from_explore": from_explore,
+            "explore_queries": explore_queries,
+            }
     )
 
 
@@ -368,6 +416,7 @@ def tag_create(request, owner_username, name):
 
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
 
     if request.method == 'POST':
         form = TagForm(request.POST)
@@ -399,7 +448,9 @@ def tag_create(request, owner_username, name):
                 if from_profile:
                     url += '?from_profile=1'
                 elif from_explore:
-                    url += '?from_explore=1'
+                    url += "?from_explore=1"
+                    if explore_queries:
+                        url += "&" + explore_queries
                 return redirect(url)
     else:
         form = TagForm()
@@ -412,6 +463,8 @@ def tag_create(request, owner_username, name):
             'repository': repo,
             'title': f'New Tag for {repo.full_name}',
             'from_profile': from_profile,
+            "from_explore": from_explore,
+            "explore_queries": explore_queries,
         }
     )
 
@@ -429,6 +482,7 @@ def tag_create_official(request, name):
         return redirect('repositories:detail_official', name=name)
 
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
 
     if request.method == 'POST':
         form = TagForm(request.POST)
@@ -453,7 +507,9 @@ def tag_create_official(request, name):
                         kwargs={'name': name}
                 )
                 if from_explore:
-                    url += '?from_explore=1'
+                    url += "?from_explore=1"
+                    if explore_queries:
+                        url += "&" + explore_queries
                 return redirect(url)
     else:
         form = TagForm()
@@ -465,7 +521,8 @@ def tag_create_official(request, name):
             "form": form,
             "repository": repo,
             "title": f"New Tag for {repo.full_name}",
-            'from_explore': from_explore
+            'from_explore': from_explore,
+            "explore_queries": explore_queries,
         },
     )
 
@@ -489,9 +546,10 @@ def tag_update(request, owner_username, name, tag_name):
     tag = get_object_or_404(repository.tags, name=tag_name)
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
 
     manifest = {}
-    if service.health_check() == True:
+    if service.health_check() is True:
         try:
             manifest = service.get_manifest(repository.name, tag.name)
         except Exception:
@@ -524,7 +582,9 @@ def tag_update(request, owner_username, name, tag_name):
             if from_profile:
                 url += '?from_profile=1'
             elif from_explore:
-                url += '?from_explore=1'
+                url += "?from_explore=1"
+                if explore_queries:
+                    url += "&" + explore_queries
             return redirect(url)
     else:
         form = TagForm(instance=tag)
@@ -540,6 +600,7 @@ def tag_update(request, owner_username, name, tag_name):
             'title': f'Edit Tag {tag.name} for {repository.full_name}',
             'from_profile': from_profile,
             'from_explore': from_explore,
+            "explore_queries": explore_queries,
         }
     )
 
@@ -563,6 +624,7 @@ def tag_delete(request, owner_username, name, tag_name, digest):
     tag = get_object_or_404(repo.tags, name=tag_name)
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
     from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
 
     commands = {
         'delete_manifest': f"curl -X DELETE -u admin:Admin123 http://localhost:5000/v2/{repo.name}/manifests/{digest}",
@@ -588,7 +650,9 @@ def tag_delete(request, owner_username, name, tag_name, digest):
             if from_profile:
                 url += "?from_profile=1"
             elif from_explore:
-                url += '?from_explore=1'
+                url += "?from_explore=1"
+                if explore_queries:
+                    url += "&" + explore_queries
             return redirect(url)
         else:
             url = reverse(
@@ -601,7 +665,9 @@ def tag_delete(request, owner_username, name, tag_name, digest):
             if from_profile:
                 url += "?from_profile=1"
             elif from_explore:
-                url += '?from_explore=1'
+                url += "?from_explore=1"
+                if explore_queries:
+                    url += "&" + explore_queries
             return redirect(url)
 
     return render(
@@ -613,6 +679,7 @@ def tag_delete(request, owner_username, name, tag_name, digest):
             "commands": commands,
             "from_profile": from_profile,
             "from_explore": from_explore,
+            "explore_queries": explore_queries,
         },
     )
 
@@ -631,6 +698,8 @@ def tag_delete_official(request, name, tag_name, digest):
 
     tag = get_object_or_404(repo.tags, name=tag_name)
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
+
     commands = {
         'delete_manifest': f"curl -X DELETE -u admin:Admin123 http://localhost:5000/v2/{repo.name}/manifests/{digest}",
         'delete_tag': f"docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}/_manifests/tags/{tag_name}",
@@ -649,7 +718,9 @@ def tag_delete_official(request, name, tag_name, digest):
                 kwargs={'name': name}
         )
         if from_explore:
-            url += '?from_explore=1'
+            url += "?from_explore=1"
+            if explore_queries:
+                url += "&" + explore_queries
         return redirect(url)
 
     return render(
@@ -660,5 +731,6 @@ def tag_delete_official(request, name, tag_name, digest):
             "tag": tag,
             "commands": commands,
             "from_explore": from_explore,
+            "explore_queries": explore_queries,
         },
     )

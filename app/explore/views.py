@@ -25,12 +25,22 @@ def search(request):
 
 def explore_repositories(request):
     query = request.GET.get("q", "").strip()
+    active_filter = request.GET.get("filter", "")
+    sort = request.GET.get("sort", "relevance")
+    explore_queries = request.GET.urlencode()
 
     repositories = (
         Repository.objects
         .filter(visibility="PUBLIC")
+        .select_related("owner")
         .order_by("-created_at")
     )
+
+    if active_filter == "official":
+        repositories = repositories.filter(is_official=True)
+
+    elif active_filter == "verified":
+        repositories = repositories.filter(owner__is_verified_publisher=True)
 
     if query:
         repositories = repositories.filter(
@@ -44,9 +54,35 @@ def explore_repositories(request):
             )
         ).order_by("relevance", "name")
 
+    if sort == "updated":
+        repositories = repositories.order_by("-updated_at")
+
+    elif sort == "name_asc":
+        repositories = repositories.order_by("name")
+
+    elif sort == "name_desc":
+        repositories = repositories.order_by("-name")
+
+    else:  # relevance (default)
+        if query:
+            repositories = repositories.order_by("relevance", "name")
+        else:
+            repositories = repositories.order_by("-created_at")
+
     paginator = Paginator(repositories, 20)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
+
+    all_filters = 0
+
+    if query:
+        all_filters += 1
+
+    if active_filter:
+        all_filters += 1
+
+    if sort != "relevance":
+        all_filters += 1
 
     return render(
         request,
@@ -55,6 +91,10 @@ def explore_repositories(request):
             "repositories": page_obj,
             "page_obj": page_obj,
             "query": query,
+            "active_filter": active_filter,
+            "sort": sort,
+            "all_filters": all_filters,
             "from_explore": True,
+            "explore_queries": explore_queries,
         },
     )
