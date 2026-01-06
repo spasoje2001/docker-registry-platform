@@ -69,11 +69,10 @@ def explore_repositories(request):
         else:
             repositories = repositories.order_by("-created_at")
 
-
     paginator = Paginator(repositories, 20)
     page_number = request.GET.get("page")
     page_obj = paginator.get_page(page_number)
-    
+
     all_filters = 0
 
     if query:
