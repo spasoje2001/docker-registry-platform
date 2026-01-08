@@ -470,21 +470,13 @@ def tag_create_official(request, name):
     )
 
 
-def tag_update(request, owner_username, name, tag_name):
+def tag_detail(request, owner_username, name, tag_name):
     service = RepositoryService()
     repository = get_object_or_404(
         Repository,
         owner__username=owner_username,
         name=name
     )
-
-    if repository.owner != request.user:
-        messages.error(request, 'You cannot edit tags for this repository.')
-        return redirect(
-            'repositories:detail',
-            owner_username=owner_username,
-            name=name
-        )
 
     tag = get_object_or_404(repository.tags, name=tag_name)
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
@@ -536,7 +528,70 @@ def tag_update(request, owner_username, name, tag_name):
             'form': form,
             'repository': repository,
             'tag': tag,
-            'manifest': manifest,
+            'title': f'Details for {tag.name} from {repository.full_name}',
+            'from_profile': from_profile,
+            'from_explore': from_explore,
+        }
+    )
+
+def tag_detail_official(request, name, tag_name):
+    service = RepositoryService()
+    repository = get_object_or_404(
+        Repository,
+        name=name,
+        is_official=True
+    )
+
+    tag = get_object_or_404(repository.tags, name=tag_name)
+    from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
+    from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
+
+    manifest = {}
+    if service.health_check() == True:
+        try:
+            manifest = service.get_manifest(repository.name, tag.name)
+        except Exception:
+            messages.error(
+                request,
+                f'Error fetching manifest for tag "{tag.name}": Tag not found in registry.'
+            )
+    else:
+        messages.error(
+            request,
+            "Registry service not available. Please try again later"
+        )
+
+    if request.method == 'POST':
+        form = TagForm(request.POST, instance=tag)
+        if form.is_valid():
+            form.save()
+            messages.success(
+                request,
+                f'Tag "{tag.name}" updated successfully!'
+            )
+
+            url = reverse(
+                'repositories:detail',
+                kwargs={
+                    'owner_username': owner_username,
+                    'name': name
+                }
+            )
+            if from_profile:
+                url += '?from_profile=1'
+            elif from_explore:
+                url += '?from_explore=1'
+            return redirect(url)
+    else:
+        form = TagForm(instance=tag)
+
+    return render(
+        request,
+        'tags/tag_form.html',
+        {
+            'form': form,
+            'repository': repository,
+            'tag': tag,
             'title': f'Details for {tag.name} from {repository.full_name}',
             'from_profile': from_profile,
             'from_explore': from_explore,

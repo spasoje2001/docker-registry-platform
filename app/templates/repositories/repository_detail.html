@@ -198,8 +198,13 @@
                                 </div>
                                 
                                 <div class="col-12 col-lg-1 text-md-end">
-                                    {% if user == repository.owner %}
-                                        <a href="{% url 'repositories:tag_update' repository.owner.username repository.name tag.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}" 
+                                    {% if repository.is_official %}
+                                        <a href="{% url 'repositories:tag_detail_official' repository.name tag.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}" 
+                                            class="btn btn-sm btn-outline-primary">
+                                            <i class="bi bi-info-circle"></i> Detail
+                                        </a>
+                                    {% else %}
+                                        <a href="{% url 'repositories:tag_detail' repository.owner.username repository.name tag.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}" 
                                             class="btn btn-sm btn-outline-primary">
                                             <i class="bi bi-info-circle"></i> Detail
                                         </a>
