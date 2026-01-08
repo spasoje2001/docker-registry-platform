@@ -119,11 +119,40 @@ def repository_detail(request, owner_username, name):
         if not request.user.is_authenticated or request.user != repo.owner:
             raise Http404("Repository not found")
 
+    from_profile = request.GET.get("from_profile")
+    from_explore = request.GET.get("from_explore")
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
+    tag_q = request.GET.get('tag_q', '')
+    tag_sort = request.GET.get('tag_sort', 'newest')
+
     tags = repo.tags.all()
+
+    if tag_q:
+        tags = tags.filter(name__icontains=tag_q)
+
+    if tag_sort == "oldest":
+        tags = tags.order_by('created_at')
+    elif tag_sort == "name_asc":
+        tags = tags.order_by('name')
+    elif tag_sort == "name_desc":
+        tags = tags.order_by('-name')
+    elif tag_sort == "size":
+        tags = tags.order_by('-size')
+    else:
+        tags = tags.order_by('-created_at')
+
     return render(
         request,
         "repositories/repository_detail.html",
-        {"repository": repo, "tags": tags},
+        {
+            "repository": repo,
+            "tags": tags,
+            "from_profile": from_profile,
+            "from_explore": from_explore,
+            "explore_queries": explore_queries,
+            "tag_q": tag_q,
+            "tag_sort": tag_sort,
+        }
     )
 
 
@@ -132,10 +161,38 @@ def repository_detail_official(request, name):
     repo = get_object_or_404(Repository, name=name, is_official=True)
     tags = repo.tags.all()
 
+    from_profile = request.GET.get("from_profile")
+    from_explore = request.GET.get("from_explore")
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
+    tag_q = request.GET.get('tag_q', '')
+    tag_sort = request.GET.get('tag_sort', 'newest')
+
+    if tag_q:
+        tags = tags.filter(name__icontains=tag_q)
+
+    if tag_sort == "oldest":
+        tags = tags.order_by('created_at')
+    elif tag_sort == "name_asc":
+        tags = tags.order_by('name')
+    elif tag_sort == "name_desc":
+        tags = tags.order_by('-name')
+    elif tag_sort == "size":
+        tags = tags.order_by('-size')
+    else:
+        tags = tags.order_by('-created_at')
+
     return render(
         request,
         "repositories/repository_detail.html",
-        {"repository": repo, "tags": tags},
+        {
+            "repository": repo,
+            "tags": tags,
+            "from_profile": from_profile,
+            "from_explore": from_explore,
+            "explore_queries": explore_queries,
+            "tag_q": tag_q,
+            "tag_sort": tag_sort,
+        }
     )
 
 

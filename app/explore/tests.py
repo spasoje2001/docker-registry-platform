@@ -21,9 +21,8 @@ class ExploreRepositoriesTests(TestCase):
             description="Official nginx image",
             owner=self.user1,
             visibility="PUBLIC",
+            is_official=True
         )
-        self.repo_name_match.is_official = True
-        self.repo_name_match.save()
 
         # Public repo – description match
         self.repo_description_match = Repository.objects.create(
