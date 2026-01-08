@@ -7,9 +7,10 @@ from repositories.models import Repository
 
 def search(request):
     repositories = (
-        Repository.objects.filter(visibility="PUBLIC")
+        Repository.objects
+        .filter(Q(visibility="PUBLIC") | Q(is_official=True))
         .select_related("owner")
-        .order_by("-created_at")
+        .distinct()
     )
 
     return render(
@@ -29,9 +30,10 @@ def explore_repositories(request):
     explore_queries = request.GET.urlencode()
 
     repositories = (
-        Repository.objects.filter(visibility="PUBLIC")
+        Repository.objects
+        .filter(Q(visibility="PUBLIC") | Q(is_official=True))
         .select_related("owner")
-        .order_by("-created_at")
+        .distinct()
     )
 
     if active_filter == "official":

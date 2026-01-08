@@ -2,6 +2,19 @@
 
 {% block content %}
 <div class="container">
+    {% if request.GET.from_profile %}
+        <a href="{% url 'accounts:profile' %}#repos" class="btn btn-link text-decoration-none mb-4">
+            <i class="bi bi-arrow-left"></i> Go Back
+        </a>
+    {% elif request.GET.from_explore %}
+        <a href="{% url 'explore:search' %}explore/{% if request.GET.q or request.GET.filter or request.GET.sort %}?q={{ request.GET.q }}&filter={{ request.GET.filter }}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.page %}&page={{ request.GET.page }}{% endif %}" class="btn btn-link text-decoration-none mb-4">
+            <i class="bi bi-arrow-left"></i> Go Back
+        </a>
+    {% else %}
+        <a href="{% url 'repositories:list' %}" class="btn btn-link text-decoration-none mb-4">
+            <i class="bi bi-arrow-left"></i> Go Back
+        </a>
+    {% endif %}
     <div class="card shadow-sm mb-2">
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
@@ -156,26 +169,105 @@
     </div>
 
     <div class="card shadow-sm">
-        <div class="card-header bg-white d-flex justify-content-between align-items-center">
-            <h5 class="mb-0">
-                <i class="bi bi-tags"></i> Tags
-            </h5>
-            {% if repository.is_official %}
-                {% if user.is_admin %}
-                    <a href="{% url 'repositories:tag_create_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% endif %}{% endif %}"
-                        class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus-circle"></i> New
-                    </a>
+        <div class="card-header bg-white">
+            <div class="d-flex align-items-end gap-3 flex-wrap">
+                <h5 class="mb-0 me-3">
+                    <i class="bi bi-tags"></i> Tags
+                </h5>
+
+                <div class="col-md-1"></div>
+                {% if tags or tag_q or tag_sort != "newest" %}
+                <form method="get"
+                    {% if repository.is_official %}
+                        action="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if request.GET.q or request.GET.filter or request.GET.sort %}&q={{ request.GET.q }}&filter={{ request.GET.filter }}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.page %}&page={{ request.GET.page }}{% endif %}{% endif %}{% if tag_sort != 'newest' or tag_q %}&tag_sort={{ tag_sort }}&tag_q={{ tag_q }}{% endif %}"
+                    {% else %}
+                        action="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if request.GET.q or request.GET.filter or request.GET.sort %}&q={{ request.GET.q }}&filter={{ request.GET.filter }}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.page %}&page={{ request.GET.page }}{% endif %}{% endif %}{% if tag_sort != 'newest' or tag_q %}&tag_sort={{ tag_sort }}&tag_q={{ tag_q }}{% endif %}"
+                    {% endif %}
+                    class="d-flex align-items-end gap-3 flex-wrap flex-grow-1">
+
+                    {% if request.GET.from_explore %}
+                        <input type="hidden" name="from_explore" value="1"/>
+                    {% endif %}
+                    {% if request.GET.from_profile %}
+                        <input type="hidden" name="from_profile" value="1"/>
+                    {% endif %}
+                    {% if request.GET.sort %}
+                        <input type="hidden" name="sort" value="{{ request.GET.sort }}"/>
+                        <input type="hidden" name="filter" value="{{ request.GET.filter }}"/>
+                        <input type="hidden" name="q" value="{{ request.GET.q }}"/>
+                        <input type="hidden" name="page" value="{{ request.GET.page }}"/>
+                    {% endif %}
+
+                    <div>
+                        <label class="form-label small mb-1">Sort by</label>
+                        <select name="tag_sort"
+                                class="form-select"
+                                onchange="this.form.submit()">
+                            <option value="newest" {% if tag_sort == "newest" %}selected{% endif %}>Newest</option>
+                            <option value="oldest" {% if tag_sort == "oldest" %}selected{% endif %}>Oldest</option>
+                            <option value="name_asc" {% if tag_sort == "name_asc" %}selected{% endif %}>Name (A–Z)</option>
+                            <option value="name_desc" {% if tag_sort == "name_desc" %}selected{% endif %}>Name (Z–A)</option>
+                            <option value="size" {% if tag_sort == "size" %}selected{% endif %}>Size</option>
+                        </select>
+                    </div>
+
+                    <div class="col-md-1"></div>
+                    <div class="flex-grow-1" style="min-width: 170px;">
+                        <label class="form-label small mb-1">Search</label>
+                        <div class="input-group">
+                            <input type="text"
+                                name="tag_q"
+                                value="{{ tag_q }}"
+                                class="form-control"
+                                placeholder="Search tags...">
+                            <button class="btn btn-outline-secondary" type="submit">
+                                <i class="bi bi-search"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="col-md-1"></div>
+                    {% if tag_q or tag_sort != "newest" %}
+                        <div class="col-md-1">
+                            <label class="form-label small mb-1">&nbsp;</label>
+                            {% if repo.is_official %}
+                                <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if request.GET.q or request.GET.filter or request.GET.sort %}&q={{ request.GET.q }}&filter={{ request.GET.filter }}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.page %}&page={{ request.GET.page }}{% endif %}{% endif %}" class="btn btn-outline-secondary">
+                            {% else %}
+                                <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if request.GET.q or request.GET.filter or request.GET.sort %}&q={{ request.GET.q }}&filter={{ request.GET.filter }}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.page %}&page={{ request.GET.page }}{% endif %}{% endif %}" class="btn btn-outline-secondary">
+                            {% endif %}
+                                Clean
+                            </a>
+                        </div>
+                    {% else %}
+                        <div class="col-md-1"></div>
+                    {% endif %}
+                </form>
+                {% else %}
+                    <div class="col-md-7"></div>
                 {% endif %}
-            {% else %}
-                {% if user == repository.owner %}
-                    <a href="{% url 'repositories:tag_create' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% endif %}{% endif %}"
-                        class="btn btn-sm btn-primary">
-                        <i class="bi bi-plus-circle"></i> New
-                    </a>
+
+                <div class="col-md-1"></div>
+                {% if repository.is_official and user.is_admin %}
+                    <div>
+                        <label class="form-label small mb-1">&nbsp;</label>
+                        <a href="{% url 'tags:create' %}" class="btn btn-primary">
+                            <i class="bi bi-plus"></i> New
+                        </a>
+                    </div>
+                {% else %}
+                    {% if user == repository.owner %}
+                        <a href="{% url 'repositories:tag_create' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% endif %}{% endif %}"
+                            class="btn btn-sm btn-primary">
+                            <i class="bi bi-plus-circle"></i> New
+                        </a>
+                    {% else %}
+                        <div class="col-md-1"></div>
+                    {% endif %}
                 {% endif %}
-            {% endif %}
+
+            </div>
         </div>
+            
         <div class="card-body p-0">
             {% if tags %}
                 <div class="list-group list-group-flush">
