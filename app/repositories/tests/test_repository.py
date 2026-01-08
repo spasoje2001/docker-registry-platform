@@ -371,7 +371,6 @@ class OfficialRepositoryTests(TestCase):
 
     def test_all_admins_can_edit_official_repo(self):
         """Test: any admin can edit official repo (not just creator)"""
-        # Admin1 creates repo
         repo = Repository.objects.create(
             name="mongodb",
             is_official=True,

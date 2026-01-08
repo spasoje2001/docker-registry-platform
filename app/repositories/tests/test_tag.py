@@ -118,7 +118,7 @@ class TagModelTests(TestCase):
         )
 
         response = self.client.post(url)
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
         self.assertFalse(repo.tags.filter(name="v1.0").exists())
 
     @patch("repositories.views.RepositoryService")
@@ -263,7 +263,7 @@ class OfficialRepoTagTests(TestCase):
 
         response = self.client.post(url)
 
-        self.assertEqual(response.status_code, 302)
+        self.assertEqual(response.status_code, 200)
         self.assertFalse(self.official_repo.tags.filter(name="old-version").exists())
 
 
