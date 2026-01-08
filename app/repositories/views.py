@@ -64,14 +64,14 @@ def repository_create(request):
 
             repo.save()
 
-            # try:
-            #     Tag.objects.create(name=tag_name, repository=repo)
-            # except Exception as e:
-            #     form.add_error(None, f"Error creating initial tag: {e}")
-            #     return render(
-            #         request,
-            #         "repositories/repository_form.html",
-            #         {"form": form, "title": "New Repository"})
+            try:
+                Tag.objects.create(name=tag_name, repository=repo)
+            except Exception as e:
+                form.add_error(None, f"Error creating initial tag: {e}")
+                return render(
+                    request,
+                    "repositories/repository_form.html",
+                    {"form": form, "title": "New Repository"})
 
             messages.success(
                 request,
@@ -109,7 +109,6 @@ def repository_create(request):
 
 def repository_detail(request, owner_username, name):
     """Show user repository details"""
-    # service = RepositoryService()
     repo = get_object_or_404(
         Repository,
         owner__username=owner_username,
@@ -123,7 +122,6 @@ def repository_detail(request, owner_username, name):
             raise Http404("Repository not found")
 
     tags = repo.tags.all()
-    # tags_reg = service.list_tags(repo.name)
     return render(
         request,
         "repositories/repository_detail.html",
@@ -133,10 +131,8 @@ def repository_detail(request, owner_username, name):
 
 def repository_detail_official(request, name):
     """Show official repository details"""
-    # service = RepositoryService()
     repo = get_object_or_404(Repository, name=name, is_official=True)
     tags = repo.tags.all()
-    # tags_reg = service.list_tags(name)
 
     return render(
         request,
@@ -540,21 +536,6 @@ def tag_detail(request, owner_username, name, tag_name):
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
     explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
 
-    manifest = {}
-    if service.health_check() is True:
-        try:
-            manifest = service.get_manifest(repository.name, tag.name)
-        except Exception:
-            messages.error(
-                request,
-                f'Error fetching manifest for tag "{tag.name}": Tag not found in registry.'
-            )
-    else:
-        messages.error(
-            request,
-            "Registry service not available. Please try again later"
-        )
-
     if request.method == 'POST':
         form = TagForm(request.POST, instance=tag)
         if form.is_valid():
@@ -607,21 +588,6 @@ def tag_detail_official(request, name, tag_name):
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
     explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
-
-    manifest = {}
-    if service.health_check() is True:
-        try:
-            manifest = service.get_manifest(repository.name, tag.name)
-        except Exception:
-            messages.error(
-                request,
-                f'Error fetching manifest for tag "{tag.name}": Tag not found in registry.'
-            )
-    else:
-        messages.error(
-            request,
-            "Registry service not available. Please try again later"
-        )
 
     if request.method == 'POST':
         form = TagForm(request.POST, instance=tag)
@@ -747,7 +713,6 @@ def tag_delete_official(request, name, tag_name, digest):
     """Delete tag from official repository (only admins)"""
     repo = get_object_or_404(Repository, name=name, is_official=True)
 
-    # Permission check - only admins can delete tags from official repos
     if not request.user.is_admin:
         messages.error(
             request,
