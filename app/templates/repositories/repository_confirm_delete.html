@@ -90,6 +90,12 @@
 
                     <form method="post">
                         {% csrf_token %}
+                        {% if from_explore %}
+                            <input type="hidden" name="from_explore" value="1">
+                            {% if explore_queries %}
+                                <input type="hidden" name="explore_queries" value="{{ explore_queries }}">
+                            {% endif %}
+                        {% endif %}
                         <div class="d-flex gap-2 pt-3 border-top">
                             <button type="submit" class="btn btn-danger">
                                 <i class="bi bi-trash-fill"></i>
@@ -97,13 +103,13 @@
                             </button>
 
                             {% if repository.is_official %}
-                                <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
+                                <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
                                 class="btn btn-outline-secondary">
                                     <i class="bi bi-x-circle"></i>
                                     Cancel
                                 </a>
                             {% else %}
-                                <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}" 
+                                <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}" 
                                 class="btn btn-outline-secondary">
                                     <i class="bi bi-x-circle"></i>
                                     Cancel

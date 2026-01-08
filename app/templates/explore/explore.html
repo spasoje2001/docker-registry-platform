@@ -1,22 +1,73 @@
  {% extends "base.html" %}
 
-{% block title %}Edit profile{% endblock %}
+{% block title %}Explore{% endblock %}
 
 {% block content %}
  <h1>Explore repositories</h1>
 
     <form method="get" action="{% url 'explore:explore' %}" class="mb-4">
-        <div class="input-group">
-            <input
-                type="text"
-                name="q"
-                value="{{ query }}"
-                class="form-control"
-                placeholder="Search repositories..."
-            >
-            <button class="btn btn-outline-secondary" type="submit">
-                <i class="bi bi-search"></i>
-            </button>
+        <div class="input-group row g-3 mb-4">
+            <div class="col-md-2">
+                <label class="form-label">Filter by</label>
+                <select
+                    name="filter"
+                    class="form-select"
+                    onchange="this.form.submit()"
+                >
+                    <option value="">All repositories</option>
+                    <option value="official"
+                            {% if active_filter == "official" %}selected{% endif %}>
+                        Official only
+                    </option>
+                    <option value="verified"
+                            {% if active_filter == "verified" %}selected{% endif %}>
+                        Verified publisher only
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+                <label class="form-label">Sort by</label>
+                <select name="sort" class="form-select" onchange="this.form.submit()">
+                    <option value="relevance" {% if sort == "relevance" %}selected{% endif %}>
+                        Relevance
+                    </option>
+                    <option value="updated" {% if sort == "updated" %}selected{% endif %}>
+                        Recently updated
+                    </option>
+                    <option value="name_asc" {% if sort == "name_asc" %}selected{% endif %}>
+                        Name (A–Z)
+                    </option>
+                    <option value="name_desc" {% if sort == "name_desc" %}selected{% endif %}>
+                        Name (Z–A)
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-1"></div>
+
+            <div class="col-md-5">
+                <label class="form-label">Search by name and description</label>
+
+                <div class="input-group">
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ query }}"
+                        class="form-control"
+                        placeholder="Search repositories..."
+                    >
+                    <button class="btn btn-outline-secondary" type="submit">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                {% if query or sort != "relevance" or active_filter %}
+                    <a href="{% url 'explore:explore' %}" class="btn btn-outline-secondary">
+                        Clear
+                    </a>
+                {% endif %}
+            </div>
         </div>
     </form>
 
@@ -29,7 +80,9 @@
                 {% if page_obj.has_previous %}
                     <li class="page-item">
                         <a class="page-link"
-                        href="?q={{ query }}&page={{ page_obj.previous_page_number }}">
+                        href="?q={{ query }}&sort={{ sort }}
+                        {% if active_filter %}&filter={{ active_filter }}{% endif %}
+                        &page={{ page_obj.previous_page_number }}">
                             Previous
                         </a>
                     </li>
@@ -43,7 +96,9 @@
                     {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
                         <li class="page-item">
                             <a class="page-link"
-                            href="?q={{ query }}&page={{ num }}">
+                            href="?q={{ query }}&sort={{ sort }}
+                            {% if active_filter %}&filter={{ active_filter }}{% endif %}
+                            &page={{ num }}">
                                 {{ num }}
                             </a>
                         </li>
@@ -53,18 +108,25 @@
                 {% if page_obj.has_next %}
                     <li class="page-item">
                         <a class="page-link"
-                        href="?q={{ query }}&page={{ page_obj.next_page_number }}">
+                        href="?q={{ query }}&sort={{ sort }}
+                        {% if active_filter %}&filter={{ active_filter }}{% endif %}
+                        &page={{ page_obj.next_page_number }}">
                             Next
                         </a>
                     </li>
                 {% endif %}
-
             </ul>
         </nav>
+    {% endif %}
 
-        <p class="text-center text-muted small">
-            Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
-            of {{ page_obj.paginator.count }} results
+    <p class="text-center text-muted small">
+        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+        of {{ page_obj.paginator.count }} results
+    </p>
+    
+    {% if all_filters %}
+        <p class="text-muted text-center small">
+            {{ all_filters }} active filter{{ all_filters|pluralize }}
         </p>
     {% endif %}
 
