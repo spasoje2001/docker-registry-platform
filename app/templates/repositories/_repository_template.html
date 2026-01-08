@@ -32,9 +32,9 @@
         <div id="step1" class="step-content">
             <form method="post" id="repositoryForm" action="{% if repository %}
                     {% if repository.is_official %}
-                        {% url 'repositories:update_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}
+                        {% url 'repositories:update_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore&' }}{% endif %}{% endif %}
                     {% else %}
-                        {% url 'repositories:update' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}
+                        {% url 'repositories:update' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore&' }}{% elif 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}
                     {% endif %}
                 {% else %}
                     {% url 'repositories:create' %}{% if request.GET.from_profile %}?from_profile=1{% endif %}
@@ -163,12 +163,12 @@
 
                 <div class="d-flex justify-content-between gap-2 pt-3 border-top">
                     {% if repository.is_official %}
-                    <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
+                    <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore&' }}{% endif %}"
                     class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Cancel
                     </a>
                     {% elif repository %}
-                    <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
+                    <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore&' }}{% elif 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}"
                     class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Cancel
                     </a>
