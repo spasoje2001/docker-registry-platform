@@ -2,11 +2,12 @@
 Service for synchronizing Docker registry tags with Django database.
 
 """
+
 import logging
 from typing import Dict, List, Tuple
 from dataclasses import dataclass
 
-from django.db import transaction, models
+from django.db import transaction
 from django.utils import timezone
 
 from ..models import Repository, Tag
@@ -19,6 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class SyncStats:
     """Statistics from a tag synchronization operation."""
+
     repos_processed: int = 0
     repos_skipped: int = 0
     tags_created: int = 0
@@ -53,7 +55,7 @@ class SyncService:
 
         logger.info("Starting full tag synchronization")
         repositories = Repository.objects.all()
-        
+
         for repo in repositories:
             try:
                 self.sync_repository_tags(repo)
@@ -62,7 +64,7 @@ class SyncService:
                 logger.error(error_msg)
                 self.stats.errors.append(error_msg)
                 self.stats.repos_skipped += 1
-        
+
         logger.info(str(self.stats))
         return self.stats
 
@@ -74,7 +76,9 @@ class SyncService:
         try:
             registry_tags = self._fetch_registry_tags(repository.name)
         except Exception as e:
-            logger.error(f"Failed to fetch tags from registry for {repository.name}: {e}")
+            logger.error(
+                f"Failed to fetch tags from registry for {repository.name}: {e}"
+            )
             raise
 
         with transaction.atomic():
@@ -103,32 +107,30 @@ class SyncService:
         if tags_list:
             for tag_name in tags_list:
                 try:
-                    manifest = self.registry_client.get_manifest(repo_name, tag_name)   
-                    digest = manifest.get('digest')        
-                    size = manifest.get('size', 0)
-                    os = manifest.get('os', '')
-                    arch = manifest.get('arch', '')
-                    image_type = manifest.get('mediaType', '').split('.')[-3]
-                    
+                    manifest = self.registry_client.get_manifest(repo_name, tag_name)
+                    digest = manifest.get("digest")
+                    size = manifest.get("size", 0)
+                    os = manifest.get("os", "")
+                    arch = manifest.get("arch", "")
+                    image_type = manifest.get("mediaType", "").split(".")[-3]
+
                     tags[tag_name] = {
-                        'digest': digest,
-                        'size': size,
-                        'os': os,
-                        'arch': arch,
-                        'image_type': image_type
+                        "digest": digest,
+                        "size": size,
+                        "os": os,
+                        "arch": arch,
+                        "image_type": image_type,
                     }
                 except Exception as e:
                     logger.warning(
                         f"Failed to get digest for {repo_name}:{tag_name}: {e}"
                     )
                     continue
-        
+
         return tags
 
     def _sync_tags_transaction(
-        self, 
-        repository: Repository, 
-        registry_tags: Dict[str, Dict]
+        self, repository: Repository, registry_tags: Dict[str, Dict]
     ) -> Tuple[int, int, int]:
         """Synchronize tags within a database transaction."""
 
@@ -138,8 +140,7 @@ class SyncService:
 
         # Get existing tags for this repository
         existing_tags = {
-            tag.name: tag 
-            for tag in Tag.objects.filter(repository=repository)
+            tag.name: tag for tag in Tag.objects.filter(repository=repository)
         }
 
         registry_tag_names = set(registry_tags.keys())
@@ -153,12 +154,12 @@ class SyncService:
                 Tag.objects.create(
                     repository=repository,
                     name=tag_name,
-                    digest=tag_data.get('digest', ''),
-                    size=tag_data.get('size', 0),
-                    os=tag_data.get('os', ''),
-                    arch=tag_data.get('arch', ''),
-                    image_type=tag_data.get('image_type', ''),
-                    last_synced=timezone.now()
+                    digest=tag_data.get("digest", ""),
+                    size=tag_data.get("size", 0),
+                    os=tag_data.get("os", ""),
+                    arch=tag_data.get("arch", ""),
+                    image_type=tag_data.get("image_type", ""),
+                    last_synced=timezone.now(),
                 )
                 created_count += 1
                 logger.debug(f"Created tag: {repository.name}:{tag_name}")
@@ -167,19 +168,25 @@ class SyncService:
             for tag_name in common_tag_names:
                 tag = existing_tags[tag_name]
                 tag_data = registry_tags[tag_name]
-                new_digest = tag_data.get('digest', '')
-                
+                new_digest = tag_data.get("digest", "")
+
                 if tag.digest != new_digest:
                     tag.digest = new_digest
-                    tag.size = tag_data.get('size', 0)
-                    tag.os = tag_data.get('os', '')
-                    tag.arch = tag_data.get('arch', '')
-                    tag.image_type = tag_data.get('image_type', '')
+                    tag.size = tag_data.get("size", 0)
+                    tag.os = tag_data.get("os", "")
+                    tag.arch = tag_data.get("arch", "")
+                    tag.image_type = tag_data.get("image_type", "")
                     tag.last_synced = timezone.now()
-                    tag.save(update_fields=[
-                        'digest', 'size', 'os', 'arch', 'image_type',
-                        'last_synced'
-                    ])
+                    tag.save(
+                        update_fields=[
+                            "digest",
+                            "size",
+                            "os",
+                            "arch",
+                            "image_type",
+                            "last_synced",
+                        ]
+                    )
                     updated_count += 1
                     logger.debug(
                         f"Updated tag: {repository.name}:{tag_name} "
@@ -187,7 +194,7 @@ class SyncService:
                     )
                 else:
                     tag.last_synced = timezone.now()
-                    tag.save(update_fields=['last_synced'])
+                    tag.save(update_fields=["last_synced"])
 
         deleted_tag_names = existing_tag_names - registry_tag_names
         for tag_name in deleted_tag_names:

@@ -6,13 +6,12 @@ import re
 class RepositoryForm(forms.ModelForm):
     initial_tag = forms.CharField(
         max_length=255,
-        initial='latest',
+        initial="latest",
         required=False,
-        widget=forms.TextInput(attrs={
-            'class': 'form-control',
-            'placeholder': 'e.g., latest, v1.0.0'
-        }),
-        help_text='Initial tag name for the repository'
+        widget=forms.TextInput(
+            attrs={"class": "form-control", "placeholder": "e.g., latest, v1.0.0"}
+        ),
+        help_text="Initial tag name for the repository",
     )
 
     class Meta:
@@ -30,11 +29,11 @@ class RepositoryForm(forms.ModelForm):
                 }
             ),
             "visibility": forms.Select(attrs={"class": "form-select"}),
-            "is_official": forms.CheckboxInput(attrs={"class": "form-check-input"})
+            "is_official": forms.CheckboxInput(attrs={"class": "form-check-input"}),
         }
 
     def clean_is_official(self):
-        is_official = self.cleaned_data.get('is_official')
+        is_official = self.cleaned_data.get("is_official")
 
         if is_official and self.request and not self.request.user.is_admin:
             raise forms.ValidationError(
@@ -55,53 +54,45 @@ class RepositoryForm(forms.ModelForm):
 
     def clean(self):
         cleaned_data = super().clean()
-        name = cleaned_data.get('name')
-        initial_tag = cleaned_data.get('initial_tag')
-        is_official = cleaned_data.get('is_official', False)
-        visibility = cleaned_data.get('visibility')
+        name = cleaned_data.get("name")
+        initial_tag = cleaned_data.get("initial_tag")
+        is_official = cleaned_data.get("is_official", False)
+        visibility = cleaned_data.get("visibility")
 
         if name:
             name = name.strip()
-            cleaned_data['name'] = name
+            cleaned_data["name"] = name
 
         if initial_tag:
             initial_tag = initial_tag.strip()
-            cleaned_data['initial_tag'] = initial_tag
+            cleaned_data["initial_tag"] = initial_tag
 
         if not name:
-            raise forms.ValidationError({
-                'name': 'Repository name is required.'
-            })
+            raise forms.ValidationError({"name": "Repository name is required."})
 
         if not self.instance.pk and not initial_tag:
-            raise forms.ValidationError({
-                'initial_tag': 'Initial tag is required.'
-            })
+            raise forms.ValidationError({"initial_tag": "Initial tag is required."})
 
         if is_official and visibility == Repository.VisibilityChoices.PRIVATE:
-            self.add_error(
-                'is_official',
-                'Official repositories must be public.'
-            )
+            self.add_error("is_official", "Official repositories must be public.")
 
         if self.instance.pk:
             if is_official:
                 duplicates = Repository.objects.exclude(pk=self.instance.pk).filter(
-                    name=name,
-                    is_official=True
+                    name=name, is_official=True
                 )
                 if duplicates.exists():
                     self.add_error(
-                        'name', 'Official repository with this name already exists.')
+                        "name", "Official repository with this name already exists."
+                    )
             else:
                 duplicates = Repository.objects.exclude(pk=self.instance.pk).filter(
-                    name=name,
-                    is_official=False,
-                    owner=self.instance.owner
+                    name=name, is_official=False, owner=self.instance.owner
                 )
                 if duplicates.exists():
                     self.add_error(
-                        'name', 'You already have a repository with this name.')
+                        "name", "You already have a repository with this name."
+                    )
 
         else:
             if not self.request:
@@ -111,16 +102,16 @@ class RepositoryForm(forms.ModelForm):
                 duplicates = Repository.objects.filter(name=name, is_official=True)
                 if duplicates.exists():
                     self.add_error(
-                        'name', 'Official repository with this name already exists.')
+                        "name", "Official repository with this name already exists."
+                    )
             else:
                 duplicates = Repository.objects.filter(
-                    name=name,
-                    is_official=False,
-                    owner=self.request.user
+                    name=name, is_official=False, owner=self.request.user
                 )
                 if duplicates.exists():
                     self.add_error(
-                        'name', 'You already have a repository with this name.')
+                        "name", "You already have a repository with this name."
+                    )
 
         return cleaned_data
 
@@ -133,38 +124,37 @@ class RepositoryForm(forms.ModelForm):
 
             if self.instance.is_official:
                 self.fields["is_official"].disabled = True
-                self.fields["is_official"].help_text =\
+                self.fields["is_official"].help_text = (
                     "Official repositories cannot be converted back to personal"
+                )
 
 
 class TagForm(forms.ModelForm):
     class Meta:
         model = Tag
-        fields = ['name', 'digest']
+        fields = ["name", "digest"]
         widgets = {
-            'name': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'v1.0.0, latest, dev'
-            }),
-            'digest': forms.TextInput(attrs={
-                'class': 'form-control',
-                'placeholder': 'sha256:7da81a8...'
-            })
+            "name": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "v1.0.0, latest, dev"}
+            ),
+            "digest": forms.TextInput(
+                attrs={"class": "form-control", "placeholder": "sha256:7da81a8..."}
+            ),
         }
         help_texts = {
-            'name': 'Tag name (e.g., v1.0.0, latest)',
-            'digest': 'SHA256 digest of the image',
-            'size': 'Image size in bytes',
+            "name": "Tag name (e.g., v1.0.0, latest)",
+            "digest": "SHA256 digest of the image",
+            "size": "Image size in bytes",
         }
 
     def clean_name(self):
         """Validate tag name format"""
-        name = self.cleaned_data.get('name')
+        name = self.cleaned_data.get("name")
 
-        if not re.match(r'^[a-zA-Z0-9._-]+$', name):
+        if not re.match(r"^[a-zA-Z0-9._-]+$", name):
             raise forms.ValidationError(
-                'Tag name can only contain letters, '
-                'numbers, dots, hyphens, and underscores.'
+                "Tag name can only contain letters, "
+                "numbers, dots, hyphens, and underscores."
             )
 
         return name

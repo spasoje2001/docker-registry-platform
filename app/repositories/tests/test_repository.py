@@ -3,8 +3,7 @@ from django.urls import reverse
 from django.db import IntegrityError
 from ..models import Repository
 from django.contrib.auth import get_user_model
-from unittest.mock import patch, MagicMock, Mock
-import requests
+from unittest.mock import patch
 
 User = get_user_model()
 
@@ -16,9 +15,7 @@ class RepositoryModelTests(TestCase):
         self.user1 = User.objects.create_user(username="user1", password="testpass123")
         self.user2 = User.objects.create_user(username="user2", password="testpass123")
         self.user3 = User.objects.create_user(
-            username="admin1",
-            password="testpass123",
-            role=User.Role.ADMIN
+            username="admin1", password="testpass123", role=User.Role.ADMIN
         )
 
     def test_create_repository(self):
@@ -58,7 +55,7 @@ class RepositoryModelTests(TestCase):
         with self.assertRaises(IntegrityError):
             Repository.objects.create(name="duplicate-test", owner=self.user1)
 
-    @patch('repositories.views.RepositoryService')
+    @patch("repositories.views.RepositoryService")
     def test_view_own_repository(self, MockService):
         """Test: show user's repository"""
         Repository.objects.create(
@@ -209,73 +206,69 @@ class RepositoryModelTests(TestCase):
             name="django-best-practices",
             is_official=True,
             visibility=Repository.VisibilityChoices.PUBLIC,
-            owner=self.user3
+            owner=self.user3,
         )
 
         with self.assertRaises(IntegrityError):
             Repository.objects.create(
-                name="django-best-practices",
-                owner=self.user3,
-                is_official=True)
-        
-    @patch('repositories.views.RepositoryService')
+                name="django-best-practices", owner=self.user3, is_official=True
+            )
+
+    @patch("repositories.views.RepositoryService")
     def test_list_repositories_mock_registry(self, MockService):
         """Unit test: list repositories (mock registry response)"""
         repo1 = Repository.objects.create(
-            name="test-repo-1",
-            owner=self.user1,
-            description="First test repository"
+            name="test-repo-1", owner=self.user1, description="First test repository"
         )
         repo2 = Repository.objects.create(
-            name="test-repo-2",
-            owner=self.user1,
-            description="Second test repository"
+            name="test-repo-2", owner=self.user1, description="Second test repository"
         )
         repo3 = Repository.objects.create(
-            name="other-repo",
-            owner=self.user2,
-            description="Another user's repository"
+            name="other-repo", owner=self.user2, description="Another user's repository"
         )
-        
+
         mock_service_instance = MockService.return_value
         mock_service_instance.health_check.return_value = True
         mock_service_instance.list_repositories.return_value = [repo1, repo2, repo3]
-        
-        self.client.login(username='user1', password='testpass123')
-        url = reverse('repositories:list')
+
+        self.client.login(username="user1", password="testpass123")
+        url = reverse("repositories:list")
         response = self.client.get(url)
-        
+
         self.assertEqual(response.status_code, 200)
-        
+
         mock_service_instance.health_check.assert_called_once()
         mock_service_instance.list_repositories.assert_called_once_with(self.user1)
-        
-        self.assertIn('repositories', response.context)
-        repositories = response.context['repositories']
-        self.assertEqual(len(repositories), 3)
-        
-        self.assertContains(response, 'test-repo-1')
-        self.assertContains(response, 'test-repo-2')
-        self.assertContains(response, 'other-repo')
-        
-        self.assertTemplateUsed(response, 'repositories/repository_list.html')
 
-    @patch('repositories.views.RepositoryService')
+        self.assertIn("repositories", response.context)
+        repositories = response.context["repositories"]
+        self.assertEqual(len(repositories), 3)
+
+        self.assertContains(response, "test-repo-1")
+        self.assertContains(response, "test-repo-2")
+        self.assertContains(response, "other-repo")
+
+        self.assertTemplateUsed(response, "repositories/repository_list.html")
+
+    @patch("repositories.views.RepositoryService")
     def test_list_repositories_connection_error(self, MockService):
         """Test: handle connection error when listing repositories"""
         mock_service_instance = MockService.return_value
         mock_service_instance.health_check.return_value = False
-        
-        self.client.login(username='user1', password='testpass123')
-        url = reverse('repositories:list')
-        response = self.client.get(url)
-        
-        self.assertEqual(response.status_code, 200)
-        
-        messages_list = list(response.context['messages'])
-        self.assertTrue(any('unavailable' in str(msg).lower() or 'error' in str(msg).lower() 
-                           for msg in messages_list))
 
+        self.client.login(username="user1", password="testpass123")
+        url = reverse("repositories:list")
+        response = self.client.get(url)
+
+        self.assertEqual(response.status_code, 200)
+
+        messages_list = list(response.context["messages"])
+        self.assertTrue(
+            any(
+                "unavailable" in str(msg).lower() or "error" in str(msg).lower()
+                for msg in messages_list
+            )
+        )
 
 
 class OfficialRepositoryTests(TestCase):
@@ -284,19 +277,13 @@ class OfficialRepositoryTests(TestCase):
     def setUp(self):
         self.client = Client()
         self.regular_user = User.objects.create_user(
-            username="user1",
-            password="testpass123",
-            role=User.Role.USER
+            username="user1", password="testpass123", role=User.Role.USER
         )
         self.admin = User.objects.create_user(
-            username="admin1",
-            password="testpass123",
-            role=User.Role.ADMIN
+            username="admin1", password="testpass123", role=User.Role.ADMIN
         )
         self.super_admin = User.objects.create_user(
-            username="superadmin",
-            password="testpass123",
-            role=User.Role.SUPER_ADMIN
+            username="superadmin", password="testpass123", role=User.Role.SUPER_ADMIN
         )
 
     def test_admin_can_create_official_repo(self):
@@ -304,13 +291,16 @@ class OfficialRepositoryTests(TestCase):
         self.client.login(username="admin1", password="testpass123")
         url = reverse("repositories:create")
 
-        response = self.client.post(url, {
-            "name": "python",
-            "description": "Official Python image",
-            "visibility": Repository.VisibilityChoices.PUBLIC,
-            "is_official": True,
-            "initial_tag": "latest"
-        })
+        response = self.client.post(
+            url,
+            {
+                "name": "python",
+                "description": "Official Python image",
+                "visibility": Repository.VisibilityChoices.PUBLIC,
+                "is_official": True,
+                "initial_tag": "latest",
+            },
+        )
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
@@ -322,13 +312,16 @@ class OfficialRepositoryTests(TestCase):
         self.client.login(username="superadmin", password="testpass123")
         url = reverse("repositories:create")
 
-        response = self.client.post(url, {
-            "name": "nginx",
-            "description": "Official NGINX image",
-            "visibility": Repository.VisibilityChoices.PUBLIC,
-            "is_official": True,
-            "initial_tag": "latest"
-        })
+        response = self.client.post(
+            url,
+            {
+                "name": "nginx",
+                "description": "Official NGINX image",
+                "visibility": Repository.VisibilityChoices.PUBLIC,
+                "is_official": True,
+                "initial_tag": "latest",
+            },
+        )
 
         self.assertEqual(response.status_code, 302)
         self.assertTrue(
@@ -340,26 +333,29 @@ class OfficialRepositoryTests(TestCase):
         self.client.login(username="admin1", password="testpass123")
         url = reverse("repositories:create")
 
-        response = self.client.post(url, {
-            "name": "redis",
-            "description": "Official Redis image",
-            "visibility": Repository.VisibilityChoices.PRIVATE,
-            "is_official": True,
-        })
+        response = self.client.post(
+            url,
+            {
+                "name": "redis",
+                "description": "Official Redis image",
+                "visibility": Repository.VisibilityChoices.PRIVATE,
+                "is_official": True,
+            },
+        )
 
         self.assertEqual(response.status_code, 200)  # Form re-rendered with error
         self.assertFalse(
             Repository.objects.filter(name="redis", is_official=True).exists()
         )
 
-    @patch('repositories.views.RepositoryService')
+    @patch("repositories.views.RepositoryService")
     def test_official_repo_detail_url(self, MockService):
         """Test: official repo accessible via /repositories/<name>/"""
-        repo = Repository.objects.create(
+        Repository.objects.create(
             name="postgres",
             is_official=True,
             visibility=Repository.VisibilityChoices.PUBLIC,
-            owner=self.admin
+            owner=self.admin,
         )
 
         mock_service_instance = MockService.return_value
@@ -381,19 +377,22 @@ class OfficialRepositoryTests(TestCase):
             is_official=True,
             visibility=Repository.VisibilityChoices.PUBLIC,
             owner=self.admin,
-            description="Original description"
+            description="Original description",
         )
 
         # Super admin edits it
         self.client.login(username="superadmin", password="testpass123")
         url = reverse("repositories:update_official", kwargs={"name": "mongodb"})
 
-        response = self.client.post(url, {
-            "name": "mongodb",
-            "description": "Updated by super admin",
-            "visibility": Repository.VisibilityChoices.PUBLIC,
-            "is_official": True,
-        })
+        response = self.client.post(
+            url,
+            {
+                "name": "mongodb",
+                "description": "Updated by super admin",
+                "visibility": Repository.VisibilityChoices.PUBLIC,
+                "is_official": True,
+            },
+        )
 
         self.assertEqual(response.status_code, 302)
         repo.refresh_from_db()
@@ -405,18 +404,21 @@ class OfficialRepositoryTests(TestCase):
             name="mysql",
             is_official=True,
             visibility=Repository.VisibilityChoices.PUBLIC,
-            owner=self.admin
+            owner=self.admin,
         )
 
         self.client.login(username="user1", password="testpass123")
         url = reverse("repositories:update_official", kwargs={"name": "mysql"})
 
-        response = self.client.post(url, {
-            "name": "mysql",
-            "description": "Hacked!",
-            "visibility": Repository.VisibilityChoices.PUBLIC,
-            "is_official": True,
-        })
+        response = self.client.post(
+            url,
+            {
+                "name": "mysql",
+                "description": "Hacked!",
+                "visibility": Repository.VisibilityChoices.PUBLIC,
+                "is_official": True,
+            },
+        )
 
         # Should redirect with error
         self.assertEqual(response.status_code, 302)
@@ -429,18 +431,21 @@ class OfficialRepositoryTests(TestCase):
             name="ubuntu",
             is_official=True,
             visibility=Repository.VisibilityChoices.PUBLIC,
-            owner=self.admin
+            owner=self.admin,
         )
 
         self.client.login(username="admin1", password="testpass123")
         url = reverse("repositories:update_official", kwargs={"name": "ubuntu"})
 
-        self.client.post(url, {
-            "name": "ubuntu",
-            "description": "Ubuntu image",
-            "visibility": Repository.VisibilityChoices.PUBLIC,
-            "is_official": False,  # Trying to uncheck
-        })
+        self.client.post(
+            url,
+            {
+                "name": "ubuntu",
+                "description": "Ubuntu image",
+                "visibility": Repository.VisibilityChoices.PUBLIC,
+                "is_official": False,  # Trying to uncheck
+            },
+        )
 
         # Form should reject or checkbox should be disabled
         repo.refresh_from_db()
@@ -449,9 +454,7 @@ class OfficialRepositoryTests(TestCase):
     def test_official_repo_full_name_no_prefix(self):
         """Test: official repo full_name has no username prefix"""
         repo = Repository.objects.create(
-            name="alpine",
-            is_official=True,
-            owner=self.admin
+            name="alpine", is_official=True, owner=self.admin
         )
 
         self.assertEqual(repo.full_name, "alpine")
@@ -463,14 +466,14 @@ class OfficialRepositoryTests(TestCase):
             name="node",
             is_official=True,
             owner=self.admin,
-            visibility=Repository.VisibilityChoices.PUBLIC
+            visibility=Repository.VisibilityChoices.PUBLIC,
         )
 
         Repository.objects.create(
             name="personal-repo",
             is_official=False,
             owner=self.admin,
-            visibility=Repository.VisibilityChoices.PUBLIC
+            visibility=Repository.VisibilityChoices.PUBLIC,
         )
 
         self.client.login(username="admin1", password="testpass123")
@@ -478,6 +481,6 @@ class OfficialRepositoryTests(TestCase):
         response = self.client.get(url)
 
         # Should only see personal repo
-        repos = response.context['repositories']
+        repos = response.context["repositories"]
         self.assertEqual(repos.count(), 1)
         self.assertEqual(repos[0].name, "personal-repo")

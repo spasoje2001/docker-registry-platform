@@ -6,20 +6,23 @@ from django.db import migrations
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('accounts', '0002_user_email_change_code_user_email_change_new_email_and_more'),
+        (
+            "accounts",
+            "0002_user_email_change_code_user_email_change_new_email_and_more",
+        ),
     ]
 
     operations = [
         migrations.RemoveField(
-            model_name='user',
-            name='email_change_code',
+            model_name="user",
+            name="email_change_code",
         ),
         migrations.RemoveField(
-            model_name='user',
-            name='email_change_new_email',
+            model_name="user",
+            name="email_change_new_email",
         ),
         migrations.RemoveField(
-            model_name='user',
-            name='email_change_requested_at',
+            model_name="user",
+            name="email_change_requested_at",
         ),
     ]

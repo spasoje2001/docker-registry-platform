@@ -9,15 +9,11 @@ class EditProfileTest(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="StrongPass123!"
+            username="testuser", email="test@example.com", password="StrongPass123!"
         )
 
         self.other_user = User.objects.create_user(
-            username="hacker",
-            email="hacker@example.com",
-            password="StrongPass123!"
+            username="hacker", email="hacker@example.com", password="StrongPass123!"
         )
 
         self.url = reverse("accounts:edit_profile")

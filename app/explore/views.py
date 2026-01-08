@@ -7,8 +7,7 @@ from repositories.models import Repository
 
 def search(request):
     repositories = (
-        Repository.objects
-        .filter(visibility="PUBLIC")
+        Repository.objects.filter(visibility="PUBLIC")
         .select_related("owner")
         .order_by("-created_at")
     )
@@ -30,8 +29,7 @@ def explore_repositories(request):
     explore_queries = request.GET.urlencode()
 
     repositories = (
-        Repository.objects
-        .filter(visibility="PUBLIC")
+        Repository.objects.filter(visibility="PUBLIC")
         .select_related("owner")
         .order_by("-created_at")
     )
@@ -43,16 +41,20 @@ def explore_repositories(request):
         repositories = repositories.filter(owner__is_verified_publisher=True)
 
     if query:
-        repositories = repositories.filter(
-            Q(name__icontains=query) | Q(description__icontains=query)
-        ).annotate(
-            relevance=Case(
-                When(name__icontains=query, then=0),
-                When(description__icontains=query, then=1),
-                default=2,
-                output_field=IntegerField(),
+        repositories = (
+            repositories.filter(
+                Q(name__icontains=query) | Q(description__icontains=query)
             )
-        ).order_by("relevance", "name")
+            .annotate(
+                relevance=Case(
+                    When(name__icontains=query, then=0),
+                    When(description__icontains=query, then=1),
+                    default=2,
+                    output_field=IntegerField(),
+                )
+            )
+            .order_by("relevance", "name")
+        )
 
     if sort == "updated":
         repositories = repositories.order_by("-updated_at")

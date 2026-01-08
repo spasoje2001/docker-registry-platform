@@ -19,7 +19,7 @@ from .utils import (
     generate_verification_code,
     store_email_change_request,
     delete_email_change_request,
-    get_email_change_request
+    get_email_change_request,
 )
 
 from repositories.forms import RepositoryForm
@@ -40,33 +40,35 @@ def admin_panel(request):
         messages.warning(request, "You do not have permission to access this page.")
         return redirect("core:home")
 
-    section = request.GET.get('section', 'users')
+    section = request.GET.get("section", "users")
 
-    if section == 'admins' and not request.user.is_super_admin:
+    if section == "admins" and not request.user.is_super_admin:
         messages.warning(request, "You do not have permission to access this section.")
         return redirect("accounts:admin_panel")
 
     q = request.GET.get("q", "").strip()
 
     context = {
-        'current_section': section,
-        'is_super_admin': request.user.is_super_admin,
-        'q': q
+        "current_section": section,
+        "is_super_admin": request.user.is_super_admin,
+        "q": q,
     }
 
-    if section == 'users':
+    if section == "users":
         users = User.objects.filter(role=User.Role.USER).order_by("username")
         if q:
             users = users.filter(Q(username__icontains=q) | Q(email__icontains=q))
-        context['users'] = users
+        context["users"] = users
 
-    elif section == 'admins':
+    elif section == "admins":
         admins = User.objects.filter(
             role__in=[User.Role.ADMIN, User.Role.SUPER_ADMIN]
-        ).order_by('-role', 'username')  # Super admins first
+        ).order_by(
+            "-role", "username"
+        )  # Super admins first
         if q:
             admins = admins.filter(Q(username__icontains=q) | Q(email__icontains=q))
-        context['admins'] = admins
+        context["admins"] = admins
 
     return render(request, "accounts/admin_panel.html", context)
 
@@ -91,12 +93,9 @@ def update_badges(request, user_id):
     setattr(target, badge, bool_value)
     target.save(update_fields=[badge])
 
-    return JsonResponse({
-        "ok": True,
-        "user_id": target.id,
-        "badge": badge,
-        "value": bool_value
-    })
+    return JsonResponse(
+        {"ok": True, "user_id": target.id, "badge": badge, "value": bool_value}
+    )
 
 
 @login_required
@@ -109,7 +108,7 @@ def create_admin(request):
         messages.warning(request, "Only super administrators can create admin users.")
         return redirect("accounts:admin_panel")
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = CreateAdminForm(request.POST)
         if form.is_valid():
             admin = form.save(commit=False)
@@ -117,32 +116,29 @@ def create_admin(request):
             admin.must_change_password = True
 
             # Handle password
-            if form.cleaned_data['generate_password']:
+            if form.cleaned_data["generate_password"]:
                 password = CreateAdminForm.generate_random_password()
             else:
-                password = form.cleaned_data['password']
+                password = form.cleaned_data["password"]
 
             admin.set_password(password)
             admin.save()
 
             messages.success(
-                request,
-                f'Admin user "{admin.username}" created successfully.'
+                request, f'Admin user "{admin.username}" created successfully.'
             )
 
             # Store password in session to display on next page
-            request.session['new_admin_password'] = password
-            request.session['new_admin_username'] = admin.username
+            request.session["new_admin_password"] = password
+            request.session["new_admin_username"] = admin.username
 
-            return redirect('accounts:create_admin_success')
+            return redirect("accounts:create_admin_success")
         else:
-            messages.error(request, 'Please correct the errors below.')
+            messages.error(request, "Please correct the errors below.")
     else:
         form = CreateAdminForm()
 
-    return render(request, 'accounts/create_admin.html', {
-        'form': form
-    })
+    return render(request, "accounts/create_admin.html", {"form": form})
 
 
 @login_required
@@ -154,17 +150,18 @@ def create_admin_success(request):
     if not request.user.is_super_admin:
         return redirect("accounts:admin_panel")
 
-    password = request.session.pop('new_admin_password', None)
-    username = request.session.pop('new_admin_username', None)
+    password = request.session.pop("new_admin_password", None)
+    username = request.session.pop("new_admin_username", None)
 
     if not password or not username:
         messages.info(request, "No new admin credentials to display.")
-        return redirect('accounts:admin_panel')
+        return redirect("accounts:admin_panel")
 
-    return render(request, 'accounts/create_admin_success.html', {
-        'username': username,
-        'password': password
-    })
+    return render(
+        request,
+        "accounts/create_admin_success.html",
+        {"username": username, "password": password},
+    )
 
 
 def login_view(request):
@@ -179,19 +176,13 @@ def login_view(request):
             user = form.get_user()
             login(request, user)
 
-            messages.success(
-                request,
-                "You have successfully logged in!"
-            )
+            messages.success(request, "You have successfully logged in!")
 
             if next_url:
                 return redirect(next_url)
             return redirect("core:home")
         else:
-            messages.error(
-                request,
-                "Invalid username or password. Please try again."
-            )
+            messages.error(request, "Invalid username or password. Please try again.")
     else:
         form = CustomAuthenticationForm(request)
 
@@ -205,10 +196,7 @@ def login_view(request):
 def logout_view(request):
     logout(request)
 
-    messages.success(
-        request,
-        "You have successfully logged out!"
-    )
+    messages.success(request, "You have successfully logged out!")
     return redirect("core:home")
 
 
@@ -223,7 +211,7 @@ def register(request):
             login(request, user)
             messages.success(
                 request,
-                f"Welcome, {user.username}! Your account has been created successfully."
+                f"Welcome, {user.username}! Your account has been created successfully.",
             )
 
             return redirect("core:home")
@@ -242,8 +230,8 @@ class CustomPasswordChangeView(auth_views.PasswordChangeView):
     for clearing the must_change_password flag after successful password change.
     """
 
-    template_name = 'accounts/password_change.html'
-    success_url = reverse_lazy('accounts:password_change_done')
+    template_name = "accounts/password_change.html"
+    success_url = reverse_lazy("accounts:password_change_done")
 
     def form_valid(self, form):
         """
@@ -257,12 +245,12 @@ class CustomPasswordChangeView(auth_views.PasswordChangeView):
         user = self.request.user
         if user.must_change_password:
             user.must_change_password = False
-            user.save(update_fields=['must_change_password'])
+            user.save(update_fields=["must_change_password"])
 
             messages.success(
                 self.request,
-                'Password changed successfully! '
-                'You now have full access to the application.'
+                "Password changed successfully! "
+                "You now have full access to the application.",
             )
 
         return response
@@ -274,9 +262,8 @@ def profile_view(request):
     form_data = request.session.pop("repo_form_data", None)
     form_errors = request.session.pop("repo_form_errors", None)
     repositories = Repository.objects.filter(
-        owner=request.user,
-        is_official=False
-    ).order_by('-updated_at')
+        owner=request.user, is_official=False
+    ).order_by("-updated_at")
 
     if form_data:
         repo_form = RepositoryForm(form_data, request=request)
@@ -295,7 +282,7 @@ def profile_view(request):
             "active_tab": active_tab,
             "repositories": repositories,
             "from_profile": True,
-        }
+        },
     )
 
 
@@ -312,11 +299,7 @@ def edit_profile(request):
     else:
         form = EditProfileForm(instance=user)
 
-    return render(
-        request,
-        "accounts/edit_profile.html",
-        {"form": form, "user": user}
-    )
+    return render(request, "accounts/edit_profile.html", {"form": form, "user": user})
 
 
 @login_required
@@ -335,9 +318,7 @@ def change_password(request):
         form = ChangePasswordForm(user=request.user)
 
     return render(
-        request,
-        "accounts/change_password.html",
-        {"form": form, "user": request.user}
+        request, "accounts/change_password.html", {"form": form, "user": request.user}
     )
 
 
@@ -346,39 +327,36 @@ def email_change(request):
     """
     Request email change - sends verification code to new email.
     """
-    if request.method == 'POST':
+    if request.method == "POST":
         form = RequestEmailChangeForm(request.user, request.POST)
         if form.is_valid():
-            new_email = form.cleaned_data['new_email']
+            new_email = form.cleaned_data["new_email"]
 
             code = generate_verification_code()
 
             # Store in Redis (expires in 10 minutes)
             store_email_change_request(
-                user_id=request.user.id,
-                new_email=new_email,
-                code=code
+                user_id=request.user.id, new_email=new_email, code=code
             )
 
             try:
                 send_mail(
-                    subject='Email Change Verification Code',
-                    message=f'Your verification code is: {code}\n\n'
-                            f'This code will expire in 10 minutes.',
+                    subject="Email Change Verification Code",
+                    message=f"Your verification code is: {code}\n\n"
+                    f"This code will expire in 10 minutes.",
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[new_email],
                     fail_silently=False,
                 )
                 messages.success(
                     request,
-                    f'Verification code sent to {new_email}. '
-                    f'Please check your inbox.'
+                    f"Verification code sent to {new_email}. "
+                    f"Please check your inbox.",
                 )
-                return redirect('accounts:email_change_confirm')
+                return redirect("accounts:email_change_confirm")
             except Exception:
                 messages.error(
-                    request,
-                    'Failed to send verification email. Please try again.'
+                    request, "Failed to send verification email. Please try again."
                 )
                 # Clean up Redis if email fails
                 delete_email_change_request(request.user.id)
@@ -387,7 +365,7 @@ def email_change(request):
     else:
         form = RequestEmailChangeForm(request.user)
 
-    return render(request, 'accounts/email_change.html', {'form': form})
+    return render(request, "accounts/email_change.html", {"form": form})
 
 
 @login_required
@@ -399,38 +377,32 @@ def email_change_confirm(request):
     email_data = get_email_change_request(request.user.id)
 
     if not email_data:
-        messages.error(
-            request,
-            'No pending email change request or code has expired.'
-        )
-        return redirect('accounts:profile')
+        messages.error(request, "No pending email change request or code has expired.")
+        return redirect("accounts:profile")
 
-    if request.method == 'POST':
+    if request.method == "POST":
         form = ConfirmEmailChangeForm(request.POST)
         if form.is_valid():
-            entered_code = form.cleaned_data['code']
+            entered_code = form.cleaned_data["code"]
 
-            if entered_code == email_data['code']:
-                request.user.email = email_data['new_email']
-                request.user.save(update_fields=['email'])
+            if entered_code == email_data["code"]:
+                request.user.email = email_data["new_email"]
+                request.user.save(update_fields=["email"])
 
                 delete_email_change_request(request.user.id)
 
-                messages.success(
-                    request,
-                    'Email address changed successfully!'
-                )
-                return redirect('accounts:profile')
+                messages.success(request, "Email address changed successfully!")
+                return redirect("accounts:profile")
             else:
-                form.add_error('code', 'Invalid verification code.')
+                form.add_error("code", "Invalid verification code.")
     else:
         form = ConfirmEmailChangeForm()
 
     context = {
-        'form': form,
-        'new_email': email_data['new_email'],
+        "form": form,
+        "new_email": email_data["new_email"],
     }
-    return render(request, 'accounts/email_change_confirm.html', context)
+    return render(request, "accounts/email_change_confirm.html", context)
 
 
 @login_required
@@ -438,8 +410,8 @@ def cancel_email_change(request):
     """
     Cancel pending email change request.
     """
-    if request.method == 'POST':
+    if request.method == "POST":
         delete_email_change_request(request.user.id)
-        messages.info(request, 'Email change request cancelled.')
+        messages.info(request, "Email change request cancelled.")
 
-    return redirect('accounts:edit_profile')
+    return redirect("accounts:edit_profile")

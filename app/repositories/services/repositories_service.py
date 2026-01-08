@@ -3,7 +3,8 @@ from django.db import models
 from ..clients.registry_client import RegistryClient
 from ..models import Repository, Tag
 
-class RepositoryService():
+
+class RepositoryService:
     def __init__(self, registry_client=None):
         self.registry_client = registry_client or RegistryClient()
 
@@ -19,9 +20,9 @@ class RepositoryService():
 
         if user.is_authenticated:
             db_list = Repository.objects.filter(
-            models.Q(visibility=Repository.VisibilityChoices.PUBLIC) |
-            models.Q(owner=user)
-        )
+                models.Q(visibility=Repository.VisibilityChoices.PUBLIC)
+                | models.Q(owner=user)
+            )
         else:
             db_list = Repository.objects.filter(
                 models.Q(visibility=Repository.VisibilityChoices.PUBLIC)
@@ -37,12 +38,10 @@ class RepositoryService():
             print(f"Error fetching tags from registry: {e}")
             raise
 
-        db_list = Tag.objects.filter(
-            models.Q(repository=repo_name)
-        )
+        db_list = Tag.objects.filter(models.Q(repository=repo_name))
 
         return self.cobine_lists(tags, db_list)
-    
+
     def get_manifest(self, repo_name: str, tag_name: str) -> Dict:
         try:
             manifest = self.registry_client.get_manifest(repo_name, tag_name)
@@ -50,7 +49,7 @@ class RepositoryService():
         except Exception as e:
             print(f"Error fetching manifest from registry: {e}")
             raise
-    
+
     def delete_manifest(self, repo_name: str, tag_name: str) -> bool:
         try:
             return self.registry_client.delete_manifest(repo_name, tag_name)
@@ -61,7 +60,7 @@ class RepositoryService():
     def combine_lists(self, client_list: List[str], db_list: List) -> List:
         db_dict = {obj.name: obj for obj in db_list}
         combined = []
-    
+
         for obj_name in client_list:
             if obj_name in db_dict:
                 combined.append(db_dict[obj_name])
