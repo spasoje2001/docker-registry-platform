@@ -40,13 +40,13 @@ class Repository(models.Model):
             models.UniqueConstraint(
                 fields=["owner", "name"],
                 condition=Q(is_official=False),
-                name="unique_owner_name"
+                name="unique_owner_name",
             ),
             models.UniqueConstraint(
-                fields=['name'],
+                fields=["name"],
                 condition=models.Q(is_official=True),
-                name='unique_official_repo_name'
-            )
+                name="unique_official_repo_name",
+            ),
         ]
 
     @property
@@ -68,9 +68,9 @@ class Tag(models.Model):
     )
     created_at = models.DateTimeField(auto_now_add=True)
     last_synced = models.DateTimeField(default=timezone.now)
-    os = models.CharField(max_length=32, blank=True, default='')
-    arch = models.CharField(max_length=32, blank=True, default='')
-    image_type = models.CharField(max_length=32, blank=True, default='')
+    os = models.CharField(max_length=32, blank=True, default="")
+    arch = models.CharField(max_length=32, blank=True, default="")
+    image_type = models.CharField(max_length=32, blank=True, default="")
 
     class Meta:
         constraints = [

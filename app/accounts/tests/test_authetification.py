@@ -7,9 +7,9 @@ User = get_user_model()
 
 class AuthentificationTest(TestCase):
     def setUp(self):
-        self.login_url = reverse('accounts:login')
-        self.logout_url = reverse('accounts:logout')
-        self.home_url = reverse('core:home')
+        self.login_url = reverse("accounts:login")
+        self.logout_url = reverse("accounts:logout")
+        self.home_url = reverse("core:home")
 
     def test_login_valid_credentials(self):
         User.objects.create_user(

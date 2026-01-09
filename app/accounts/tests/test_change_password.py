@@ -9,9 +9,7 @@ class ChangePasswordTest(TestCase):
 
     def setUp(self):
         self.user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="OldPassword123!"
+            username="testuser", email="test@example.com", password="OldPassword123!"
         )
         self.url = reverse("accounts:change_password")
         self.profile_url = reverse("accounts:profile")

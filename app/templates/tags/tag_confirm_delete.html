@@ -10,101 +10,171 @@
                         <i class="bi bi-tag-fill text-danger"></i>
                         Delete "{{ tag.name }}" from {{ repository.full_name }}
                     </h3>
-                   
-                    <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
-                        class="btn btn-link text-decoration-none">
-                        <i class="bi bi-arrow-left"></i> Go Back
-                    </a>
                 </div>
                 <div class="card-body p-4">
-                    <form method="post">
-                        {% csrf_token %}
-                        {% if from_explore %}
-                            <input type="hidden" name="from_explore" value="1">
-                            {% if explore_queries %}
-                                <input type="hidden" name="explore_queries" value="{{ explore_queries }}">
-                            {% endif %}
-                        {% endif %}
-                        <p class="mb-4">
-                            To delete this tag, please execute the following commands in your command prompt:
-                        </p>
-                        <div class="mt-3">
-                            <div class="mb-3">
-                                <label class="form-label"><strong>Step 1:</strong> Delete manifest</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control font-monospace" 
-                                        id="cmd-delete-manifest" 
-                                        value="{{ commands.delete_manifest }}"
-                                        readonly>
-                                    <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('cmd-delete-manifest')">
-                                        <i class="bi bi-clipboard"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                             <div class="mb-3">
-                                <label class="form-label"><strong>Step 2:</strong> Delete tag reference</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control font-monospace" 
-                                        id="cmd-delete-tag" 
-                                        value="{{ commands.delete_tag }}"
-                                        readonly>
-                                    <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('cmd-delete-tag')">
-                                        <i class="bi bi-clipboard"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label"><strong>Step 3:</strong> Garbage collection</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control font-monospace" 
-                                        id="cmd-gc" 
-                                        value="{{ commands.gc }}" 
-                                        readonly>
-                                    <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('cmd-gc')">
-                                        <i class="bi bi-clipboard"></i>
-                                    </button>
-                                </div>
-                            </div>
-
-                            <div class="mb-3">
-                                <label class="form-label"><strong>Step 4:</strong> Restart registry (optional)</label>
-                                <div class="input-group">
-                                    <input type="text" class="form-control font-monospace" 
-                                        id="cmd-restart" 
-                                        value="{{ commands.restart }}" 
-                                        readonly>
-                                    <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('cmd-restart')">
-                                        <i class="bi bi-clipboard"></i>
-                                    </button>
+                    <div class="mb-4">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="flex-fill">
+                                <div class="progress" style="height: 4px;">
+                                    <div class="progress-bar {% if step %}w-100{% else %}w-50{% endif %}" id="formProgress" role="progressbar"></div>
                                 </div>
                             </div>
                         </div>
+                        <div class="d-flex justify-content-between mt-2">
+                            <div class="text-center" style="flex: 1;">
+                                <div class="rounded-circle {% if not step %}bg-primary{% else %}bg-success{% endif %} text-white d-inline-flex align-items-center justify-content-center" 
+                                    style="width: 40px; height: 40px;" id="step1Badge">
+                                    {% if not step %}
+                                    <i class="bi bi-1-circle-fill"></i>
+                                    {% else %}
+                                    <i class="bi bi-check-circle-fill"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="small mt-1 fw-semibold {% if step %}text-success{% endif %}" id="step1Text">Start</div>
+                            </div>
+                            <div class="text-center" style="flex: 1;">
+                                <div class="rounded-circle {% if step %}bg-primary{% else %}bg-secondary{% endif %} text-white d-inline-flex align-items-center justify-content-center" 
+                                    style="width: 40px; height: 40px;" id="step2Badge">
+                                    {% if step %}
+                                    <i class="bi bi-2-circle-fill"></i>
+                                    {% else %}
+                                    <i class="bi bi-2-circle"></i>
+                                    {% endif %}
+                                </div>
+                                <div class="small mt-1 {% if step %}fw-semibold{% else %}text-muted{% endif %}" id="step2Text">Commands</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {% if not step %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <strong>Warning:</strong> This action will permanently delete the tag "{{ tag.name }}" and its manifest.
+                        </div>
                         <p class="mb-4">
-                            After executing the above commands, confirm deletion by clicking the <strong>Delete</strong> button below.
+                            Click the button below to initiate the deletion process. This will:
                         </p>
-                        <button type="submit" class="btn btn-danger">
-                            <i class="bi bi-trash-fill"></i> Delete
-                        </button>
-                       
-                        {% if repository.is_official %}
-                            <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
-                                class="btn btn-link text-decoration-none">
-                                <i class="bi bi-x-circle"></i> Cancel
-                            </a>
-                        {% else %}
-                            <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
-                                class="btn btn-link text-decoration-none">
-                                <i class="bi bi-x-circle"></i> Cancel
-                            </a>
-                        {% endif %}
-                    </form>
+                        <ul class="mb-4">
+                            <li>Delete the manifest from the registry</li>
+                            <li>Remove the tag reference from database</li>
+                            <li>Prepare the image for garbage collection</li>
+                        </ul>
+                        <form method="post">
+                            {% csrf_token %}
+                            <input type="hidden" name="step" value="1">
+                            <button type="submit" class="btn btn-danger">
+                                <i class="bi bi-play-fill"></i> Start Deletion Process
+                            </button>
+                            {% if repository.is_official %}
+                                <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
+                                    class="btn btn-link text-decoration-none">
+                                    <i class="bi bi-x-circle"></i> Cancel
+                                </a>
+                            {% else %}
+                                <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
+                                    class="btn btn-link text-decoration-none">
+                                    <i class="bi bi-x-circle"></i> Cancel
+                                </a>
+                            {% endif %}
+                        </form>
+
+                    {% else %}
+                    {% if deletion_success %}
+                        <div class="alert alert-success">
+                            <i class="bi bi-check-circle-fill"></i>
+                            <strong>Success!</strong> The manifest and tag have been deleted successfully.
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <i class="bi bi-exclamation-triangle-fill"></i>
+                            <strong>Error:</strong> {{ error_message }}
+                        </div>
+                    {% endif %}
+
+                    <p class="mb-4">
+                        Please execute the following commands to complete the cleanup:
+                    </p>
+                    
+                    <div class="mb-3">
+                        <label class="form-label"><strong>Step 1:</strong> Garbage collection</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" 
+                                id="cmd-gc" 
+                                value="{{ commands.gc }}" 
+                                readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('cmd-gc')">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="mb-4">
+                        <label class="form-label"><strong>Step 2:</strong> Restart registry (optional)</label>
+                        <div class="input-group">
+                            <input type="text" class="form-control font-monospace" 
+                                id="cmd-restart" 
+                                value="{{ commands.restart }}" 
+                                readonly>
+                            <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('cmd-restart')">
+                                <i class="bi bi-clipboard"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    {% if repository.is_official %}
+                        <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
+                            class="btn btn-success">
+                            <i class="bi bi-check-lg"></i> Done
+                        </a>
+                    {% else %}
+                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
+                            class="btn btn-success">
+                            <i class="bi bi-check-lg"></i> Done
+                        </a>
+                    {% endif %}
+                    {% endif %}
                 </div>
             </div>
         </div>
     </div>
 </div>
+
+<style>
+.step-circle {
+    width: 50px;
+    height: 50px;
+    border-radius: 50%;
+    background-color: #e9ecef;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: #6c757d;
+    transition: all 0.3s ease;
+}
+
+.step-circle.active {
+    background-color: #0d6efd;
+    color: white;
+}
+
+.step-circle.completed {
+    background-color: #198754;
+    color: white;
+}
+
+.step-line {
+    height: 2px;
+    background-color: #e9ecef;
+    flex: 1;
+    margin: 0 10px;
+    transition: all 0.3s ease;
+}
+
+.step-line.active {
+    background-color: #0d6efd;
+}
+</style>
 
 <script>
 function copyCmd(elementId) {

@@ -10,17 +10,6 @@
                         <i class="bi bi-tag text-primary"></i>
                         {{ title }}
                     </h3>
-                    {% if repository.is_official %}
-                        <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
-                        class="btn btn-link text-decoration-none">
-                            <i class="bi bi-arrow-left"></i> Go Back
-                        </a>
-                    {% else %}
-                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
-                        class="btn btn-link text-decoration-none">
-                            <i class="bi bi-arrow-left"></i> Go Back
-                        </a>
-                    {% endif %}
                 </div>
 
                 <div class="card-body p-4">
@@ -85,88 +74,110 @@
                                         </div>
                                          {% endif %}
                                     {% if not tag %}
-
-                                    <div class="form-text">
-                                        <i class="bi bi-info-circle"></i>
-                                        Alphanumeric with dots, hyphens, and underscores (e.g., v1.0.0, latest)
-                                    </div>
-                                {% endif %}
+                                        <div class="form-text">
+                                            <i class="bi bi-info-circle"></i>
+                                            Alphanumeric with dots, hyphens, and underscores (e.g., v1.0.0, latest)
+                                        </div>
+                                    {% endif %}
                             </div>
                             
                                 {% if tag %}
-                                <div class="mb-4">
-                                    <label class="form-label fw-semibold">
-                                        Digest
-                                    </label>
-                                    <div class="input-group">
-                                        <span class="input-group-text">
-                                            <i class="bi bi-fingerprint"></i>
-                                        </span>
-                                        <input type="text"
-                                        class="form-control font-monospace"
-                                        value="{{ manifest.digest }}" 
-                                        readonly>
-                                    </div>
-                                      </div>
-
-                                <div class="row g-3 align-items-center mb-2">
-                                    <div class="col-6 col-lg-3">
-                                        <div>
-                                            <small class="text-muted d-block">
-                                                <i class="bi bi-cpu"></i> OS/Arch
-                                            </small>
-                                            <small>{{ manifest.os }}{% if manifest.arch %}/{{ manifest.arch }}{% endif %}</small>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                    <div class="col-6 col-lg-3">
-                                        <div>
-                                            <small class="text-muted d-block">
-                                                <i class="bi bi-hdd"></i> Size
-                                            </small>
-                                            <small>{{ manifest.size }}</small>
-                                        </div>
-                                    </div>
-                                          <div class="col-6 col-lg-3">
-                                        <div>
-                                            <small class="text-muted d-block">
-                                                <i class="bi bi-calendar-check"></i> Type
-                                            </small>
-                                            <small>{{ manifest.type }}</small>
+                                    <div class="mb-2">
+                                        <label class="form-label fw-semibold">
+                                            Digest
+                                        </label>
+                                        <div class="input-group">
+                                            <span class="input-group-text">
+                                                <i class="bi bi-fingerprint"></i>
+                                            </span>
+                                            <input type="text"
+                                            class="form-control font-monospace"
+                                            value="{{ tag.digest }}" 
+                                            readonly>
                                         </div>
                                     </div>
 
-                                     <div class="col-6 col-lg-3">
-                                        <div>
-                                            <small class="text-muted d-block">
-                                                <i class="bi bi-calendar-plus"></i> Created
-                                            </small>
-                                            <small>{{ tag.created_at|date:"M d, Y" }}</small>
+                                    <div class="row g-3 align-items-center mt-1 mb-3">
+                                        <div class="col-6 col-lg-3">
+                                            <div>
+                                                <small class="text-muted d-block">
+                                                    <i class="bi bi-cpu"></i> OS/Arch
+                                                </small>
+                                                <small>{{ tag.os }}{% if tag.arch %}/{{ tag.arch }}{% endif %}</small>
+                                            </div>
                                         </div>
-                                  
-                                    </div>
-                            </div>
-                            {% endif %}
 
-                            <div class="d-flex gap-2 pt-3 border-top">
-                                {% if not tag %}
-                                    <button type="button" class="btn btn-primary" id="nextBtn">
-                                        Next <i class="bi bi-arrow-right"></i>
-                                    </button>
-                                {% else %}
-                                       {% if manifest.digest %}
-                                        <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name tag.digest %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}" 
-                                            class="btn btn-sm btn-danger">
-                                            <i class="bi bi-trash"></i> Delete
-                                        </a>
-                                    {% else %}
-                                        <button class="btn btn-secondary" disabled>
-                                            <i class="bi bi-trash"></i> Unavailable delete (no digest)
-                                        </button>
-                                    {% endif %}
+                                        <div class="col-6 col-lg-3">
+                                            <div>
+                                                <small class="text-muted d-block">
+                                                    <i class="bi bi-hdd"></i> Size
+                                                </small>
+                                                <small>{{ tag.size_display }}</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-6 col-lg-3">
+                                            <div>
+                                                <small class="text-muted d-block">
+                                                    <i class="bi bi-calendar-check"></i> Type
+                                                </small>
+                                                <small>{{ tag.image_type }}</small>
+                                            </div>
+                                        </div>
+
+                                        <div class="col-6 col-lg-3">
+                                            <div>
+                                                <small class="text-muted d-block">
+                                                    <i class="bi bi-calendar-plus"></i> Created
+                                                </small>
+                                                <small>{{ tag.created_at|date:"M d, Y" }}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    <div class="mb-1">
+                                        <label class="form-label fw-semibold">
+                                            Pull commands <span class="text-danger">*</span>
+                                        </label>
+                                        <div class="col-md-7">
+                                            <pre class="bg-dark text-light p-3 rounded"><code>docker pull localhost:5000/{{ repository.name }}:{{ tag.name }}
+docker run localhost:5000/{{ repository.name }}:{{ tag.name }}</code></pre>
+                                        </div>
+                                    </div>
                                 {% endif %}
-                            </div>
+                            {% if user == repository.owner %}
+                                <div class="d-flex gap-2 pt-3 border-top">
+                                    {% if not tag %}
+                                        <button type="button" class="btn btn-primary" id="nextBtn">
+                                            Next <i class="bi bi-arrow-right"></i>
+                                        </button>
+                                    {% else %}
+                                        {% if tag.digest %}
+                                            {% if user == repository.owner %}
+                                                <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name tag.digest %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}" 
+                                                    class="btn btn-danger">
+                                                    <i class="bi bi-trash"></i> Delete
+                                                </a>
+                                            {% endif %}
+                                        {% else %}
+                                            <button class="btn btn-secondary" disabled>
+                                                <i class="bi bi-trash"></i> Unavailable delete (no digest)
+                                            </button>
+                                        {% endif %}
+                                    {% endif %}
+                                        {% if repository.is_official %}
+                                            <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
+                                            class="btn btn-outline-secondary">
+                                                <i class="bi bi-x-circle"></i> Cancel
+                                            </a>
+                                        {% else %}
+                                            <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}"
+                                            class="btn btn-outline-secondary">
+                                                <i class="bi bi-x-circle"></i> Cancel
+                                            </a>
+                                        {% endif %}
+                                </div>
+                            {% endif %}
                         </div>
 
                         {% if not tag %}

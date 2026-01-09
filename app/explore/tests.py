@@ -10,12 +10,8 @@ User = get_user_model()
 class ExploreRepositoriesTests(TestCase):
 
     def setUp(self):
-        self.user1 = User.objects.create_user(
-            username="alice", password="password"
-        )
-        self.user2 = User.objects.create_user(
-            username="bob", password="password"
-        )
+        self.user1 = User.objects.create_user(username="alice", password="password")
+        self.user2 = User.objects.create_user(username="bob", password="password")
         self.user1.is_verified_publisher = True
         self.user1.save()
 
@@ -108,8 +104,8 @@ class ExploreRepositoriesTests(TestCase):
         response = self.client.get(self.url, {"filter": "verified"})
         repos = list(response.context["repositories"].object_list)
 
-        self.assertIn(self.repo_name_match, repos)   # owner = verified
-        self.assertIn(self.repo_no_match, repos)     # owner = verified
+        self.assertIn(self.repo_name_match, repos)  # owner = verified
+        self.assertIn(self.repo_no_match, repos)  # owner = verified
 
         self.assertNotIn(self.repo_description_match, repos)  # bob NOT verified
         self.assertNotIn(self.private_repo, repos)
@@ -141,7 +137,7 @@ class ExploreRepositoriesTests(TestCase):
             {
                 "q": "nginx",
                 "filter": "verified",
-            }
+            },
         )
 
         repos = list(response.context["repositories"].object_list)
@@ -155,7 +151,7 @@ class ExploreRepositoriesTests(TestCase):
             {
                 "q": "nginx",
                 "sort": "name_desc",
-            }
+            },
         )
 
         repos = list(response.context["repositories"].object_list)

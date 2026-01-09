@@ -94,13 +94,13 @@ cat admin_password.txt
 
 **Important:** This command is idempotent (safe to run multiple times). Super admin will be forced to change password on first login.
 
-### 7. Tags synchronization
-Synchronization all tags for all repositories:
+### 7. Tag synchronization
+Synchronize all tags for all repositories:
 ```bash
 docker-compose exec web python manage.py sync_tags
 ```
 
-Synchronization all tags for single repository:
+Synchronize all tags for single repository:
 ```bash
 docker-compose exec web python manage.py sync_tags --repo myrepo
 ```

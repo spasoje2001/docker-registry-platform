@@ -30,14 +30,14 @@ class ForcePasswordChangeMiddleware:
         self.get_response = get_response
 
         self.excluded_paths = [
-            reverse('accounts:password_change'),
-            reverse('accounts:password_change_done'),
+            reverse("accounts:password_change"),
+            reverse("accounts:password_change_done"),
         ]
 
         self.excluded_prefixes = [
-            '/static/',
-            '/media/',
-            '/admin/',
+            "/static/",
+            "/media/",
+            "/admin/",
         ]
 
     def __call__(self, request):
@@ -51,12 +51,12 @@ class ForcePasswordChangeMiddleware:
             HTTP response (either redirect or continue to next middleware/view)
         """
         if (
-                request.user.is_authenticated
-                and hasattr(request.user, 'must_change_password')
-                and request.user.must_change_password
+            request.user.is_authenticated
+            and hasattr(request.user, "must_change_password")
+            and request.user.must_change_password
         ):
             if not self._is_excluded_path(request.path):
-                return redirect('accounts:password_change')
+                return redirect("accounts:password_change")
 
         response = self.get_response(request)
         return response

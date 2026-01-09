@@ -62,7 +62,7 @@ class RegistrationTest(TestCase):
 
         self.assertIn(
             "Welcome, msguser! Your account has been created successfully.",
-            str(messages[0])
+            str(messages[0]),
         )
 
     def test_email_must_be_unique(self):

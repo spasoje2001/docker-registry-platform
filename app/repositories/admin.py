@@ -32,7 +32,8 @@ class TagAdmin(admin.ModelAdmin):
         "digest",
         "size_display",
         "repository",
-        "created_at")
+        "created_at",
+    )
 
     list_filter = ("created_at",)
 
@@ -40,7 +41,8 @@ class TagAdmin(admin.ModelAdmin):
         "name",
         "digest",
         "repository__name",
-        "repository__owner__username")
+        "repository__owner__username",
+    )
 
     readonly_fields = ("created_at",)
 

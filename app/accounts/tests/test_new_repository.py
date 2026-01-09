@@ -27,9 +27,8 @@ class ProfileRepoTabTests(TestCase):
         self.assertRedirects(response, reverse("accounts:profile"))
 
         self.assertTrue(
-            Repository.objects.filter(
-                name="my-repo",
-                owner=self.user).exists())
+            Repository.objects.filter(name="my-repo", owner=self.user).exists()
+        )
 
 
 def test_create_new_repository_name_exists(self):
