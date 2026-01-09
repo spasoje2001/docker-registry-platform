@@ -5,7 +5,7 @@ from ..models import Repository, Tag
 from ..services import SyncService, SyncStats
 from django.contrib.auth import get_user_model
 from django.core.management import call_command as django_call_command
-from unittest.mock import patch, Mock
+from unittest.mock import patch, Mock, MagicMock
 from io import StringIO
 
 User = get_user_model()
@@ -94,7 +94,8 @@ class TagModelTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(repo.tags.filter(name="v1.0").exists())
 
-    def test_delete_tag(self):
+    @patch('repositories.views.RepositoryService')
+    def test_delete_tag(self, mock_service_class):
         """Test: delete tag view"""
         repo = Repository.objects.create(
             name="tag-repo",
@@ -106,6 +107,10 @@ class TagModelTests(TestCase):
             size=2048,
         )
 
+        mock_service = MagicMock()
+        mock_service.delete_manifest.return_value = True
+        mock_service_class.return_value = mock_service
+
         self.client.login(username="user1", password="testpass123")
         url = reverse(
             "repositories:tag_delete",
@@ -113,11 +118,11 @@ class TagModelTests(TestCase):
                 "owner_username": "user1",
                 "name": "tag-repo",
                 "tag_name": "v1.0",
-                "digest": "sha256:" + "a" * 64,
+                "digest": "sha256:" + "e" * 64,
             },
         )
 
-        response = self.client.post(url)
+        response = self.client.post(url,data={"step": "1"})
         self.assertEqual(response.status_code, 200)
         self.assertFalse(repo.tags.filter(name="v1.0").exists())
 
@@ -183,13 +188,9 @@ class TagModelTests(TestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-
-        # mock_service_instance.list_tags.assert_called_once_with(self.repo.name)
-
         self.assertIn("tags", response.context)
         tags = response.context["tags"]
         self.assertEqual(len(tags), 3)
-
         self.assertContains(response, "v1.0")
         self.assertContains(response, "v2.0")
         self.assertContains(response, "latest")
@@ -238,11 +239,11 @@ class OfficialRepoTagTests(TestCase):
             url, {"name": "3.10", "digest": "sha256:" + "d" * 64, "size": 100000000}
         )
 
-        # Should redirect with error
         self.assertEqual(response.status_code, 302)
         self.assertFalse(self.official_repo.tags.filter(name="3.10").exists())
 
-    def test_delete_official_repo_tag(self):
+    @patch('repositories.views.RepositoryService')
+    def test_delete_official_repo_tag(self, mock_service_class):
         """Test: admin can delete tag from official repository"""
         Tag.objects.create(
             repository=self.official_repo,
@@ -250,6 +251,10 @@ class OfficialRepoTagTests(TestCase):
             digest="sha256:" + "e" * 64,
             size=100000000,
         )
+
+        mock_service = MagicMock()
+        mock_service.delete_manifest.return_value = True
+        mock_service_class.return_value = mock_service
 
         self.client.login(username="admin2", password="testpass123")
         url = reverse(
@@ -261,9 +266,17 @@ class OfficialRepoTagTests(TestCase):
             },
         )
 
-        response = self.client.post(url)
-
+        response = self.client.post(url, data={"step": "1"})
         self.assertEqual(response.status_code, 200)
+        
+        mock_service.delete_manifest.assert_called_once_with(
+            "python", 
+            "sha256:" + "e" * 64
+        )
+        
+        self.assertTrue(response.context['deletion_success'])
+        self.assertIsNone(response.context['error_message'])
+        self.assertEqual(response.context['step'], "1")
         self.assertFalse(self.official_repo.tags.filter(name="old-version").exists())
 
 
