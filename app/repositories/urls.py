@@ -7,7 +7,7 @@ app_name = "repositories"
 
 urlpatterns = [
     # ===== GENERAL =====
-    path("", views.repository_list, name="list"),
+    # path("", views.repository_list, name="list"),
     path("new/", views.repository_create, name="create"),
     # ===== OFFICIAL REPOS =====
     path("<str:name>/", views.repository_detail_official, name="detail_official"),

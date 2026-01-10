@@ -11,34 +11,14 @@ import logging
 logger = logging.getLogger(__name__)
 
 
-def repository_list(request):
-    service = RepositoryService()
-    repositories = []
-
-    if not service.health_check():
-        messages.error(
-            request, "Registry is unavailable at this moment. Please try again later."
-        )
-    else:
-        try:
-            repositories = service.list_repositories(request.user)
-        except Exception:
-            messages.error(request, "Error fetching repositories from registry.")
-
-    return render(
-        request,
-        "repositories/repository_list.html",
-        {
-            "repositories": repositories,
-            "from_profile": False,
-        },
-    )
-
-
 @login_required
 def repository_create(request):
     """Create new repository (user repo or official repo if admin)"""
     from_profile = request.POST.get("from_profile")
+    from_explore = request.GET.get("from_explore")
+    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
+    tag_q = request.GET.get('tag_q', '')
+    tag_sort = request.GET.get('tag_sort', 'newest')
 
     if request.method == "POST":
         form = RepositoryForm(request.POST, request=request)
@@ -81,7 +61,20 @@ def repository_create(request):
 
             if from_profile:
                 return redirect("accounts:profile")
-            return redirect("repositories:list")
+            if explore_queries:
+                url = reverse(
+                    "explore:explore",
+                    kwargs={
+                        "from_profile": from_profile,
+                        "from_explore": from_explore,
+                        "explore_queries": explore_queries,
+                        "tag_q": tag_q,
+                        "tag_sort": tag_sort,
+                    },
+                )
+                url += "&" + explore_queries
+                return redirect(url)
+            return redirect("explore:search")
 
         # Form invalid
         if from_profile:
@@ -280,13 +273,8 @@ def repository_update_official(request, name):
         return redirect("repositories:detail_official", name=repo.name)
 
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
-<<<<<<< HEAD
-    from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
-=======
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
     explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
->>>>>>> 18d63a7 (feat: return path are good)
     form = RepositoryForm(request.POST or None, instance=repo, request=request)
 
     if request.method == "POST" and form.is_valid():
@@ -379,8 +367,7 @@ def repository_delete(request, owner_username, name):
                 )
                 url += "explore/?" + explore_queries
                 return redirect(url)
-            return redirect("explore:search")
-        return redirect("repositories:list")
+        return redirect("explore:search")
 
     return render(
         request,
@@ -426,8 +413,7 @@ def repository_delete_official(request, name):
                 )
                 url += "explore/?" + explore_queries
                 return redirect(url)
-            return redirect("explore:search")
-        return redirect("repositories:list")
+        return redirect("explore:search")
 
     return render(
         request,
@@ -453,15 +439,9 @@ def tag_create(request, owner_username, name):
         messages.error(request, "You cannot create tags for this repository.")
         return redirect("repositories:detail", owner_username=owner_username, name=name)
 
-<<<<<<< HEAD
-    from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
-    from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
-=======
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
     explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
->>>>>>> 18d63a7 (feat: return path are good)
 
     if request.method == "POST":
         form = TagForm(request.POST)
@@ -519,13 +499,8 @@ def tag_create_official(request, name):
         )
         return redirect("repositories:detail_official", name=name)
 
-<<<<<<< HEAD
-    from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
-=======
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
     explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
->>>>>>> 18d63a7 (feat: return path are good)
 
     if request.method == "POST":
         form = TagForm(request.POST)
@@ -574,15 +549,9 @@ def tag_detail(request, owner_username, name, tag_name):
     )
 
     tag = get_object_or_404(repository.tags, name=tag_name)
-<<<<<<< HEAD
-    from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
-    from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
-=======
     from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
     explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
->>>>>>> 18d63a7 (feat: return path are good)
 
     if request.method == "POST":
         form = TagForm(request.POST, instance=tag)
@@ -717,8 +686,6 @@ def tag_delete(request, owner_username, name, tag_name, digest):
                     "error_message": error_message,
                 },
             )
-<<<<<<< HEAD
-=======
             if from_profile:
                 url += "?from_profile=1"
             elif from_explore:
@@ -741,7 +708,6 @@ def tag_delete(request, owner_username, name, tag_name, digest):
             if explore_queries:
                 url += "&" + explore_queries
             return redirect(url)
->>>>>>> 18d63a7 (feat: return path are good)
 
     return render(
         request,
@@ -773,13 +739,8 @@ def tag_delete_official(request, name, tag_name, digest):
         return redirect("repositories:detail_official", name=repo.name)
 
     tag = get_object_or_404(repo.tags, name=tag_name)
-<<<<<<< HEAD
-    from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&")
-=======
     from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
     explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
->>>>>>> 18d63a7 (feat: return path are good)
 
     commands = {
         "gc": "docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml",
@@ -791,7 +752,6 @@ def tag_delete_official(request, name, tag_name, digest):
     error_message = None
 
     if request.method == "POST":
-<<<<<<< HEAD
         step = request.POST.get("step")
 
         if step == "1":
@@ -799,6 +759,19 @@ def tag_delete_official(request, name, tag_name, digest):
                 if service.delete_manifest(repo.name, tag.digest):
                     tag.delete()
                     deletion_success = True
+                    messages.success(
+                        request,
+                        f'Tag "{tag_name}" deleted from repository "{repo.full_name}".'
+                    )
+                    url = reverse(
+                        'repositories:detail_official',
+                        kwargs={'name': name}
+                    )
+                    if from_explore:
+                        url += "?from_explore=1"
+                    if explore_queries:
+                        url += "&" + explore_queries
+                    return redirect(url)
                 else:
                     error_message = "Failed to delete manifest from registry."
             except Exception as e:
@@ -813,27 +786,12 @@ def tag_delete_official(request, name, tag_name, digest):
                     "tag": tag,
                     "commands": commands,
                     "from_explore": from_explore,
+                    "explore_queries": explore_queries,
                     "step": step,
                     "deletion_success": deletion_success,
                     "error_message": error_message,
                 },
             )
-=======
-        tag.delete()
-        messages.success(
-            request,
-            f'Tag "{tag_name}" deleted from repository "{repo.full_name}".'
-        )
-        url = reverse(
-                'repositories:detail_official',
-                kwargs={'name': name}
-        )
-        if from_explore:
-            url += "?from_explore=1"
-        if explore_queries:
-            url += "&" + explore_queries
-        return redirect(url)
->>>>>>> 18d63a7 (feat: return path are good)
 
     return render(
         request,
