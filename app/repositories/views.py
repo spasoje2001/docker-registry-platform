@@ -686,13 +686,6 @@ def tag_delete(request, owner_username, name, tag_name, digest):
                     "error_message": error_message,
                 },
             )
-            if from_profile:
-                url += "?from_profile=1"
-            elif from_explore:
-                url += "?from_explore=1"
-            if explore_queries:
-                url += "&" + explore_queries
-            return redirect(url)
         else:
             url = reverse(
                 "repositories:detail",
