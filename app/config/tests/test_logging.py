@@ -42,6 +42,7 @@ class LoggingConfigurationTests(TestCase):
         loggers = settings.LOGGING["loggers"]
         self.assertIn("access", loggers)
 
+
 class RequestLoggingMiddlewareTests(TestCase):
     """Tests for RequestLoggingMiddleware."""
 

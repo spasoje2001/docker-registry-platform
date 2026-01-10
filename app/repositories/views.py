@@ -467,8 +467,13 @@ def tag_create_official(request, name):
                 )
             else:
                 tag.save()
-                messages.success(request, f'Tag "{tag.name}" created successfully!')
-                url = reverse("repositories:detail_official", kwargs={"name": name})
+                messages.success(
+                    request,
+                    f'Tag "{tag.name}" created successfully!'
+                )
+                url = reverse(
+                    "repositories:detail_official",
+                    kwargs={"name": name})
                 if from_explore:
                     url += "?from_explore=1"
                     if explore_queries:
@@ -507,8 +512,7 @@ def tag_detail(request, owner_username, name, tag_name):
             messages.success(request, f'Tag "{tag.name}" updated successfully!')
 
             url = reverse(
-                "repositories:detail",
-                kwargs={"owner_username": owner_username, "name": name},
+                "repositories:detail", kwargs={"owner_username": owner_username, "name": name},
             )
             if from_profile:
                 url += "?from_profile=1"
@@ -689,7 +693,7 @@ def tag_delete_official(request, name, tag_name, digest):
                     error_message = "Failed to delete manifest from registry."
             except Exception as e:
                 logger.error(f"Error deleting tag: {e}")
-                error_message = str(e)
+            error_message = str(e)
 
             return render(
                 request,

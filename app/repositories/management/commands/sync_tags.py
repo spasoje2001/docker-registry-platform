@@ -45,7 +45,6 @@ class Command(BaseCommand):
             )
 
         repo_name = options.get("repo")
-
         try:
             service = SyncService()
 
@@ -62,7 +61,6 @@ class Command(BaseCommand):
     def _sync_single_repository(self, service: SyncService, repo_name: str):
         """Sync tags for a single repository."""
         self.stdout.write(f"Synchronizing repository: {repo_name}")
-
         try:
             created, updated, deleted = service.sync_repository_by_name(repo_name)
 
@@ -84,7 +82,6 @@ class Command(BaseCommand):
     def _sync_all_repositories(self, service: SyncService):
         """Sync tags for all active repositories."""
         self.stdout.write("Synchronizing repositories...")
-
         stats = service.sync_all_tags()
 
         # Output results
@@ -95,13 +92,11 @@ class Command(BaseCommand):
         self.stdout.write(f"  Tags created:           {stats.tags_created}")
         self.stdout.write(f"  Tags updated:           {stats.tags_updated}")
         self.stdout.write(f"  Tags deleted:           {stats.tags_deleted}")
-
         if stats.errors:
             self.stdout.write("")
             self.stdout.write(self.style.WARNING(f"Errors ({len(stats.errors)}):"))
             for error in stats.errors:
                 self.stdout.write(self.style.ERROR(f"  - {error}"))
-
         # Exit with error code if there were errors
         if stats.errors and stats.repos_processed == 0:
             raise CommandError("All repositories failed to sync")
