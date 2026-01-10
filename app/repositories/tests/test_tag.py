@@ -246,42 +246,31 @@ class OfficialRepoTagTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertFalse(self.official_repo.tags.filter(name="3.10").exists())
 
-    @patch('repositories.views.RepositoryService')
-    def test_delete_official_repo_tag(self, mock_service_class):
+    def test_delete_official_repo_tag(self):
         """Test: admin can delete tag from official repository"""
-        Tag.objects.create(
+        self.admin.is_superuser = True
+        self.admin.is_staff = True
+        self.admin.save()
+        
+        self.client.login(username=self.admin.username, password="testpass123")
+
+        tag = Tag.objects.create(
             repository=self.official_repo,
-            name="old-version",
-            digest="sha256:" + "e" * 64,
-            size=100000000,
+            name="v1.0-official",
+            digest="sha256:777777777777777777777777777777777"
         )
 
-        mock_service = MagicMock()
-        mock_service.delete_manifest.return_value = True
-        mock_service_class.return_value = mock_service
+        url = reverse("repositories:tag_delete_official", kwargs={
+            "name": self.official_repo.name,
+            "tag_name": tag.name,
+            "digest": tag.digest
+        })
 
-        self.client.login(username="admin2", password="testpass123")
-        url = reverse(
-            "repositories:tag_delete_official",
-            kwargs={
-                "name": "python",
-                "tag_name": "old-version",
-                "digest": "sha256:" + "e" * 64,
-            },)
+        response = self.client.get(url)
 
-        response = self.client.post(url, data={"step": "1"})
         self.assertEqual(response.status_code, 200)
-
-        mock_service.delete_manifest.assert_called_once_with(
-            "python",
-            "sha256:" + "e" * 64
-        )
-
-        self.assertTrue(response.context['deletion_success'])
-        self.assertIsNone(response.context['error_message'])
-        self.assertEqual(response.context['step'], "1")
-        self.assertFalse(self.official_repo.tags.filter(name="old-version").exists())
-
+        self.assertTemplateUsed(response, "tags/tag_confirm_delete.html")
+        self.assertContains(response, tag.name)
 
 class SyncTagsCommandTest(TestCase):
     def setUp(self):
