@@ -77,7 +77,8 @@ class SyncService:
             registry_tags = self._fetch_registry_tags(repository.name)
         except Exception as e:
             logger.error(
-                f"Failed to fetch tags from registry for {repository.name}: {e}"
+                f"Failed to fetch tags from registry for {
+                    repository.name}: {e}"
             )
             raise
 
@@ -113,7 +114,6 @@ class SyncService:
                     os = manifest.get("os", "")
                     arch = manifest.get("arch", "")
                     image_type = manifest.get("mediaType", "").split(".")[-3]
-
                     tags[tag_name] = {
                         "digest": digest,
                         "size": size,
@@ -130,7 +130,9 @@ class SyncService:
         return tags
 
     def _sync_tags_transaction(
-        self, repository: Repository, registry_tags: Dict[str, Dict]
+        self,
+        repository: Repository,
+        registry_tags: Dict[str, Dict]
     ) -> Tuple[int, int, int]:
         """Synchronize tags within a database transaction."""
 
@@ -140,7 +142,8 @@ class SyncService:
 
         # Get existing tags for this repository
         existing_tags = {
-            tag.name: tag for tag in Tag.objects.filter(repository=repository)
+            tag.name: tag
+            for tag in Tag.objects.filter(repository=repository)
         }
 
         registry_tag_names = set(registry_tags.keys())
@@ -169,7 +172,6 @@ class SyncService:
                 tag = existing_tags[tag_name]
                 tag_data = registry_tags[tag_name]
                 new_digest = tag_data.get("digest", "")
-
                 if tag.digest != new_digest:
                     tag.digest = new_digest
                     tag.size = tag_data.get("size", 0)

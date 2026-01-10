@@ -265,10 +265,8 @@ class RepositoryModelTests(TestCase):
         messages_list = list(response.context["messages"])
         self.assertTrue(
             any(
-                "unavailable" in str(msg).lower() or "error" in str(msg).lower()
-                for msg in messages_list
-            )
-        )
+                "unavailable" in str(msg).lower()
+                        or "error" in str(msg).lower() for msg in messages_list))
 
 
 class OfficialRepositoryTests(TestCase):

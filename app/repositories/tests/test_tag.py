@@ -188,9 +188,13 @@ class TagModelTests(TestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
+
+
+
         self.assertIn("tags", response.context)
         tags = response.context["tags"]
         self.assertEqual(len(tags), 3)
+
         self.assertContains(response, "v1.0")
         self.assertContains(response, "v2.0")
         self.assertContains(response, "latest")
@@ -263,17 +267,16 @@ class OfficialRepoTagTests(TestCase):
                 "name": "python",
                 "tag_name": "old-version",
                 "digest": "sha256:" + "e" * 64,
-            },
-        )
+            },)
 
         response = self.client.post(url, data={"step": "1"})
         self.assertEqual(response.status_code, 200)
-        
+
         mock_service.delete_manifest.assert_called_once_with(
-            "python", 
+            "python",
             "sha256:" + "e" * 64
         )
-        
+
         self.assertTrue(response.context['deletion_success'])
         self.assertIsNone(response.context['error_message'])
         self.assertEqual(response.context['step'], "1")
@@ -346,22 +349,23 @@ class SyncTagsCommandTest(TestCase):
     def test_orphan_tags_are_deleted(self):
         """Test that orphan tags (not in registry) are deleted from database."""
         Tag.objects.create(
-            repository=self.repository, name="v1.0.0", digest="sha256:abc123"
-        )
+            repository=self.repository,
+            name="v1.0.0",
+            digest="sha256:abc123")
         Tag.objects.create(
-            repository=self.repository, name="v2.0.0", digest="sha256:def456"
-        )
+            repository=self.repository,
+            name="v2.0.0",
+            digest="sha256:def456")
         Tag.objects.create(
-            repository=self.repository, name="orphan-tag", digest="sha256:orphan"
-        )
+            repository=self.repository,
+            name="orphan-tag",
+            digest="sha256:orphan")
 
-        self._setup_mock_for_tags(
-            {
-                "v1.0.0": "sha256:abc123",
+        self._setup_mock_for_tags({
+            "v1.0.0": "sha256:abc123",
                 "v2.0.0": "sha256:def456",
             }
-        )
-
+)
         created, updated, deleted = self.service.sync_repository_tags(self.repository)
 
         self.assertEqual(deleted, 1)

@@ -35,7 +35,6 @@ class RegistryClient:
             response = self.session.get(url)
             response.raise_for_status()
             return response.json().get("repositories", [])
-
         except requests.exceptions.RequestException as e:
             logger.error(f"Error fetching repositories: {e}")
             raise Exception(f"Failed to fetch repositories: {str(e)}")
@@ -87,10 +86,12 @@ class RegistryClient:
             if "config" in manifest and "layers" in manifest:
                 config_digest = manifest["config"]["digest"]
                 config_url = (
-                    f"{self.registry_url}/v2/{repository}/blobs/{config_digest}"
+                    f"{
+                    self.registry_url}/v2/{repository}/blobs/{config_digest}"
                 )
                 config_response = self.session.get(
-                    config_url, headers={"Accept": manifest["config"]["mediaType"]}
+                    config_url,
+                    headers={"Accept": manifest["config"]["mediaType"]}
                 )
                 config_data = config_response.json()
 
@@ -101,7 +102,8 @@ class RegistryClient:
                 manifest["os"] = "multi-platform"
                 if "manifests" in manifest:
                     manifest["size"] = sum(
-                        m.get("size", 0) for m in manifest["manifests"]
+                        m.get("size", 0)
+                                           for m in manifest["manifests"]
                     )
                 else:
                     manifest["size"] = 0

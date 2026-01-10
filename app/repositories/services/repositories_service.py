@@ -21,7 +21,7 @@ class RepositoryService:
         if user.is_authenticated:
             db_list = Repository.objects.filter(
                 models.Q(visibility=Repository.VisibilityChoices.PUBLIC)
-                | models.Q(owner=user)
+                |models.Q(owner=user)
             )
         else:
             db_list = Repository.objects.filter(
