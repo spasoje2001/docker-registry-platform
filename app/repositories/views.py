@@ -693,7 +693,7 @@ def tag_delete_official(request, name, tag_name, digest):
                     error_message = "Failed to delete manifest from registry."
             except Exception as e:
                 logger.error(f"Error deleting tag: {e}")
-            error_message = str(e)
+                error_message = str(e)
 
             return render(
                 request,
