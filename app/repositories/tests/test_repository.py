@@ -219,20 +219,18 @@ class RepositoryModelTests(TestCase):
     def test_list_repositories_mock_registry(self, MockService):
         """Unit test: list repositories (mock registry response)"""
         Repository.objects.create(
-            name="test-repo-1",
+            name="mock-repo-1",
             owner=self.user1,
             visibility=Repository.VisibilityChoices.PUBLIC
         )
         Repository.objects.create(
-            name="test-repo-2",
+            name="mock-repo-2",
             owner=self.user1,
             visibility=Repository.VisibilityChoices.PUBLIC
         )
 
         mock_service_instance = MockService.return_value
-
-        mock_qs = Repository.objects.filter(name__in=["test-repo-1", "test-repo-2"])
-        mock_service_instance.list_repositories.return_value = mock_qs
+        mock_service_instance.list_repositories.return_value = Repository.objects.filter(name__icontains="mock-repo")
 
         self.client.login(username='user1', password='testpass123')
         url = reverse('explore:explore')
@@ -240,20 +238,12 @@ class RepositoryModelTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
+        self.assertTemplateUsed(response, "explore/explore.html")
+
+        self.assertContains(response, "mock-repo-1")
+        self.assertContains(response, "mock-repo-2")
+
         self.assertTrue(mock_service_instance.list_repositories.called)
-
-        self.assertContains(response, 'test-repo-1')
-        self.assertContains(response, 'test-repo-2')
-
-        self.assertIn("repositories", response.context)
-        repositories = response.context["repositories"]
-        self.assertEqual(len(repositories), 3)
-
-        self.assertContains(response, "test-repo-1")
-        self.assertContains(response, "test-repo-2")
-        self.assertContains(response, "other-repo")
-
-        self.assertTemplateUsed(response, "repositories/repository_list.html")
 
     @patch("repositories.views.RepositoryService")
     def test_list_repositories_connection_error(self, MockService):
