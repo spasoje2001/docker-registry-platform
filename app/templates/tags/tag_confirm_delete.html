@@ -10,6 +10,10 @@
                         <i class="bi bi-tag-fill text-danger"></i>
                         Delete "{{ tag.name }}" from {{ repository.full_name }}
                     </h3>
+                    <a href="{% url 'repositories:tag_update' repository.owner.username repository.name tag.name %}{% if request.GET.from_profile %}?from_profile=1{% if 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% endif %}{% endif %}"
+                        class="btn btn-link text-decoration-none">
+                        <i class="bi bi-arrow-left"></i> Go Back
+                    </a>
                 </div>
                 <div class="card-body p-4">
                     <div class="mb-4">
@@ -66,12 +70,12 @@
                                 <i class="bi bi-play-fill"></i> Start Deletion Process
                             </button>
                             {% if repository.is_official %}
-                                <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
+                                <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% elif 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}"
                                     class="btn btn-link text-decoration-none">
                                     <i class="bi bi-x-circle"></i> Cancel
                                 </a>
                             {% else %}
-                                <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}"
+                                <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% elif 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}"
                                     class="btn btn-link text-decoration-none">
                                     <i class="bi bi-x-circle"></i> Cancel
                                 </a>

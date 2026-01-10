@@ -123,13 +123,12 @@
             </ul>
         </nav>
     {% endif %}
-
-    <p class="text-center text-muted small">
-        Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
-        of {{ page_obj.paginator.count }} results
-    </p>
     
     {% if all_filters %}
+        <p class="text-center text-muted small">
+            Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+            of {{ page_obj.paginator.count }} results
+        </p>
         <p class="text-muted text-center small">
             {{ all_filters }} active filter{{ all_filters|pluralize }}
         </p>

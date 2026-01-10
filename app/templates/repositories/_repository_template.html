@@ -178,7 +178,7 @@
                         <i class="bi bi-arrow-left"></i> Cancel
                     </a>
                     {% else %}
-                    <a href="{% url 'repositories:list' %}"
+                    <a href="{% url 'explore:search' %}"
                     class="btn btn-outline-secondary">
                         <i class="bi bi-arrow-left"></i> Cancel
                     </a>
@@ -255,10 +255,8 @@
                 </button>
                 <a href="{% if from_profile %}
                             {% url 'accounts:profile' %}
-                        {% elif from_explore %}
-                            {% url 'explore:search' %}
                         {% else %}
-                            {% url 'repositories:list' %}
+                            {% url 'explore:search' %}
                         {% endif %}"
                 class="btn btn-success">
                     <i class="bi bi-check-lg"></i> Done
