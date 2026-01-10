@@ -5,6 +5,7 @@ from repositories.models import Repository
 
 User = get_user_model()
 
+
 class ExploreSearchFlowTestCase(TestCase):
     def setUp(self):
         self.explore_url = reverse("explore:explore")
@@ -51,4 +52,4 @@ class ExploreSearchFlowTestCase(TestCase):
         self.assertNotIn("kubernetes", repo_names)
         self.assertNotIn("docker-private", repo_names)
 
-
+        self.assertEqual(len(repo_names), 1)

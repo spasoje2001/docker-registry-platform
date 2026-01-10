@@ -40,7 +40,6 @@ class UserRepositoryIntegrationTest(TestCase):
         response = self.client.post(self.login_url, login_data, follow=True)
         self.assertTrue(response.context["user"].is_authenticated)
 
-
         repo_data = {
             "name": "test-repo",
             "visibility": "PUBLIC",
@@ -49,7 +48,9 @@ class UserRepositoryIntegrationTest(TestCase):
         }
         response = self.client.post(self.repo_create_url, repo_data, follow=True)
 
-        if response.status_code == 200 and hasattr(response, "context") and "form" in response.context:
+        if (response.status_code == 200 and
+                hasattr(response, "context") and
+                "form" in response.context):
             print("Form errors:", response.context["form"].errors)
 
         repo = Repository.objects.get(name="test-repo", owner=user)
