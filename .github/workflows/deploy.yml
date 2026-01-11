@@ -60,7 +60,7 @@ jobs:
           REDIS_URL: redis://localhost:6379/0
           ALLOWED_HOSTS: localhost,127.0.0.1
         run: |
-          cd appd
+          cd app
           python manage.py migrate
           python manage.py test
 
