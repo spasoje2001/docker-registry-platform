@@ -23,7 +23,7 @@ from .utils import (
 )
 
 from repositories.forms import RepositoryForm
-from repositories.models import Repository
+from repositories.services.repositories_service import RepositoryService
 
 
 User = get_user_model()
@@ -261,9 +261,24 @@ def profile_view(request):
     active_tab = "repos"
     form_data = request.session.pop("repo_form_data", None)
     form_errors = request.session.pop("repo_form_errors", None)
-    repositories = Repository.objects.filter(
-        owner=request.user, is_official=False
-    ).order_by("-updated_at")
+
+    service = RepositoryService()
+    repositories = service.get_initial_repositories(True, request.user)
+
+    if not service.health_check():
+        if request.GET.get('tab') == 'repos' or not request.GET.get('tab'):
+            messages.error(
+                request,
+                "Registry is unavailable at this moment. Please try again later."
+            )
+    else:
+        try:
+            repositories = service.list_repositories(request.user, True)
+        except Exception:
+            messages.error(request, "Error fetching repositories from registry.")
+            repositories = service.get_initial_repositories(True, request.user)
+
+    repositories = repositories.order_by('-updated_at')
 
     if form_data:
         repo_form = RepositoryForm(form_data, request=request)

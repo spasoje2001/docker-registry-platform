@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
+from unittest.mock import patch
 
 from repositories.models import Repository
 
@@ -9,7 +10,9 @@ User = get_user_model()
 
 class OfficialRepositoryEndToEndFlowTestCase(TestCase):
 
-    def test_admin_creates_official_repo_visible_in_explore_and_opens_detail(self):
+    @patch('repositories.services.repositories_service.RegistryClient.get_all_repositories')
+    def test_admin_creates_official_repo_visible_in_explore_and_opens_detail(self, mock_reg):
+        mock_reg.return_value = ["docker-official"]
         admin = User.objects.create_superuser(
             username="admin",
             email="admin@gmail.com",

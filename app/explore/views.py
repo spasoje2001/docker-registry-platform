@@ -1,16 +1,28 @@
 from django.shortcuts import render
 from django.db.models import Q, Case, When, IntegerField
 from django.core.paginator import Paginator
+from django.contrib import messages
 
-from repositories.models import Repository
+from repositories.services.repositories_service import RepositoryService
 
 
 def search(request):
-    repositories = (
-        Repository.objects.filter(visibility="PUBLIC")
-        .select_related("owner")
-        .order_by("-created_at")
-    )
+    service = RepositoryService()
+    repositories = service.get_initial_repositories(False, None)
+
+    if not service.health_check():
+        messages.error(
+            request,
+            "Registry is unavailable at this moment. Please try again later."
+        )
+    else:
+        try:
+            repositories = service.list_repositories(request.user, False)
+        except Exception:
+            messages.error(request, "Error fetching repositories from registry.")
+            repositories = service.get_initial_repositories(False, None)
+
+    repositories = repositories.select_related("owner").order_by("-created_at")
 
     return render(
         request,
@@ -28,11 +40,22 @@ def explore_repositories(request):
     sort = request.GET.get("sort", "relevance")
     explore_queries = request.GET.urlencode()
 
-    repositories = (
-        Repository.objects.filter(visibility="PUBLIC")
-        .select_related("owner")
-        .order_by("-created_at")
-    )
+    service = RepositoryService()
+    repositories = service.get_initial_repositories(False, None)
+
+    if not service.health_check():
+        messages.error(
+            request,
+            "Registry is unavailable at this moment. Please try again later."
+        )
+    else:
+        try:
+            repositories = service.list_repositories(request.user, False)
+        except Exception:
+            messages.error(request, "Error fetching repositories from registry.")
+            repositories = service.get_initial_repositories(False, None)
+
+    repositories = repositories.select_related("owner").order_by("-created_at")
 
     if active_filter == "official":
         repositories = repositories.filter(is_official=True)
