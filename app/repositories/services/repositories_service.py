@@ -68,4 +68,4 @@ class RepositoryService():
         return self.registry_client.check_health()
 
     def get_query_set(self) -> QuerySet:
-        return Repository.objects.none()
+        return Repository.objects.all()
