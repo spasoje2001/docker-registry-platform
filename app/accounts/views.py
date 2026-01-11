@@ -263,7 +263,7 @@ def profile_view(request):
     form_errors = request.session.pop("repo_form_errors", None)
 
     service = RepositoryService()
-    repositories = service.get_query_set()
+    repositories = service.get_initial_repositories(True, request.user)
 
     if not service.health_check():
         if request.GET.get('tab') == 'repos' or not request.GET.get('tab'):
@@ -276,7 +276,7 @@ def profile_view(request):
             repositories = service.list_repositories(request.user, True)
         except Exception:
             messages.error(request, "Error fetching repositories from registry.")
-            repositories = service.get_query_set()
+            repositories = service.get_initial_repositories(True, request.user)
 
     repositories = repositories.order_by('-updated_at')
 

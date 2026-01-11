@@ -69,7 +69,7 @@
                             {% endif %}
 
                             <div class="mb-4">
-                                <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold"></label>
+                                <label for="{{ form.name.id_for_label }}" class="form-label fw-semibold">
                                     Name <span class="text-danger">*</span>
                                 </label>
 
@@ -103,18 +103,18 @@
                                             </span>
                                             <input type="text"
                                             class="form-control font-monospace"
-                                            value="{{ tag.digest }}" 
+                                            value="{{ manifest.digest }}"  
                                             readonly>
                                         </div>
                                     </div>
 
-                                    <div class="row g-3 align-items-center mt-1 mb-3">
+                                    <div class="row g-3 align-items-center mb-2">
                                         <div class="col-6 col-lg-3">
                                             <div>
                                                 <small class="text-muted d-block">
                                                     <i class="bi bi-cpu"></i> OS/Arch
                                                 </small>
-                                                <small>{{ tag.os }}{% if tag.arch %}/{{ tag.arch }}{% endif %}</small>
+                                                <small>{{ manifest.os }}{% if manifest.arch %}/{{ manifest.arch }}{% endif %}</small>
                                             </div>
                                         </div>
 
@@ -123,16 +123,16 @@
                                                 <small class="text-muted d-block">
                                                     <i class="bi bi-hdd"></i> Size
                                                 </small>
-                                                <small>{{ tag.size_display }}</small>
+                                                <small>{{ manifest.size }}</small>
                                             </div>
                                         </div>
 
-                                        <div class="col-6 col-lg-3">
+                                         <div class="col-6 col-lg-3">
                                             <div>
                                                 <small class="text-muted d-block">
                                                     <i class="bi bi-calendar-check"></i> Type
                                                 </small>
-                                                <small>{{ tag.image_type }}</small>
+                                                <small>{{ manifest.type }}</small>
                                             </div>
                                         </div>
 
@@ -163,13 +163,11 @@ docker run localhost:5000/{{ repository.name }}:{{ tag.name }}</code></pre>
                                             Next <i class="bi bi-arrow-right"></i>
                                         </button>
                                     {% else %}
-                                        {% if tag.digest %}
-                                            {% if user == repository.owner %}
-                                                <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name tag.digest %}{% if request.GET.from_profile %}?from_profile=1{% if 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% endif %}{% endif %}" 
-                                                    class="btn btn-danger">
-                                                    <i class="bi bi-trash"></i> Delete
-                                                </a>
-                                            {% endif %}
+                                        {% if  manifest.digest %}
+                                            <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name manifest.digest %}{% if request.GET.from_profile %}?from_profile=1{% if 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% endif %}{% endif %}" 
+                                                class="btn btn-danger">
+                                                <i class="bi bi-trash"></i> Delete
+                                            </a>
                                         {% else %}
                                             <button class="btn btn-secondary" disabled>
                                                 <i class="bi bi-trash"></i> Unavailable delete (no digest)

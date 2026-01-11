@@ -67,5 +67,12 @@ class RepositoryService():
     def health_check(self) -> bool:
         return self.registry_client.check_health()
 
-    def get_query_set(self) -> QuerySet:
-        return Repository.objects.all()
+    def get_initial_repositories(self, from_profile, user) -> QuerySet:
+        if from_profile:
+            return Repository.objects.filter(
+                models.Q(is_official=False) &
+                models.Q(owner=user)
+            )
+        return Repository.objects.filter(
+            visibility=Repository.VisibilityChoices.PUBLIC
+        )
