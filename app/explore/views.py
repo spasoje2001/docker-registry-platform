@@ -20,6 +20,7 @@ def search(request):
             repositories = service.list_repositories(request.user, False)
         except Exception:
             messages.error(request, "Error fetching repositories from registry.")
+            repositories = service.get_query_set()
 
     repositories = repositories.select_related("owner").order_by("-created_at")
 
@@ -52,7 +53,7 @@ def explore_repositories(request):
             repositories = service.list_repositories(request.user, False)
         except Exception:
             messages.error(request, "Error fetching repositories from registry.")
-            return
+            repositories = service.get_query_set()
 
     repositories = repositories.select_related("owner").order_by("-created_at")
 

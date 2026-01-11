@@ -22,7 +22,7 @@ class RepositoryService():
             )
         if profile:
             db_list = Repository.objects.filter(
-                models.Q(is_official="False") &
+                models.Q(is_official=False) &
                 models.Q(owner=user)
             )
 
@@ -62,6 +62,7 @@ class RepositoryService():
         for obj_name in client_list:
             if obj_name in db_dict:
                 combined.append(db_dict[obj_name])
+        return combined
 
     def health_check(self) -> bool:
         return self.registry_client.check_health()

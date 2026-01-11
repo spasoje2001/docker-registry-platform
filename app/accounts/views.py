@@ -266,15 +266,17 @@ def profile_view(request):
     repositories = service.get_query_set()
 
     if not service.health_check():
-        messages.error(
-            request,
-            "Registry is unavailable at this moment. Please try again later."
-        )
+        if request.GET.get('tab') == 'repos' or not request.GET.get('tab'):
+            messages.error(
+                request,
+                "Registry is unavailable at this moment. Please try again later."
+            )
     else:
         try:
             repositories = service.list_repositories(request.user, True)
         except Exception:
             messages.error(request, "Error fetching repositories from registry.")
+            repositories = service.get_query_set()
 
     repositories = repositories.order_by('-updated_at')
 

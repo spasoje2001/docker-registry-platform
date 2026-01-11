@@ -2,6 +2,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 from django.urls import reverse
 from repositories.models import Repository
+from unittest.mock import patch
 
 User = get_user_model()
 
@@ -36,6 +37,13 @@ class ExploreSearchFlowTestCase(TestCase):
             description="Docker private repo",
             owner=self.user
         )
+
+        self.patcher = patch('repositories.services.repositories_service.RegistryClient.get_all_repositories')
+        self.mock_registry = self.patcher.start()
+        self.mock_registry.return_value = ["docker-registry", "kubernetes", "docker-private"]
+
+    def tearDown(self):
+        self.patcher.stop()
 
     def test_user_search_finds_correct_repositories(self):
         response = self.client.get(
