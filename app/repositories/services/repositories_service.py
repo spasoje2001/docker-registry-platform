@@ -38,7 +38,7 @@ class RepositoryService():
 
         db_list = Tag.objects.filter(models.Q(repository=repo_name))
 
-        return self.cobine_lists(tags, db_list)
+        return self.combine_lists(tags, db_list)
 
     def get_manifest(self, repo_name: str, tag_name: str) -> Dict:
         try:
@@ -55,5 +55,16 @@ class RepositoryService():
             print(f"Error deleting manifest from registry: {e}")
             raise
 
+    def combine_lists(self, client_list: List[str], db_list: List) -> List:
+        db_dict = {obj.name: obj for obj in db_list}
+        combined = []
+
+        for obj_name in client_list:
+            if obj_name in db_dict:
+                combined.append(db_dict[obj_name])
+
     def health_check(self) -> bool:
         return self.registry_client.check_health()
+
+    def get_query_set(self) -> QuerySet:
+        return Repository.objects.none()

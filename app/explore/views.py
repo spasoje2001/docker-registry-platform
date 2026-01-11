@@ -8,7 +8,7 @@ from repositories.services.repositories_service import RepositoryService
 
 def search(request):
     service = RepositoryService()
-    repositories = []
+    repositories = service.get_query_set()
 
     if not service.health_check():
         messages.error(
@@ -21,7 +21,7 @@ def search(request):
         except Exception:
             messages.error(request, "Error fetching repositories from registry.")
 
-    repositories.select_related("owner").order_by("-created_at")
+    repositories = repositories.select_related("owner").order_by("-created_at")
 
     return render(
         request,
@@ -40,7 +40,7 @@ def explore_repositories(request):
     explore_queries = request.GET.urlencode()
 
     service = RepositoryService()
-    repositories = []
+    repositories = service.get_query_set()
 
     if not service.health_check():
         messages.error(
@@ -52,8 +52,9 @@ def explore_repositories(request):
             repositories = service.list_repositories(request.user, False)
         except Exception:
             messages.error(request, "Error fetching repositories from registry.")
+            return
 
-    repositories.select_related("owner").order_by("-created_at")
+    repositories = repositories.select_related("owner").order_by("-created_at")
 
     if active_filter == "official":
         repositories = repositories.filter(is_official=True)
