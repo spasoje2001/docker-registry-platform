@@ -73,20 +73,27 @@ class ExploreRepositoriesTests(TestCase):
         self.assertEqual(repos[0].name, "redis")
 
     def test_relevance_sorting_name_before_description(self):
-        self.mock_registry.return_value = ['nginx', 'webserver', 'redis', 'searchterm-repo', 'other-app']
+        new_names = ['nginx', 'webserver', 'redis', 'searchterm-repo', 'other-app']
+        
+        with patch('repositories.services.repositories_service.RegistryClient.get_all_repositories', return_value=new_names):
+            Repository.objects.create(
+                name="other-app", 
+                description="searchterm", 
+                owner=self.user1, 
+                visibility=Repository.VisibilityChoices.PUBLIC
+            )
+            Repository.objects.create(
+                name="searchterm-repo", 
+                description="blah", 
+                owner=self.user1, 
+                visibility=Repository.VisibilityChoices.PUBLIC
+            )
 
-        Repository.objects.create(
-            name="other-app", description="searchterm", owner=self.user1, visibility="PUBLIC"
-        )
-        Repository.objects.create(
-            name="searchterm-repo", description="blah", owner=self.user1, visibility="PUBLIC"
-        )
+            response = self.client.get(self.url, {"q": "searchterm"})
+            repos = list(response.context["page_obj"].object_list)
 
-        response = self.client.get(self.url, {"q": "searchterm"})
-        repos = list(response.context["page_obj"].object_list)
-
-        self.assertEqual(len(repos), 2)
-        self.assertEqual(repos[0].name, "searchterm-repo")
+            self.assertEqual(len(repos), 2)
+            self.assertEqual(repos[0].name, "searchterm-repo")
 
     def test_empty_search_returns_all_public(self):
         response = self.client.get(self.url, {"q": ""})

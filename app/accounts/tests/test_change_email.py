@@ -1,6 +1,7 @@
 from django.test import TestCase
 from django.urls import reverse
 from django.core import mail
+from unittest.mock import patch
 
 from ..models import User
 from ..utils import (
@@ -9,10 +10,17 @@ from ..utils import (
     delete_email_change_request,
 )
 
+from repositories.models import Repository
 
 class EmailChangeTest(TestCase):
 
     def setUp(self):
+        self.health_patcher = patch('repositories.services.repositories_service.RepositoryService.health_check', return_value=True)
+        self.list_patcher = patch('repositories.services.repositories_service.RepositoryService.list_repositories', return_value=Repository.objects.none())
+        
+        self.health_patcher.start()
+        self.list_patcher.start()
+
         self.user = User.objects.create_user(
             username="testuser", email="old@example.com", password="StrongPass123!"
         )
@@ -23,7 +31,9 @@ class EmailChangeTest(TestCase):
         self.cancel_url = reverse("accounts:email_change_cancel")
 
     def tearDown(self):
-        """Clean up Redis after each test."""
+        self.health_patcher.stop()
+        self.list_patcher.stop()
+        
         delete_email_change_request(self.user.id)
 
     def test_request_email_change_sends_code(self):
