@@ -19,16 +19,16 @@ class ProfileRepoTabTests(TestCase):
             "name": "my-repo",
             "description": "Test repository",
             "visibility": "PUBLIC",
-            "from_profile": "1"
+            "from_profile": "1",
+            "initial_tag": "latest",
         }
 
         response = self.client.post(url, data)
         self.assertRedirects(response, reverse("accounts:profile"))
 
         self.assertTrue(
-            Repository.objects.filter(
-                name="my-repo",
-                owner=self.user).exists())
+            Repository.objects.filter(name="my-repo", owner=self.user).exists()
+        )
 
 
 def test_create_new_repository_name_exists(self):

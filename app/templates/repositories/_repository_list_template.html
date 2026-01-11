@@ -8,6 +8,10 @@
         box-shadow: 0 0.5rem 1rem rgba(0, 0, 0, 0.1);
         transform: translateY(-2px);
     }
+    .repo-title i[title] {
+        font-size: 0.95rem;
+        cursor: help;
+    }
     .repo-title {
         font-size: 1.25rem;
         font-weight: 600;
@@ -29,19 +33,32 @@
 {% if repositories %}
     <div class="row">
         {% for repo in repositories %}
+        <div class="col-lg-6 mb-2">
             {% if repo.is_official %}
-                <a href="{% url 'repositories:detail_official' repo.name %}{% if from_profile %}?from_profile=1{% endif %}" class="text-decoration-none">
+                <a href="{% url 'repositories:detail_official' repo.name %}{% if from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}" class="text-decoration-none">
             {% else %}
-                <a href="{% url 'repositories:detail' repo.owner.username repo.name %}{% if from_profile %}?from_profile=1{% endif %}" class="text-decoration-none">
+                <a href="{% url 'repositories:detail' repo.owner.username repo.name %}{% if from_profile %}?from_profile=1{% endif %}{% if from_explore %}?from_explore=1{% if explore_queries %}&{{ explore_queries }}{% endif %}{% endif %}" class="text-decoration-none">
             {% endif %}
-            <div class="col-12 mb-3">
                 <div class="card repo-card h-100">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div>
-                                <h5 class="repo-title mb-2">
+                                <h5 class="repo-title mb-2 d-flex align-items-center gap-2">
                                     <i class="bi bi-book text-primary"></i>
-                                    {{ repo.full_name }}
+
+                                    <span>{{ repo.full_name }}</span>
+
+                                    {% if repo.owner.is_verified_publisher %}
+                                        <i class="bi bi-patch-check-fill text-primary"
+                                        title="Verified Publisher"
+                                        data-bs-toggle="tooltip"></i>
+                                    {% endif %}
+
+                                    {% if repo.owner.is_sponsored_oss %}
+                                        <i class="bi bi-cash-coin text-success"
+                                        title="Sponsored OSS"
+                                        data-bs-toggle="tooltip"></i>
+                                    {% endif %}
                                 </h5>
                             </div>
                             <div>
@@ -49,15 +66,16 @@
                                     <span class="badge bg-info badge-custom">
                                         <i class="bi bi-patch-check-fill"></i> OFFICIAL
                                     </span>
-                                {% endif %}
-                                {% if repo.visibility == 'PRIVATE' %}
-                                    <span class="badge bg-warning text-dark badge-custom">
-                                        <i class="bi bi-lock-fill"></i> PRIVATE
-                                    </span>
                                 {% else %}
-                                    <span class="badge bg-success badge-custom">
-                                        <i class="bi bi-unlock-fill"></i> PUBLIC
-                                    </span>
+                                    {% if repo.visibility == 'PRIVATE' %}
+                                        <span class="badge bg-warning text-dark badge-custom">
+                                            <i class="bi bi-lock-fill"></i> PRIVATE
+                                        </span>
+                                    {% else %}
+                                        <span class="badge bg-success badge-custom">
+                                            <i class="bi bi-unlock-fill"></i> PUBLIC
+                                        </span>
+                                    {% endif %}
                                 {% endif %}
                             </div>
                         </div>
@@ -84,8 +102,8 @@
                         </div>
                     </div>
                 </div>
+                </a>
             </div>
-        </a>
         {% endfor %}
     </div>
 {% else %}

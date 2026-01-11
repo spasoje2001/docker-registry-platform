@@ -1,0 +1,137 @@
+ {% extends "base.html" %}
+
+{% block title %}Explore{% endblock %}
+
+{% block content %}
+    <div class="card mb-4 shadow-sm">
+        <div class="card-body d-flex justify-content-between align-items-center">
+            <h2 class="mb-1">
+                <i class="bi bi-search text-primary"></i> Explore repositories
+            </h2>
+            {% if user.is_authenticated %}
+                <a href="{% url 'repositories:create' %}" class="btn btn-primary">
+                    <i class="bi bi-folder-plus"></i> New
+                </a>
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="get" action="{% url 'explore:explore' %}" class="mb-4">
+        <div class="input-group row g-3 mb-4">
+            <div class="col-md-2">
+                <label class="form-label">Filter by</label>
+                <select
+                    name="filter"
+                    class="form-select"
+                    onchange="this.form.submit()"
+                >
+                    <option value="">All repositories</option>
+                    <option value="official"
+                            {% if active_filter == "official" %}selected{% endif %}>
+                        Official only
+                    </option>
+                    <option value="verified"
+                            {% if active_filter == "verified" %}selected{% endif %}>
+                        Verified publisher only
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-1"></div>
+            <div class="col-md-2">
+                <label class="form-label">Sort by</label>
+                <select name="sort" class="form-select" onchange="this.form.submit()">
+                    <option value="relevance" {% if sort == "relevance" %}selected{% endif %}>
+                        Relevance
+                    </option>
+                    <option value="updated" {% if sort == "updated" or not sort %}selected{% endif %}>
+                        Recently updated
+                    </option>
+                    <option value="name_asc" {% if sort == "name_asc" %}selected{% endif %}>
+                        Name (A–Z)
+                    </option>
+                    <option value="name_desc" {% if sort == "name_desc" %}selected{% endif %}>
+                        Name (Z–A)
+                    </option>
+                </select>
+            </div>
+            <div class="col-md-1"></div>
+
+            <div class="col-md-5">
+                <label class="form-label">Search by name and description</label>
+
+                <div class="input-group">
+                    <input
+                        type="text"
+                        name="q"
+                        value="{{ query }}"
+                        class="form-control"
+                        placeholder="Search repositories..."
+                    >
+                    <button class="btn btn-outline-secondary" type="submit">
+                        <i class="bi bi-search"></i>
+                    </button>
+                </div>
+            </div>
+            <div class="col-md-1 d-flex align-items-end">
+                {% if query or sort != "relevance" or active_filter %}
+                    <a href="{% url 'explore:explore' %}" class="btn btn-outline-secondary">
+                        Clear
+                    </a>
+                {% endif %}
+            </div>
+        </div>
+    </form>
+
+    {% include "repositories/_repository_list_template.html" %}
+
+    {% if page_obj.paginator.num_pages > 1 %}
+        <nav class="mt-4">
+            <ul class="pagination justify-content-center">
+
+                {% if page_obj.has_previous %}
+                    <li class="page-item">
+                        <a class="page-link"
+                        href="?q={{ query }}&sort={{ sort }}{% if active_filter %}&filter={{ active_filter }}{% endif %}page={{ page_obj.previous_page_number }}">
+                            Previous
+                        </a>
+                    </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if num == page_obj.number %}
+                        <li class="page-item active">
+                            <span class="page-link">{{ num }}</span>
+                        </li>
+                    {% elif num >= page_obj.number|add:"-2" and num <= page_obj.number|add:"2" %}
+                        <li class="page-item">
+                            <a class="page-link"
+                            href="?q={{ query }}&sort={{ sort }}{% if active_filter %}&filter={{ active_filter }}{% endif %}&page={{ num }}">
+                                {{ num }}
+                            </a>
+                        </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                    <li class="page-item">
+                        <a class="page-link"
+                        href="?q={{ query }}&sort={{ sort }}{% if active_filter %}&filter={{ active_filter }}{% endif %}&page={{ page_obj.next_page_number }}">
+                            Next
+                        </a>
+                    </li>
+                {% endif %}
+            </ul>
+        </nav>
+    {% endif %}
+    
+    {% if all_filters %}
+        <p class="text-center text-muted small">
+            Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
+            of {{ page_obj.paginator.count }} results
+        </p>
+        <p class="text-muted text-center small">
+            {{ all_filters }} active filter{{ all_filters|pluralize }}
+        </p>
+    {% endif %}
+
+{% endblock %}

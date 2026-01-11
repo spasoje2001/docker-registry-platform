@@ -7,8 +7,8 @@ User = get_user_model()
 
 class AdminPanelTest(TestCase):
     def setUp(self):
-        self.home_url = reverse('core:home')
-        self.admin_panel_url = reverse('accounts:admin_panel')
+        self.home_url = reverse("core:home")
+        self.admin_panel_url = reverse("accounts:admin_panel")
 
         self.admin_password = "AdminPass123!"
         self.admin = User.objects.create_user(

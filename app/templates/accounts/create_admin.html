@@ -1,0 +1,168 @@
+{% extends "base.html" %}
+{% block title %}Create Admin User{% endblock %}
+
+{% block content %}
+<div class="container" style="max-width: 600px;">
+    
+    <div class="d-flex align-items-center mb-4">
+        <a href="{% url 'accounts:admin_panel' %}?section=admins" 
+           class="btn btn-outline-secondary btn-sm me-3">
+            <i class="bi bi-arrow-left"></i> Back
+        </a>
+        <h2 class="h3 mb-0">
+            <i class="bi bi-person-plus text-success me-2"></i>Create Admin User
+        </h2>
+    </div>
+
+    <div class="card shadow-sm border-0">
+        <div class="card-body p-4">
+            <form method="post" novalidate>
+                {% csrf_token %}
+                
+                {% if form.non_field_errors %}
+                    <div class="alert alert-danger">
+                        {{ form.non_field_errors }}
+                    </div>
+                {% endif %}
+
+                <!-- Username -->
+                <div class="mb-3">
+                    <label for="id_username" class="form-label fw-semibold">
+                        Username <span class="text-danger">*</span>
+                    </label>
+                    {{ form.username }}
+                    {% if form.username.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.username.errors }}
+                        </div>
+                    {% endif %}
+                    <div class="form-text">
+                        Required. 150 characters or fewer. Letters, digits and @/./+/-/_ only.
+                    </div>
+                </div>
+
+                <!-- Email -->
+                <div class="mb-3">
+                    <label for="id_email" class="form-label fw-semibold">
+                        Email <span class="text-danger">*</span>
+                    </label>
+                    {{ form.email }}
+                    {% if form.email.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.email.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- First Name -->
+                <div class="mb-3">
+                    <label for="id_first_name" class="form-label fw-semibold">
+                        First Name
+                    </label>
+                    {{ form.first_name }}
+                    {% if form.first_name.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.first_name.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <!-- Last Name -->
+                <div class="mb-3">
+                    <label for="id_last_name" class="form-label fw-semibold">
+                        Last Name
+                    </label>
+                    {{ form.last_name }}
+                    {% if form.last_name.errors %}
+                        <div class="text-danger small mt-1">
+                            {{ form.last_name.errors }}
+                        </div>
+                    {% endif %}
+                </div>
+
+                <hr class="my-4">
+
+                <!-- Password Section -->
+                <h5 class="mb-3">Password Setup</h5>
+
+                <!-- Generate Password Checkbox -->
+                <div class="mb-3">
+                    <div class="form-check">
+                        {{ form.generate_password }}
+                        <label class="form-check-label" for="id_generate_password">
+                            Generate random password
+                        </label>
+                    </div>
+                    <div class="form-text">
+                        Admin will be forced to change password on first login
+                    </div>
+                </div>
+
+                <!-- Manual Password Fields (hidden by default) -->
+                <div id="manual-password-fields" style="display: none;">
+                    <div class="mb-3">
+                        <label for="id_password" class="form-label fw-semibold">
+                            Password
+                        </label>
+                        {{ form.password }}
+                        {% if form.password.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.password.errors }}
+                            </div>
+                        {% endif %}
+                        <div class="form-text">
+                            Minimum 8 characters. Leave empty if generating random password.
+                        </div>
+                    </div>
+
+                    <div class="mb-3">
+                        <label for="id_password_confirm" class="form-label fw-semibold">
+                            Confirm Password
+                        </label>
+                        {{ form.password_confirm }}
+                        {% if form.password_confirm.errors %}
+                            <div class="text-danger small mt-1">
+                                {{ form.password_confirm.errors }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="alert alert-warning">
+                    <i class="bi bi-exclamation-triangle me-2"></i>
+                    The new admin will be forced to change their password on first login.
+                </div>
+
+                <!-- Submit Buttons -->
+                <div class="d-flex gap-2 justify-content-end">
+                    <a href="{% url 'accounts:admin_panel' %}?section=admins"
+                       class="btn btn-secondary">
+                        Cancel
+                    </a>
+                    <button type="submit" class="btn btn-success">
+                        <i class="bi bi-check-circle me-1"></i> Create Admin
+                    </button>
+                </div>
+
+            </form>
+        </div>
+    </div>
+
+</div>
+
+<script>
+const generateCheckbox = document.getElementById('id_generate_password');
+const manualFields = document.getElementById('manual-password-fields');
+
+function togglePasswordFields() {
+    if (generateCheckbox.checked) {
+        manualFields.style.display = 'none';
+    } else {
+        manualFields.style.display = 'block';
+    }
+}
+
+generateCheckbox.addEventListener('change', togglePasswordFields);
+togglePasswordFields();
+</script>
+{% endblock %}

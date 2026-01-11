@@ -2,6 +2,7 @@ from django.db import models
 from django.core.validators import RegexValidator
 from django.contrib.auth import get_user_model
 from django.db.models import Q
+from django.utils import timezone
 
 User = get_user_model()
 
@@ -33,18 +34,19 @@ class Repository(models.Model):
     )
 
     class Meta:
+        db_table = "repositories"
         verbose_name_plural = "repositories"
         constraints = [
             models.UniqueConstraint(
                 fields=["owner", "name"],
                 condition=Q(is_official=False),
-                name="unique_owner_name"
+                name="unique_owner_name",
             ),
             models.UniqueConstraint(
-                fields=['name'],
+                fields=["name"],
                 condition=models.Q(is_official=True),
-                name='unique_official_repo_name'
-            )
+                name="unique_official_repo_name",
+            ),
         ]
 
     @property
@@ -59,12 +61,16 @@ class Repository(models.Model):
 
 class Tag(models.Model):
     name = models.CharField(max_length=100)
-    digest = models.CharField(max_length=256)
-    size = models.PositiveBigIntegerField()
+    digest = models.CharField(max_length=256, blank=True, null=True)
+    size = models.PositiveBigIntegerField(blank=True, null=True, default=0)
     repository = models.ForeignKey(
         Repository, on_delete=models.CASCADE, related_name="tags"
     )
     created_at = models.DateTimeField(auto_now_add=True)
+    last_synced = models.DateTimeField(default=timezone.now)
+    os = models.CharField(max_length=32, blank=True, default="")
+    arch = models.CharField(max_length=32, blank=True, default="")
+    image_type = models.CharField(max_length=32, blank=True, default="")
 
     class Meta:
         constraints = [

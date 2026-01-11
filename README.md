@@ -94,7 +94,18 @@ cat admin_password.txt
 
 **Important:** This command is idempotent (safe to run multiple times). Super admin will be forced to change password on first login.
 
-### 7. Verify Everything is Running
+### 7. Tag synchronization
+Synchronize all tags for all repositories:
+```bash
+docker-compose exec web python manage.py sync_tags
+```
+
+Synchronize all tags for single repository:
+```bash
+docker-compose exec web python manage.py sync_tags --repo myrepo
+```
+
+### 8. Verify Everything is Running
 
 Open in browser:
 
@@ -105,7 +116,7 @@ Open in browser:
 | Registry | http://localhost:5000/v2/ | `{}` |
 | MailHog | http://localhost:8025 | Email inbox UI |
 
-### 8. Verify Registry Authentication
+### 9. Verify Registry Authentication
 ```bash
 # Test docker login
 docker login localhost:5000
@@ -116,7 +127,7 @@ docker login localhost:5000
 curl -u admin:Admin123 http://localhost:5000/v2/_catalog
 ```
 
-### 9. Stop the Application
+### 10. Stop the Application
 
 Press `Ctrl+C` in the terminal, then:
 ```bash
@@ -164,9 +175,35 @@ docker-compose exec db psql -U postgres -d dockerhub
 # \d tablename - describe table
 # \q           - quit
 ```
-## Running Tests
+### Registry configuration
 
-Run tests inside Docker container:
+### 1. Create htpasswd file
+
+Create htpasswd file locally using Docker htpasswd image.
+
+```docker run --rm --entrypoint htpasswd httpd:2 -Bbn admin Admin123 > auth/htpasswd```
+
+Do not edit file manually. Encode it to UTF-8 LF.
+
+### 2. Test login
+
+```docker login localhost:5000```
+
+Enter the credentials:
+Username: admin
+Password: Admin123
+
+Then, in command prompt, to get all repositories:
+
+```curl -i -u admin:Admin123 http://localhost:5000/v2/_catalog```
+
+or in Powershell:
+
+```(Invoke-WebRequest -Uri "http://localhost:5000/v2/_catalog" -Headers @{Authorization = "Basic $([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('admin:Admin123')))"}).Content```
+
+### Running Tests Locally
+
+**Option A: Inside Docker (recommended)**
 ```bash
 docker-compose exec web python manage.py test
 ```

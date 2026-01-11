@@ -13,6 +13,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 import os
 from pathlib import Path
 import dj_database_url
+from django.contrib.messages import constants as messages
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -54,6 +55,7 @@ MIDDLEWARE = [
     "django.contrib.messages.middleware.MessageMiddleware",
     "django.middleware.clickjacking.XFrameOptionsMiddleware",
     "accounts.middleware.ForcePasswordChangeMiddleware",
+    "config.middleware.RequestLoggingMiddleware",
 ]
 
 ROOT_URLCONF = "config.urls"
@@ -86,16 +88,16 @@ DATABASES = {
     )
 }
 
-REDIS_URL = os.getenv('REDIS_URL', 'redis://127.0.0.1:6379/0')
+REDIS_URL = os.getenv("REDIS_URL", "redis://127.0.0.1:6379/0")
 
 CACHES = {
-    'default': {
-        'BACKEND': 'django_redis.cache.RedisCache',
-        'LOCATION': REDIS_URL,
-        'OPTIONS': {
-            'CLIENT_CLASS': 'django_redis.client.DefaultClient',
+    "default": {
+        "BACKEND": "django_redis.cache.RedisCache",
+        "LOCATION": REDIS_URL,
+        "OPTIONS": {
+            "CLIENT_CLASS": "django_redis.client.DefaultClient",
         },
-        'KEY_PREFIX': 'docker_registry',
+        "KEY_PREFIX": "docker_registry",
     }
 }
 
@@ -107,7 +109,7 @@ AUTH_USER_MODEL = "accounts.User"
 AUTH_PASSWORD_VALIDATORS = [
     {
         "NAME": "django.contrib.auth.password_validation"
-                ".UserAttributeSimilarityValidator",
+        ".UserAttributeSimilarityValidator",
     },
     {
         "NAME": "django.contrib.auth.password_validation.MinimumLengthValidator",
@@ -140,9 +142,9 @@ STATIC_URL = "/static/"
 STATIC_ROOT = BASE_DIR / "staticfiles"
 
 # Authentication
-LOGIN_URL = '/accounts/login/'
-LOGIN_REDIRECT_URL = '/accounts/profile/'
-LOGOUT_REDIRECT_URL = '/'
+LOGIN_URL = "/accounts/login/"
+LOGIN_REDIRECT_URL = "/accounts/profile/"
+LOGOUT_REDIRECT_URL = "/"
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
@@ -156,9 +158,6 @@ ELASTICSEARCH_URL = os.environ.get("ELASTICSEARCH_URL", "http://localhost:9200")
 REGISTRY_URL = os.environ.get("REGISTRY_URL", "http://localhost:5000")
 
 # Logging
-# =============================================================================
-# LOGGING
-# =============================================================================
 
 LOGS_DIR = BASE_DIR / "logs"
 LOGS_DIR.mkdir(exist_ok=True)
@@ -167,9 +166,32 @@ LOGGING = {
     "version": 1,
     "disable_existing_loggers": False,
     "formatters": {
+        "json": {
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s",
+            "rename_fields": {
+                "asctime": "timestamp",
+                "levelname": "level",
+                "name": "logger_name",
+            },
+        },
+        "json_access": {
+            "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s %(user)s %(path)s %(method)s",
+            "rename_fields": {
+                "asctime": "timestamp",
+                "levelname": "level",
+                "name": "logger_name",
+            },
+        },
         "verbose": {
             "format": "{asctime} {levelname} {name} {message}",
             "style": "{",
+        },
+    },
+    "filters": {
+        "require_debug_false": {
+            "()": "django.utils.log.RequireDebugFalse",
         },
     },
     "handlers": {
@@ -177,17 +199,70 @@ LOGGING = {
             "class": "logging.StreamHandler",
             "formatter": "verbose",
         },
-        "file": {
+        "app_file": {
             "level": "INFO",
             "class": "logging.handlers.RotatingFileHandler",
             "filename": LOGS_DIR / "app.log",
-            "maxBytes": 1024 * 1024 * 5,
+            "maxBytes": 1024 * 1024 * 5,  # 5MB
             "backupCount": 5,
-            "formatter": "verbose",
+            "formatter": "json",
+        },
+        "access_file": {
+            "level": "INFO",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOGS_DIR / "access.log",
+            "maxBytes": 1024 * 1024 * 5,  # 5MB
+            "backupCount": 5,
+            "formatter": "json_access",
+        },
+        "error_file": {
+            "level": "ERROR",
+            "class": "logging.handlers.RotatingFileHandler",
+            "filename": LOGS_DIR / "error.log",
+            "maxBytes": 1024 * 1024 * 5,  # 5MB
+            "backupCount": 5,
+            "formatter": "json",
+        },
+    },
+    "loggers": {
+        "django": {
+            "handlers": ["console", "app_file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "django.request": {
+            "handlers": ["console", "app_file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "access": {
+            "handlers": ["console", "access_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "accounts": {
+            "handlers": ["console", "app_file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "repositories": {
+            "handlers": ["console", "app_file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "explore": {
+            "handlers": ["console", "app_file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
+        },
+        "analytics": {
+            "handlers": ["console", "app_file", "error_file"],
+            "level": "INFO",
+            "propagate": False,
         },
     },
     "root": {
-        "handlers": ["console", "file"],
+        "handlers": ["console", "app_file", "error_file"],
         "level": "INFO",
     },
 }
@@ -208,3 +283,11 @@ EMAIL_PORT = int(os.environ.get("EMAIL_PORT", 1025))
 EMAIL_USE_TLS = False
 EMAIL_USE_SSL = False
 DEFAULT_FROM_EMAIL = "no-reply@usk-team.com"
+
+MESSAGE_TAGS = {
+    messages.DEBUG: "secondary",
+    messages.INFO: "info",
+    messages.SUCCESS: "success",
+    messages.WARNING: "warning",
+    messages.ERROR: "danger",  # ✅ Ovo mapira 'error' na 'danger'
+}
