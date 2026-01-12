@@ -8,22 +8,49 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('repositories', '0008_alter_repository_table'),
+        ("repositories", "0008_alter_repository_table"),
         migrations.swappable_dependency(settings.AUTH_USER_MODEL),
     ]
 
     operations = [
         migrations.CreateModel(
-            name='Star',
+            name="Star",
             fields=[
-                ('id', models.BigAutoField(auto_created=True, primary_key=True, serialize=False, verbose_name='ID')),
-                ('starred_at', models.DateTimeField(auto_now_add=True)),
-                ('repository', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='stars', to='repositories.repository')),
-                ('user', models.ForeignKey(on_delete=django.db.models.deletion.CASCADE, related_name='stars', to=settings.AUTH_USER_MODEL)),
+                (
+                    "id",
+                    models.BigAutoField(
+                        auto_created=True,
+                        primary_key=True,
+                        serialize=False,
+                        verbose_name="ID",
+                    ),
+                ),
+                ("starred_at", models.DateTimeField(auto_now_add=True)),
+                (
+                    "repository",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="stars",
+                        to="repositories.repository",
+                    ),
+                ),
+                (
+                    "user",
+                    models.ForeignKey(
+                        on_delete=django.db.models.deletion.CASCADE,
+                        related_name="stars",
+                        to=settings.AUTH_USER_MODEL,
+                    ),
+                ),
             ],
             options={
-                'ordering': ['-starred_at'],
-                'constraints': [models.UniqueConstraint(fields=('user', 'repository'), name='unique_user_repository_star')],
+                "ordering": ["-starred_at"],
+                "constraints": [
+                    models.UniqueConstraint(
+                        fields=("user", "repository"),
+                        name="unique_user_repository_star",
+                    )
+                ],
             },
         ),
     ]

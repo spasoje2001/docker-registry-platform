@@ -267,10 +267,10 @@ def profile_view(request):
     repositories = service.get_initial_repositories(True, request.user)
 
     if not service.health_check():
-        if request.GET.get('tab') == 'repos' or not request.GET.get('tab'):
+        if request.GET.get("tab") == "repos" or not request.GET.get("tab"):
             messages.error(
                 request,
-                "Registry is unavailable at this moment. Please try again later."
+                "Registry is unavailable at this moment. Please try again later.",
             )
     else:
         try:
@@ -279,10 +279,12 @@ def profile_view(request):
             messages.error(request, "Error fetching repositories from registry.")
             repositories = service.get_initial_repositories(True, request.user)
 
-    repositories = repositories.order_by('-updated_at')
-    starred_repositories = Repository.objects.filter(
-        stars__user=request.user
-    ).select_related('owner').order_by('-stars__starred_at')
+    repositories = repositories.order_by("-updated_at")
+    starred_repositories = (
+        Repository.objects.filter(stars__user=request.user)
+        .select_related("owner")
+        .order_by("-stars__starred_at")
+    )
 
     if form_data:
         repo_form = RepositoryForm(form_data, request=request)

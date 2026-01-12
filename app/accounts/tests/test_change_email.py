@@ -12,12 +12,19 @@ from ..utils import (
 
 from repositories.models import Repository
 
+
 class EmailChangeTest(TestCase):
 
     def setUp(self):
-        self.health_patcher = patch('repositories.services.repositories_service.RepositoryService.health_check', return_value=True)
-        self.list_patcher = patch('repositories.services.repositories_service.RepositoryService.list_repositories', return_value=Repository.objects.none())
-        
+        self.health_patcher = patch(
+            "repositories.services.repositories_service.RepositoryService.health_check",
+            return_value=True,
+        )
+        self.list_patcher = patch(
+            "repositories.services.repositories_service.RepositoryService.list_repositories",
+            return_value=Repository.objects.none(),
+        )
+
         self.health_patcher.start()
         self.list_patcher.start()
 
@@ -33,7 +40,7 @@ class EmailChangeTest(TestCase):
     def tearDown(self):
         self.health_patcher.stop()
         self.list_patcher.stop()
-        
+
         delete_email_change_request(self.user.id)
 
     def test_request_email_change_sends_code(self):

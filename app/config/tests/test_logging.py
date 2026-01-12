@@ -1,6 +1,7 @@
 """
 Unit tests for logging configuration and request logging middleware.
 """
+
 import json
 import logging
 from unittest.mock import MagicMock, patch
@@ -49,9 +50,7 @@ class RequestLoggingMiddlewareTests(TestCase):
     def setUp(self):
         self.factory = RequestFactory()
         self.user = User.objects.create_user(
-            username="testuser",
-            email="test@example.com",
-            password="testpass123"
+            username="testuser", email="test@example.com", password="testpass123"
         )
 
     def test_middleware_logs_authenticated_request(self):

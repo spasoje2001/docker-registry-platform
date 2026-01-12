@@ -6,13 +6,13 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ('repositories', '0009_star'),
+        ("repositories", "0009_star"),
     ]
 
     operations = [
         migrations.AddField(
-            model_name='repository',
-            name='star_count',
+            model_name="repository",
+            name="star_count",
             field=models.PositiveIntegerField(default=0),
         ),
     ]

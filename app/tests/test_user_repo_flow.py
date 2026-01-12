@@ -44,13 +44,15 @@ class UserRepositoryIntegrationTest(TestCase):
             "name": "test-repo",
             "visibility": "PUBLIC",
             "description": "Integration test repository",
-            "initial_tag": "latest"
+            "initial_tag": "latest",
         }
         response = self.client.post(self.repo_create_url, repo_data, follow=True)
 
-        if (response.status_code == 200 and
-                hasattr(response, "context") and
-                "form" in response.context):
+        if (
+            response.status_code == 200
+            and hasattr(response, "context")
+            and "form" in response.context
+        ):
             print("Form errors:", response.context["form"].errors)
 
         repo = Repository.objects.get(name="test-repo", owner=user)

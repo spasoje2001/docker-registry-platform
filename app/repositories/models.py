@@ -105,10 +105,9 @@ class Tag(models.Model):
     def __str__(self):
         return self.full_tag_name
 
+
 class Star(models.Model):
-    user = models.ForeignKey(
-        User, on_delete=models.CASCADE, related_name="stars"
-    )
+    user = models.ForeignKey(User, on_delete=models.CASCADE, related_name="stars")
     repository = models.ForeignKey(
         Repository, on_delete=models.CASCADE, related_name="stars"
     )
@@ -117,8 +116,7 @@ class Star(models.Model):
     class Meta:
         constraints = [
             models.UniqueConstraint(
-                fields=["user", "repository"],
-                name="unique_user_repository_star"
+                fields=["user", "repository"], name="unique_user_repository_star"
             )
         ]
         ordering = ["-starred_at"]

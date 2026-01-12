@@ -12,8 +12,7 @@ def search(request):
 
     if not service.health_check():
         messages.error(
-            request,
-            "Registry is unavailable at this moment. Please try again later."
+            request, "Registry is unavailable at this moment. Please try again later."
         )
     else:
         try:
@@ -45,8 +44,7 @@ def explore_repositories(request):
 
     if not service.health_check():
         messages.error(
-            request,
-            "Registry is unavailable at this moment. Please try again later."
+            request, "Registry is unavailable at this moment. Please try again later."
         )
     else:
         try:
