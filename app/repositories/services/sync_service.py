@@ -130,9 +130,7 @@ class SyncService:
         return tags
 
     def _sync_tags_transaction(
-        self,
-        repository: Repository,
-        registry_tags: Dict[str, Dict]
+        self, repository: Repository, registry_tags: Dict[str, Dict]
     ) -> Tuple[int, int, int]:
         """Synchronize tags within a database transaction."""
 
@@ -142,8 +140,7 @@ class SyncService:
 
         # Get existing tags for this repository
         existing_tags = {
-            tag.name: tag
-            for tag in Tag.objects.filter(repository=repository)
+            tag.name: tag for tag in Tag.objects.filter(repository=repository)
         }
 
         registry_tag_names = set(registry_tags.keys())

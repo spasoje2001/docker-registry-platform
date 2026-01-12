@@ -94,7 +94,7 @@ class TagModelTests(TestCase):
         self.assertEqual(response.status_code, 302)
         self.assertTrue(repo.tags.filter(name="v1.0").exists())
 
-    @patch('repositories.views.RepositoryService')
+    @patch("repositories.views.RepositoryService")
     def test_delete_tag(self, mock_service_class):
         """Test: delete tag view"""
         repo = Repository.objects.create(
@@ -122,7 +122,7 @@ class TagModelTests(TestCase):
             },
         )
 
-        response = self.client.post(url,data={"step": "1"})
+        response = self.client.post(url, data={"step": "1"})
         self.assertEqual(response.status_code, 200)
         self.assertFalse(repo.tags.filter(name="v1.0").exists())
 
@@ -189,8 +189,6 @@ class TagModelTests(TestCase):
 
         self.assertEqual(response.status_code, 200)
 
-
-
         self.assertIn("tags", response.context)
         tags = response.context["tags"]
         self.assertEqual(len(tags), 3)
@@ -251,26 +249,30 @@ class OfficialRepoTagTests(TestCase):
         self.admin.is_superuser = True
         self.admin.is_staff = True
         self.admin.save()
-        
+
         self.client.login(username=self.admin.username, password="testpass123")
 
         tag = Tag.objects.create(
             repository=self.official_repo,
             name="v1.0-official",
-            digest="sha256:777777777777777777777777777777777"
+            digest="sha256:777777777777777777777777777777777",
         )
 
-        url = reverse("repositories:tag_delete_official", kwargs={
-            "name": self.official_repo.name,
-            "tag_name": tag.name,
-            "digest": tag.digest
-        })
+        url = reverse(
+            "repositories:tag_delete_official",
+            kwargs={
+                "name": self.official_repo.name,
+                "tag_name": tag.name,
+                "digest": tag.digest,
+            },
+        )
 
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
         self.assertTemplateUsed(response, "tags/tag_confirm_delete.html")
         self.assertContains(response, tag.name)
+
 
 class SyncTagsCommandTest(TestCase):
     def setUp(self):
@@ -338,23 +340,21 @@ class SyncTagsCommandTest(TestCase):
     def test_orphan_tags_are_deleted(self):
         """Test that orphan tags (not in registry) are deleted from database."""
         Tag.objects.create(
-            repository=self.repository,
-            name="v1.0.0",
-            digest="sha256:abc123")
+            repository=self.repository, name="v1.0.0", digest="sha256:abc123"
+        )
         Tag.objects.create(
-            repository=self.repository,
-            name="v2.0.0",
-            digest="sha256:def456")
+            repository=self.repository, name="v2.0.0", digest="sha256:def456"
+        )
         Tag.objects.create(
-            repository=self.repository,
-            name="orphan-tag",
-            digest="sha256:orphan")
+            repository=self.repository, name="orphan-tag", digest="sha256:orphan"
+        )
 
-        self._setup_mock_for_tags({
-            "v1.0.0": "sha256:abc123",
+        self._setup_mock_for_tags(
+            {
+                "v1.0.0": "sha256:abc123",
                 "v2.0.0": "sha256:def456",
             }
-)
+        )
         created, updated, deleted = self.service.sync_repository_tags(self.repository)
 
         self.assertEqual(deleted, 1)
@@ -364,84 +364,69 @@ class SyncTagsCommandTest(TestCase):
 class TagSearchSortTest(TestCase):
     def setUp(self):
         self.user = User.objects.create_user(
-            username='testuser',
-            password='password123'
+            username="testuser", password="password123"
         )
 
         self.repo = Repository.objects.create(
-            owner=self.user,
-            name='test-repo',
-            visibility='PUBLIC'
+            owner=self.user, name="test-repo", visibility="PUBLIC"
         )
 
         self.official_repo = Repository.objects.create(
-            owner=self.user,
-            name='nginx',
-            is_official=True,
-            visibility='PUBLIC'
+            owner=self.user, name="nginx", is_official=True, visibility="PUBLIC"
         )
 
-        self.tag_a = Tag.objects.create(repository=self.repo, name='alpha')
-        self.tag_b = Tag.objects.create(repository=self.repo, name='beta')
-        self.tag_c = Tag.objects.create(repository=self.repo, name='gamma')
+        self.tag_a = Tag.objects.create(repository=self.repo, name="alpha")
+        self.tag_b = Tag.objects.create(repository=self.repo, name="beta")
+        self.tag_c = Tag.objects.create(repository=self.repo, name="gamma")
 
         self.tag_stable = Tag.objects.create(
-            repository=self.official_repo,
-            name='stable'
+            repository=self.official_repo, name="stable"
         )
 
         self.url = reverse(
-            'repositories:detail',
-            args=[
-                self.user.username,
-                self.repo.name
-            ]
+            "repositories:detail", args=[self.user.username, self.repo.name]
         )
 
         self.official_url = reverse(
-            'repositories:detail_official',
-            args=[self.official_repo.name]
+            "repositories:detail_official", args=[self.official_repo.name]
         )
 
     def test_tag_name_filter_works(self):
         """Unit test: name filter works (tag_q)"""
-        response = self.client.get(self.url, {'tag_q': 'alp'})
+        response = self.client.get(self.url, {"tag_q": "alp"})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'alpha')
-        self.assertNotContains(response, 'beta')
-        self.assertNotContains(response, 'gamma')
+        self.assertContains(response, "alpha")
+        self.assertNotContains(response, "beta")
+        self.assertNotContains(response, "gamma")
 
     def test_tag_sorting_name_asc(self):
         """Unit test: sorting works correctly (Name A-Z)"""
-        response = self.client.get(self.url, {'tag_sort': 'name_asc'})
-        tags = list(response.context['tags'])
-        self.assertEqual(tags[0].name, 'alpha')
-        self.assertEqual(tags[1].name, 'beta')
-        self.assertEqual(tags[2].name, 'gamma')
+        response = self.client.get(self.url, {"tag_sort": "name_asc"})
+        tags = list(response.context["tags"])
+        self.assertEqual(tags[0].name, "alpha")
+        self.assertEqual(tags[1].name, "beta")
+        self.assertEqual(tags[2].name, "gamma")
 
     def test_tag_sorting_name_desc(self):
         """Unit test: sorting works correctly (Name Z-A)"""
-        response = self.client.get(self.url, {'tag_sort': 'name_desc'})
-        tags = list(response.context['tags'])
-        self.assertEqual(tags[0].name, 'gamma')
-        self.assertEqual(tags[1].name, 'beta')
-        self.assertEqual(tags[2].name, 'alpha')
+        response = self.client.get(self.url, {"tag_sort": "name_desc"})
+        tags = list(response.context["tags"])
+        self.assertEqual(tags[0].name, "gamma")
+        self.assertEqual(tags[1].name, "beta")
+        self.assertEqual(tags[2].name, "alpha")
 
     def test_tag_sorting_oldest(self):
         """Unit test: sorting works correctly (Oldest first)"""
-        response = self.client.get(self.url, {'tag_sort': 'oldest'})
-        tags = list(response.context['tags'])
+        response = self.client.get(self.url, {"tag_sort": "oldest"})
+        tags = list(response.context["tags"])
         self.assertEqual(tags[0], self.tag_a)
 
     def test_combined_filter_and_sort(self):
         """Test sort and filter together"""
-        response = self.client.get(self.url, {
-            'tag_q': 'a',
-            'tag_sort': 'name_desc'
-        })
-        tags = list(response.context['tags'])
-        self.assertEqual(tags[0].name, 'gamma')
-        self.assertEqual(tags[-1].name, 'alpha')
+        response = self.client.get(self.url, {"tag_q": "a", "tag_sort": "name_desc"})
+        tags = list(response.context["tags"])
+        self.assertEqual(tags[0].name, "gamma")
+        self.assertEqual(tags[-1].name, "alpha")
 
     def test_clean_button_preserves_explore_params(self):
         url_with_explore = self.url + "?from_explore=1&q=search-val&tag_q=tag-val"
@@ -450,6 +435,6 @@ class TagSearchSortTest(TestCase):
 
     def test_official_repo_tag_search(self):
         """Proverava da li pretraga tagova radi na official repozitorijumu"""
-        response = self.client.get(self.official_url, {'tag_q': 'stab'})
+        response = self.client.get(self.official_url, {"tag_q": "stab"})
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'stable')
+        self.assertContains(response, "stable")

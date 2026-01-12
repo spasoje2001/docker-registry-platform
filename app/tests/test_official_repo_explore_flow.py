@@ -10,13 +10,15 @@ User = get_user_model()
 
 class OfficialRepositoryEndToEndFlowTestCase(TestCase):
 
-    @patch('repositories.services.repositories_service.RegistryClient.get_all_repositories')
-    def test_admin_creates_official_repo_visible_in_explore_and_opens_detail(self, mock_reg):
+    @patch(
+        "repositories.services.repositories_service.RegistryClient.get_all_repositories"
+    )
+    def test_admin_creates_official_repo_visible_in_explore_and_opens_detail(
+        self, mock_reg
+    ):
         mock_reg.return_value = ["docker-official"]
         admin = User.objects.create_superuser(
-            username="admin",
-            email="admin@gmail.com",
-            password="admin123"
+            username="admin", email="admin@gmail.com", password="admin123"
         )
 
         self.client.login(username="admin", password="admin123")
@@ -26,7 +28,7 @@ class OfficialRepositoryEndToEndFlowTestCase(TestCase):
             description="Official Docker image",
             visibility="PUBLIC",
             is_official=True,
-            owner=admin
+            owner=admin,
         )
 
         explore_url = reverse("explore:explore")
@@ -39,10 +41,7 @@ class OfficialRepositoryEndToEndFlowTestCase(TestCase):
 
         self.assertIn(repo.name, repo_names)
 
-        detail_url = reverse(
-            "repositories:detail_official",
-            kwargs={"name": repo.name}
-        )
+        detail_url = reverse("repositories:detail_official", kwargs={"name": repo.name})
         detail_response = self.client.get(detail_url)
 
         self.assertEqual(detail_response.status_code, 200)

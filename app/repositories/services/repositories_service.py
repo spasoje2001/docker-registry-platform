@@ -5,7 +5,7 @@ from ..clients.registry_client import RegistryClient
 from ..models import Repository, Tag
 
 
-class RepositoryService():
+class RepositoryService:
     def __init__(self, registry_client=None):
         self.registry_client = registry_client or RegistryClient()
 
@@ -18,12 +18,11 @@ class RepositoryService():
             raise
 
         db_list = Repository.objects.filter(
-                models.Q(visibility=Repository.VisibilityChoices.PUBLIC)
-            )
+            models.Q(visibility=Repository.VisibilityChoices.PUBLIC)
+        )
         if profile:
             db_list = Repository.objects.filter(
-                models.Q(is_official=False) &
-                models.Q(owner=user)
+                models.Q(is_official=False) & models.Q(owner=user)
             )
 
         return db_list.filter(name__in=repositories)
@@ -70,9 +69,6 @@ class RepositoryService():
     def get_initial_repositories(self, from_profile, user) -> QuerySet:
         if from_profile:
             return Repository.objects.filter(
-                models.Q(is_official=False) &
-                models.Q(owner=user)
+                models.Q(is_official=False) & models.Q(owner=user)
             )
-        return Repository.objects.filter(
-            visibility=Repository.VisibilityChoices.PUBLIC
-        )
+        return Repository.objects.filter(visibility=Repository.VisibilityChoices.PUBLIC)

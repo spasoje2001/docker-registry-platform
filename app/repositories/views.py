@@ -2,11 +2,12 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
 from django.http import Http404
-from .models import Repository, Tag
+from .models import Repository, Tag, Star
 from .forms import RepositoryForm, TagForm
 from .services.repositories_service import RepositoryService
 from django.urls import reverse
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -16,9 +17,15 @@ def repository_create(request):
     """Create new repository (user repo or official repo if admin)"""
     from_profile = request.POST.get("from_profile")
     from_explore = request.GET.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
-    tag_q = request.GET.get('tag_q', '')
-    tag_sort = request.GET.get('tag_sort', 'newest')
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
+    tag_q = request.GET.get("tag_q", "")
+    tag_sort = request.GET.get("tag_sort", "newest")
 
     if request.method == "POST":
         form = RepositoryForm(request.POST, request=request)
@@ -114,9 +121,21 @@ def repository_detail(request, owner_username, name):
 
     from_profile = request.GET.get("from_profile")
     from_explore = request.GET.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
-    tag_q = request.GET.get('tag_q', '')
-    tag_sort = request.GET.get('tag_sort', 'newest')
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
+    tag_q = request.GET.get("tag_q", "")
+    tag_sort = request.GET.get("tag_sort", "newest")
+    is_starred = False
+    if request.user.is_authenticated:
+        is_starred = Star.objects.filter(user=request.user, repository=repo).exists()
+    else:
+        is_starred = False
+    star_count = Star.objects.filter(repository=repo).count()
 
     tags = repo.tags.all()
 
@@ -124,15 +143,15 @@ def repository_detail(request, owner_username, name):
         tags = tags.filter(name__icontains=tag_q)
 
     if tag_sort == "oldest":
-        tags = tags.order_by('created_at')
+        tags = tags.order_by("created_at")
     elif tag_sort == "name_asc":
-        tags = tags.order_by('name')
+        tags = tags.order_by("name")
     elif tag_sort == "name_desc":
-        tags = tags.order_by('-name')
+        tags = tags.order_by("-name")
     elif tag_sort == "size":
-        tags = tags.order_by('-size')
+        tags = tags.order_by("-size")
     else:
-        tags = tags.order_by('-created_at')
+        tags = tags.order_by("-created_at")
 
     return render(
         request,
@@ -145,7 +164,9 @@ def repository_detail(request, owner_username, name):
             "explore_queries": explore_queries,
             "tag_q": tag_q,
             "tag_sort": tag_sort,
-        }
+            "is_starred": is_starred,
+            "star_count": star_count,
+        },
     )
 
 
@@ -156,23 +177,29 @@ def repository_detail_official(request, name):
 
     from_profile = request.GET.get("from_profile")
     from_explore = request.GET.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
-    tag_q = request.GET.get('tag_q', '')
-    tag_sort = request.GET.get('tag_sort', 'newest')
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
+    tag_q = request.GET.get("tag_q", "")
+    tag_sort = request.GET.get("tag_sort", "newest")
 
     if tag_q:
         tags = tags.filter(name__icontains=tag_q)
 
     if tag_sort == "oldest":
-        tags = tags.order_by('created_at')
+        tags = tags.order_by("created_at")
     elif tag_sort == "name_asc":
-        tags = tags.order_by('name')
+        tags = tags.order_by("name")
     elif tag_sort == "name_desc":
-        tags = tags.order_by('-name')
+        tags = tags.order_by("-name")
     elif tag_sort == "size":
-        tags = tags.order_by('-size')
+        tags = tags.order_by("-size")
     else:
-        tags = tags.order_by('-created_at')
+        tags = tags.order_by("-created_at")
 
     return render(
         request,
@@ -185,7 +212,7 @@ def repository_detail_official(request, name):
             "explore_queries": explore_queries,
             "tag_q": tag_q,
             "tag_sort": tag_sort,
-        }
+        },
     )
 
 
@@ -210,7 +237,13 @@ def repository_update(request, owner_username, name):
 
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
     from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
     form = RepositoryForm(request.POST or None, instance=repo, request=request)
 
     if request.method == "POST" and form.is_valid():
@@ -273,8 +306,14 @@ def repository_update_official(request, name):
         return redirect("repositories:detail_official", name=repo.name)
 
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
-    from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
+    from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
     form = RepositoryForm(request.POST or None, instance=repo, request=request)
 
     if request.method == "POST" and form.is_valid():
@@ -351,7 +390,13 @@ def repository_delete(request, owner_username, name):
 
     from_profile = request.GET.get("from_profile")
     from_explore = request.GET.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
 
     if request.method == "POST":
         repo_name = repo.full_name
@@ -393,7 +438,13 @@ def repository_delete_official(request, name):
         return redirect("repositories:detail_official", name=repo.name)
 
     from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
 
     commands = {
         "delete_repo": f"docker exec docker-registry-platform-registry-1 rm -rf /var/lib/registry/docker/registry/v2/repositories/{repo.name}",
@@ -439,9 +490,15 @@ def tag_create(request, owner_username, name):
         messages.error(request, "You cannot create tags for this repository.")
         return redirect("repositories:detail", owner_username=owner_username, name=name)
 
-    from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
-    from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
+    from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
+    from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
 
     if request.method == "POST":
         form = TagForm(request.POST)
@@ -499,8 +556,14 @@ def tag_create_official(request, name):
         )
         return redirect("repositories:detail_official", name=name)
 
-    from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
+    from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
 
     if request.method == "POST":
         form = TagForm(request.POST)
@@ -515,13 +578,8 @@ def tag_create_official(request, name):
                 )
             else:
                 tag.save()
-                messages.success(
-                    request,
-                    f'Tag "{tag.name}" created successfully!'
-                )
-                url = reverse(
-                    "repositories:detail_official",
-                    kwargs={"name": name})
+                messages.success(request, f'Tag "{tag.name}" created successfully!')
+                url = reverse("repositories:detail_official", kwargs={"name": name})
                 if from_explore:
                     url += "?from_explore=1"
                     if explore_queries:
@@ -549,9 +607,15 @@ def tag_detail(request, owner_username, name, tag_name):
     )
 
     tag = get_object_or_404(repository.tags, name=tag_name)
-    from_profile = request.GET.get('from_profile') or request.POST.get('from_profile')
-    from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
+    from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
+    from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
 
     if request.method == "POST":
         form = TagForm(request.POST, instance=tag)
@@ -560,7 +624,8 @@ def tag_detail(request, owner_username, name, tag_name):
             messages.success(request, f'Tag "{tag.name}" updated successfully!')
 
             url = reverse(
-                "repositories:detail", kwargs={"owner_username": owner_username, "name": name},
+                "repositories:detail",
+                kwargs={"owner_username": owner_username, "name": name},
             )
             if from_profile:
                 url += "?from_profile=1"
@@ -647,7 +712,13 @@ def tag_delete(request, owner_username, name, tag_name, digest):
     tag = get_object_or_404(repo.tags, name=tag_name)
     from_profile = request.GET.get("from_profile") or request.POST.get("from_profile")
     from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
 
     commands = {
         "gc": "docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml",
@@ -732,8 +803,14 @@ def tag_delete_official(request, name, tag_name, digest):
         return redirect("repositories:detail_official", name=repo.name)
 
     tag = get_object_or_404(repo.tags, name=tag_name)
-    from_explore = request.GET.get('from_explore') or request.POST.get('from_explore')
-    explore_queries = request.GET.urlencode().replace("from_explore=1", "").lstrip("&").replace("from_profile=1", "").lstrip("&")
+    from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
+    explore_queries = (
+        request.GET.urlencode()
+        .replace("from_explore=1", "")
+        .lstrip("&")
+        .replace("from_profile=1", "")
+        .lstrip("&")
+    )
 
     commands = {
         "gc": "docker exec docker-registry-platform-registry-1 bin/registry garbage-collect /etc/docker/registry/config.yml",
@@ -754,12 +831,9 @@ def tag_delete_official(request, name, tag_name, digest):
                     deletion_success = True
                     messages.success(
                         request,
-                        f'Tag "{tag_name}" deleted from repository "{repo.full_name}".'
+                        f'Tag "{tag_name}" deleted from repository "{repo.full_name}".',
                     )
-                    url = reverse(
-                        'repositories:detail_official',
-                        kwargs={'name': name}
-                    )
+                    url = reverse("repositories:detail_official", kwargs={"name": name})
                     if from_explore:
                         url += "?from_explore=1"
                     if explore_queries:
@@ -798,5 +872,60 @@ def tag_delete_official(request, name, tag_name, digest):
             "step": step,
             "deletion_success": deletion_success,
             "error_message": error_message,
+        },
+    )
+
+
+@login_required
+def star_repository(request, name):
+    """Star a repository"""
+    repo = get_object_or_404(Repository, name=name)
+    is_starred = Star.objects.filter(user=request.user, repository=repo).exists()
+
+    if repo.owner == request.user:
+        messages.error(request, "You cannot star your own repository!")
+        return render(
+            request,
+            "repositories/repository_detail.html",
+            {
+                "repository": repo,
+                "is_starred": is_starred,
+            },
+        )
+
+    if repo.visibility == Repository.VisibilityChoices.PRIVATE:
+        messages.error(request, "You cannot star a private repository!")
+        return render(
+            request,
+            "repositories/repository_detail.html",
+            {
+                "repository": repo,
+                "is_starred": is_starred,
+            },
+        )
+
+    if is_starred:
+        try:
+            Star.objects.filter(user=request.user, repository=repo).delete()
+            repo.star_count = max(0, repo.star_count - 1)
+            repo.save()
+            messages.success(request, "Repository unstarred successfully!")
+        except Exception:
+            messages.error(request, "Error unstarring repository")
+    else:
+        try:
+            Star.objects.create(user=request.user, repository=repo)
+            repo.star_count = repo.star_count + 1
+            repo.save()
+            messages.success(request, "Repository starred successfully!")
+        except Exception:
+            messages.error(request, "Error starring repository")
+
+    return render(
+        request,
+        "repositories/repository_detail.html",
+        {
+            "repository": repo,
+            "is_starred": not is_starred,
         },
     )
