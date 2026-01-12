@@ -88,7 +88,7 @@ def explore_repositories(request):
     elif sort == "name_desc":
         repositories = repositories.order_by("-name")
 
-    else:  # relevance (default)
+    else:
         if query:
             repositories = repositories.order_by("relevance", "name")
         else:

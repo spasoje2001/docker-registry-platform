@@ -1,7 +1,7 @@
 from django.test import TestCase, Client
 from django.urls import reverse
 from django.db import IntegrityError
-from ..models import Repository
+from ..models import Repository, Star
 from django.contrib.auth import get_user_model
 from unittest.mock import patch
 
@@ -16,6 +16,27 @@ class RepositoryModelTests(TestCase):
         self.user2 = User.objects.create_user(username="user2", password="testpass123")
         self.user3 = User.objects.create_user(
             username="admin1", password="testpass123", role=User.Role.ADMIN
+        )
+        self.public_repo = Repository.objects.create(
+            name='public-repo',
+            owner=self.user2,
+            visibility=Repository.VisibilityChoices.PUBLIC,
+            description='Public test repository',
+            star_count=0
+        )
+        self.private_repo = Repository.objects.create(
+            name='private-repo',
+            owner=self.user2,
+            visibility=Repository.VisibilityChoices.PRIVATE,
+            description='Private test repository',
+            star_count=0
+        )
+        self.own_repo = Repository.objects.create(
+            name='own-repo',
+            owner=self.user1,
+            visibility=Repository.VisibilityChoices.PUBLIC,
+            description='User1 own repository',
+            star_count=0
         )
 
     def test_create_repository(self):
@@ -237,12 +258,9 @@ class RepositoryModelTests(TestCase):
         response = self.client.get(url)
 
         self.assertEqual(response.status_code, 200)
-
         self.assertTemplateUsed(response, "explore/explore.html")
-
         self.assertContains(response, "mock-repo-1")
         self.assertContains(response, "mock-repo-2")
-
         self.assertTrue(mock_service_instance.list_repositories.called)
 
     @patch("repositories.views.RepositoryService")
@@ -258,6 +276,96 @@ class RepositoryModelTests(TestCase):
         self.assertEqual(response.status_code, 200)
 
         list(response.context['messages'])
+
+    def test_user_can_star_public_repo(self):
+        """Unit test: user can star public repo"""
+        self.client.login(username='user1', password='testpass123')
+        url = reverse('repositories:star', args=[self.public_repo.name])
+        response = self.client.post(url)
+        
+        self.assertEqual(response.status_code, 200)
+        
+        star_exists = Star.objects.filter(
+            user=self.user1,
+            repository=self.public_repo
+        ).exists()
+        self.assertTrue(star_exists)
+        self.public_repo.refresh_from_db()
+        self.assertEqual(self.public_repo.star_count, 1)
+        
+        messages = list(response.context['messages'])
+        self.assertEqual(len(messages), 1)
+        self.assertEqual(str(messages[0]), "Repository starred successfully!")
+    
+    def test_user_cannot_star_own_repo(self):
+        """Unit test: user cannot star own repo"""
+        self.client.login(username='user1', password='testpass123')
+        url = reverse('repositories:star', args=[self.own_repo.name])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        
+        messages = list(response.context['messages'])
+        self.assertEqual(len(messages), 1)
+        self.assertIn("cannot star your own", str(messages[0]).lower())
+        
+        star_exists = Star.objects.filter(
+            user=self.user1,
+            repository=self.own_repo
+        ).exists()
+        self.assertFalse(star_exists)
+        self.own_repo.refresh_from_db()
+        self.assertEqual(self.own_repo.star_count, 0)
+
+    def test_user_cannot_star_private_repo(self):
+        """Unit test: user cannot star private repo"""
+        self.client.login(username='user1', password='testpass123')
+        url = reverse('repositories:star', args=[self.private_repo.name])
+        response = self.client.post(url)
+        self.assertEqual(response.status_code, 200)
+        
+        messages = list(response.context['messages'])
+        self.assertEqual(len(messages), 1)
+        self.assertIn("cannot star a private", str(messages[0]).lower())
+        
+        star_exists = Star.objects.filter(
+            user=self.user1,
+            repository=self.private_repo
+        ).exists()
+        self.assertFalse(star_exists)
+        self.private_repo.refresh_from_db()
+        self.assertEqual(self.private_repo.star_count, 0)
+
+    def test_star_count_returns_correct_number(self):
+        """Unit test: star_count returns correct number"""
+        users = []
+        for i in range(5):
+            user = User.objects.create_user(
+                username=f'testuser{i}',
+                email=f'testuser{i}@example.com',
+                password='testpass123'
+            )
+            users.append(user)
+            
+            Star.objects.create(user=user, repository=self.public_repo)
+        
+        from django.db.models import F
+        Repository.objects.filter(id=self.public_repo.id).update(
+            star_count=F('star_count') + 5
+        )
+        
+        self.public_repo.refresh_from_db()
+        
+        actual_stars = Star.objects.filter(repository=self.public_repo).count()
+        self.assertEqual(self.public_repo.star_count, actual_stars)
+        self.assertEqual(self.public_repo.star_count, 5)
+        self.assertEqual(self.public_repo.stars.count(), 5)
+        
+        for user in users:
+            user_stars = Star.objects.filter(
+                user=user,
+                repository=self.public_repo
+            ).count()
+            self.assertEqual(user_stars, 1)
 
 
 class OfficialRepositoryTests(TestCase):

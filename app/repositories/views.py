@@ -1,12 +1,13 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import Http404
-from .models import Repository, Tag
+from django.http import Http404, JsonResponse
+from .models import Repository, Tag, Star
 from .forms import RepositoryForm, TagForm
 from .services.repositories_service import RepositoryService
 from django.urls import reverse
 import logging
+
 
 logger = logging.getLogger(__name__)
 
@@ -118,6 +119,9 @@ def repository_detail(request, owner_username, name):
     tag_q = request.GET.get('tag_q', '')
     tag_sort = request.GET.get('tag_sort', 'newest')
 
+    is_starred = Star.objects.filter(user=request.user, repository=repo).exists()
+    star_count = Star.objects.filter(repository=repo).count()
+
     tags = repo.tags.all()
 
     if tag_q:
@@ -145,6 +149,8 @@ def repository_detail(request, owner_username, name):
             "explore_queries": explore_queries,
             "tag_q": tag_q,
             "tag_sort": tag_sort,
+            "is_starred": is_starred,
+            "star_count": star_count,
         }
     )
 
@@ -799,4 +805,58 @@ def tag_delete_official(request, name, tag_name, digest):
             "deletion_success": deletion_success,
             "error_message": error_message,
         },
+    )
+
+@login_required
+def star_repository(request, name):
+    """Star a repository"""
+    repo = get_object_or_404(Repository, name=name)
+    is_starred = Star.objects.filter(user=request.user, repository=repo).exists()
+
+    if repo.owner == request.user:
+        messages.error(request, "You cannot star your own repository!")
+        return render(
+            request,
+            "repositories/repository_detail.html",
+            {
+                "repository": repo,
+                "is_starred": is_starred,
+            }
+        )
+
+    if repo.visibility == Repository.VisibilityChoices.PRIVATE:
+        messages.error(request, "You cannot star a private repository!")
+        return render(
+            request,
+            "repositories/repository_detail.html",
+            {
+                "repository": repo,
+                "is_starred": is_starred,
+            }
+        )
+
+    if is_starred:
+        try:
+            Star.objects.filter(user=request.user, repository=repo).delete()
+            repo.star_count = max(0, repo.star_count - 1)
+            repo.save()
+            messages.success(request, "Repository unstarred successfully!")
+        except Exception:
+            messages.error(request, f"Error unstarring repository")
+    else:
+        try:
+            Star.objects.create(user=request.user, repository=repo)
+            repo.star_count = repo.star_count + 1
+            repo.save()
+            messages.success(request, "Repository starred successfully!")
+        except Exception:
+            messages.error(request, f"Error starring repository")
+
+    return render(
+        request,
+        "repositories/repository_detail.html",
+        {
+            "repository": repo,
+            "is_starred": not is_starred,
+        }
     )

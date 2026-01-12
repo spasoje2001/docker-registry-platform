@@ -103,7 +103,7 @@
                                             </span>
                                             <input type="text"
                                             class="form-control font-monospace"
-                                            value="{{ manifest.digest }}"  
+                                            value="{{ tag.digest }}"  
                                             readonly>
                                         </div>
                                     </div>
@@ -114,7 +114,7 @@
                                                 <small class="text-muted d-block">
                                                     <i class="bi bi-cpu"></i> OS/Arch
                                                 </small>
-                                                <small>{{ manifest.os }}{% if manifest.arch %}/{{ manifest.arch }}{% endif %}</small>
+                                                <small>{{ tag.os }}{% if tag.arch %}/{{ tag.arch }}{% endif %}</small>
                                             </div>
                                         </div>
 
@@ -123,7 +123,7 @@
                                                 <small class="text-muted d-block">
                                                     <i class="bi bi-hdd"></i> Size
                                                 </small>
-                                                <small>{{ manifest.size }}</small>
+                                                <small>{{ tag.size_display }}</small>
                                             </div>
                                         </div>
 
@@ -132,7 +132,7 @@
                                                 <small class="text-muted d-block">
                                                     <i class="bi bi-calendar-check"></i> Type
                                                 </small>
-                                                <small>{{ manifest.type }}</small>
+                                                <small>{{ tag.image_type }}</small>
                                             </div>
                                         </div>
 
@@ -163,8 +163,8 @@ docker run localhost:5000/{{ repository.name }}:{{ tag.name }}</code></pre>
                                             Next <i class="bi bi-arrow-right"></i>
                                         </button>
                                     {% else %}
-                                        {% if  manifest.digest %}
-                                            <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name manifest.digest %}{% if request.GET.from_profile %}?from_profile=1{% if 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% endif %}{% endif %}" 
+                                        {% if  tag.digest %}
+                                            <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name tag.digest %}{% if request.GET.from_profile %}?from_profile=1{% if 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% endif %}{% endif %}" 
                                                 class="btn btn-danger">
                                                 <i class="bi bi-trash"></i> Delete
                                             </a>

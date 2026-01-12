@@ -32,6 +32,7 @@ class Repository(models.Model):
     owner = models.ForeignKey(
         User, on_delete=models.CASCADE, related_name="repositories"
     )
+    star_count = models.PositiveIntegerField(default=0)
 
     class Meta:
         db_table = "repositories"
@@ -103,3 +104,24 @@ class Tag(models.Model):
 
     def __str__(self):
         return self.full_tag_name
+
+class Star(models.Model):
+    user = models.ForeignKey(
+        User, on_delete=models.CASCADE, related_name="stars"
+    )
+    repository = models.ForeignKey(
+        Repository, on_delete=models.CASCADE, related_name="stars"
+    )
+    starred_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        constraints = [
+            models.UniqueConstraint(
+                fields=["user", "repository"],
+                name="unique_user_repository_star"
+            )
+        ]
+        ordering = ["-starred_at"]
+
+    def __str__(self):
+        return f"{self.user.username} starred {self.repository.full_name}"
