@@ -130,8 +130,11 @@ def repository_detail(request, owner_username, name):
     )
     tag_q = request.GET.get("tag_q", "")
     tag_sort = request.GET.get("tag_sort", "newest")
-
-    is_starred = Star.objects.filter(user=request.user, repository=repo).exists()
+    is_starred = False
+    if request.user.is_authenticated:
+        is_starred = Star.objects.filter(user=request.user, repository=repo).exists()
+    else:
+        is_starred = False
     star_count = Star.objects.filter(repository=repo).count()
 
     tags = repo.tags.all()
