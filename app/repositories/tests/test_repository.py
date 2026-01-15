@@ -363,61 +363,71 @@ class RepositoryModelTests(TestCase):
 
     def test_star_button_appears_for_authenticated_user(self):
         """Star button should be visible when user is authenticated"""
-        self.client.login(username='user3', password='testpass123')
+        self.client.login(username="user3", password="testpass123")
         response = self.client.get(
-            reverse('repositories:detail', kwargs={'owner_username': self.public_repo.owner.username,'name': self.public_repo.name})
+            reverse(
+                "repositories:detail",
+                kwargs={
+                    "owner_username": self.public_repo.owner.username,
+                    "name": self.public_repo.name,
+                },
+            )
         )
-        
+
         self.assertEqual(response.status_code, 200)
-        self.assertContains(response, 'Star')
-    
+        self.assertContains(response, "Star")
+
     def test_star_button_hidden_on_own_repository(self):
         """Star button should NOT appear on repositories owned by current user"""
-        self.client.login(username='user2', password='testpass123')
+        self.client.login(username="user2", password="testpass123")
         response = self.client.get(
-            reverse('repositories:detail', kwargs={'owner_username': self.public_repo.owner.username,'name': self.public_repo.name})
+            reverse(
+                "repositories:detail",
+                kwargs={
+                    "owner_username": self.public_repo.owner.username,
+                    "name": self.public_repo.name,
+                },
+            )
         )
-        
+
         self.assertEqual(response.status_code, 200)
-        self.assertNotContains(response, 'Star')
-    
+        self.assertNotContains(response, "Star")
+
     def test_star_count_increments_correctly(self):
         """Star count should increment when user stars a repository"""
-        self.client.login(username='admin1', password='testpass123')
+        self.client.login(username="admin1", password="testpass123")
         self.assertEqual(self.public_repo.star_count, 0)
         response = self.client.post(
-            reverse('repositories:star', kwargs={'name': self.public_repo.name})
+            reverse("repositories:star", kwargs={"name": self.public_repo.name})
         )
-        
+
         self.assertEqual(response.status_code, 200)
         self.public_repo.refresh_from_db()
         self.assertEqual(self.public_repo.star_count, 1)
 
         star_exists = Star.objects.filter(
-            user=self.user3,
-            repository=self.public_repo
+            user=self.user3, repository=self.public_repo
         ).exists()
         self.assertTrue(star_exists)
-        
+
     def test_star_count_decrements_correctly(self):
         """Star count should decrement when user unstars a repository"""
-        self.client.login(username='user2', password='testpass123')
+        self.client.login(username="user2", password="testpass123")
         Star.objects.create(user=self.user2, repository=self.own_repo)
 
         self.own_repo.star_count = 43
         self.own_repo.save()
         self.assertEqual(self.own_repo.star_count, 43)
         response = self.client.post(
-            reverse('repositories:star', kwargs={'name': self.own_repo.name})
+            reverse("repositories:star", kwargs={"name": self.own_repo.name})
         )
-        
+
         self.assertEqual(response.status_code, 200)
         self.own_repo.refresh_from_db()
         self.assertEqual(self.own_repo.star_count, 42)
 
         star_exists = Star.objects.filter(
-            user=self.user2,
-            repository=self.own_repo
+            user=self.user2, repository=self.own_repo
         ).exists()
         self.assertFalse(star_exists)
 
