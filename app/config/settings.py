@@ -257,7 +257,17 @@ LOGGING = {
         },
         "analytics": {
             "handlers": ["console", "app_file", "error_file"],
-            "level": "INFO",
+            "level": "WARNING",
+            "propagate": False,
+        },
+        "elastic_transport": {
+            "handlers": ["console", "error_file"],
+            "level": "ERROR",
+            "propagate": False,
+        },
+        "elasticsearch": {
+            "handlers": ["console", "error_file"],
+            "level": "ERROR",
             "propagate": False,
         },
     },
