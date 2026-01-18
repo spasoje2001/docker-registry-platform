@@ -211,9 +211,8 @@ def register(request):
             user = form.save()
             login(request, user)
             messages.success(
-                request,
-                f"Welcome, {user.username}! Your account has been created successfully.",
-            )
+                request, f"Welcome, {
+                    user.username}! Your account has been created successfully.", )
 
             return redirect("core:home")
 
