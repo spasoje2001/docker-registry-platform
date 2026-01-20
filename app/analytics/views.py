@@ -2,26 +2,38 @@ from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from django.shortcuts import redirect, render
 from datetime import datetime
+import pytz
 
 from .services import LogSearchService
 
 
 def format_timestamp(ts_string):
-    """Convert ISO timestamp to readable format."""
+    """Convert ISO timestamp to local Serbia timezone (Europe/Belgrade)."""
     if not ts_string:
         return "-"
     try:
         # Parse ISO format: "2026-01-14T22:36:47.435000" or "2026-01-14T22:36:47"
         if 'T' in ts_string:
-            # Split on T and take just the parts we need
-            date_part, time_part = ts_string.split('T')
-            # Remove microseconds if present
-            if '.' in time_part:
-                time_part = time_part.split('.')[0]
+            # Remove microseconds and Z suffix if present
+            ts_clean = ts_string.replace('Z', '').split('.')[0]
+
+            # Parse as UTC datetime
+            dt_utc = datetime.fromisoformat(ts_clean)
+
+            # Make it timezone aware (assume UTC if naive)
+            if dt_utc.tzinfo is None:
+                utc_tz = pytz.UTC
+                dt_utc = utc_tz.localize(dt_utc)
+
+            # Convert to Serbia timezone (UTC+1 in winter, UTC+2 in summer)
+            serbia_tz = pytz.timezone('Europe/Belgrade')
+            dt_local = dt_utc.astimezone(serbia_tz)
+
             # Format: YYYY-MM-DD HH:MM:SS
-            return f"{date_part} {time_part}"
+            return dt_local.strftime('%Y-%m-%d %H:%M:%S')
+
         return ts_string
-    except (ValueError, AttributeError):
+    except (ValueError, AttributeError) as e:
         return ts_string
 
 
