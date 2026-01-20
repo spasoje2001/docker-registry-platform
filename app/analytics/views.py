@@ -43,6 +43,10 @@ def log_search(request):
     date_from = request.GET.get('date_from', '').strip()
     date_to = request.GET.get('date_to', '').strip()
     page = request.GET.get('page', '1')
+    sort_order = request.GET.get('sort', 'desc')  # ADD THIS LINE
+
+    if sort_order not in ['asc', 'desc']:
+        sort_order = 'desc'
 
     # Convert page to int
     try:
@@ -61,7 +65,7 @@ def log_search(request):
         date_to=date_to if date_to else None,
         page=page,
         page_size=20,
-        sort_order='desc'
+        sort_order=sort_order
     )
 
     # Handle errors
@@ -100,6 +104,7 @@ def log_search(request):
         'level': level,
         'date_from': date_from,
         'date_to': date_to,
+        'sort_order': sort_order,
     }
 
     return render(request, 'analytics/search.html', context)

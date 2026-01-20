@@ -119,6 +119,15 @@
                         <tr>
                             <th style="width: 160px;">
                                 <i class="bi bi-clock me-1"></i>Timestamp
+                                <a href="?q={{ query }}&level={{ level }}&date_from={{ date_from }}&date_to={{ date_to }}&sort={% if sort_order == 'desc' %}asc{% else %}desc{% endif %}&page=1"
+                                   class="text-white text-decoration-none ms-1"
+                                   title="Toggle sort order">
+                                    {% if sort_order == 'desc' %}
+                                        <i class="bi bi-arrow-down"></i>
+                                    {% else %}
+                                        <i class="bi bi-arrow-up"></i>
+                                    {% endif %}
+                                </a>
                             </th>
                             <th style="width: 90px;">
                                 <i class="bi bi-tag me-1"></i>Level
@@ -276,7 +285,7 @@
                     <!-- Previous Button -->
                     <li class="page-item {% if not has_prev %}disabled{% endif %}">
                         {% if has_prev %}
-                            <a class="page-link" href="?page={{ page|add:'-1' }}&q={{ query }}&level={{ level }}&date_from={{ date_from }}&date_to={{ date_to }}">
+                            <a class="page-link" href="?page={{ page|add:'-1' }}&q={{ query }}&level={{ level }}&date_from={{ date_from }}&date_to={{ date_to }}&sort={{ sort_order }}">
                                 <i class="bi bi-chevron-left"></i>
                             </a>
                         {% else %}
@@ -289,7 +298,7 @@
                     <!-- Page Numbers -->
                     {% for page_num in page_range %}
                         <li class="page-item {% if page_num == page %}active{% endif %}">
-                            <a class="page-link" href="?page={{ page_num }}&q={{ query }}&level={{ level }}&date_from={{ date_from }}&date_to={{ date_to }}">
+                            <a class="page-link" href="?page={{ page_num }}&q={{ query }}&level={{ level }}&date_from={{ date_from }}&date_to={{ date_to }}&sort={{ sort_order }}">
                                 {{ page_num }}
                             </a>
                         </li>
@@ -298,7 +307,7 @@
                     <!-- Next Button -->
                     <li class="page-item {% if not has_next %}disabled{% endif %}">
                         {% if has_next %}
-                            <a class="page-link" href="?page={{ page|add:'1' }}&q={{ query }}&level={{ level }}&date_from={{ date_from }}&date_to={{ date_to }}">
+                            <a class="page-link" href="?page={{ page|add:'1' }}&q={{ query }}&level={{ level }}&date_from={{ date_from }}&date_to={{ date_to }}&sort={{ sort_order }}">
                                 <i class="bi bi-chevron-right"></i>
                             </a>
                         {% else %}
