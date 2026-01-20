@@ -1,0 +1,336 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Analytics - Log Search{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-graph-up text-primary me-2"></i>
+                Analytics - Log Search
+            </h2>
+            <p class="text-muted">Search and filter application logs</p>
+        </div>
+    </div>
+
+    <!-- Search Filters Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <form method="get" action="{% url 'analytics:search' %}" id="searchForm">
+                <div class="row g-3">
+                    <!-- Text Search -->
+                    <div class="col-md-4">
+                        <label for="searchQuery" class="form-label">
+                            <i class="bi bi-search me-1"></i>Search Message
+                        </label>
+                        <input 
+                            type="text" 
+                            class="form-control" 
+                            id="searchQuery" 
+                            name="q" 
+                            value="{{ query }}"
+                            placeholder="Search log messages..."
+                        >
+                    </div>
+
+                    <!-- Level Filter -->
+                    <div class="col-md-2">
+                        <label for="levelFilter" class="form-label">
+                            <i class="bi bi-funnel me-1"></i>Level
+                        </label>
+                        <select class="form-select" id="levelFilter" name="level">
+                            <option value="">All Levels</option>
+                            <option value="INFO" {% if level == "INFO" %}selected{% endif %}>INFO</option>
+                            <option value="WARNING" {% if level == "WARNING" %}selected{% endif %}>WARNING</option>
+                            <option value="ERROR" {% if level == "ERROR" %}selected{% endif %}>ERROR</option>
+                        </select>
+                    </div>
+
+                    <!-- Date From -->
+                    <div class="col-md-2">
+                        <label for="dateFrom" class="form-label">
+                            <i class="bi bi-calendar me-1"></i>From Date
+                        </label>
+                        <input 
+                            type="date" 
+                            class="form-control" 
+                            id="dateFrom" 
+                            name="date_from"
+                            value="{{ date_from }}"
+                        >
+                    </div>
+
+                    <!-- Date To -->
+                    <div class="col-md-2">
+                        <label for="dateTo" class="form-label">
+                            <i class="bi bi-calendar-check me-1"></i>To Date
+                        </label>
+                        <input 
+                            type="date" 
+                            class="form-control" 
+                            id="dateTo" 
+                            name="date_to"
+                            value="{{ date_to }}"
+                        >
+                    </div>
+
+                    <!-- Buttons -->
+                    <div class="col-md-2 d-flex align-items-end">
+                        <div class="btn-group w-100" role="group">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>Search
+                            </button>
+                            <a href="{% url 'analytics:search' %}" class="btn btn-outline-secondary">
+                                <i class="bi bi-x-circle me-1"></i>Clear
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    {% if total > 0 %}
+    <div class="alert alert-info d-flex align-items-center" role="alert">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        <div>
+            Found <strong>{{ total }}</strong> log{% if total != 1 %}s{% endif %}
+            {% if query or level or date_from or date_to %}
+                matching filters:
+                {% if query %}<strong>"{{ query }}"</strong>{% endif %}
+                {% if level %}<span class="badge bg-primary ms-1">Level: {{ level }}</span>{% endif %}
+                {% if date_from %}<span class="badge bg-secondary ms-1">From: {{ date_from }}</span>{% endif %}
+                {% if date_to %}<span class="badge bg-secondary ms-1">To: {{ date_to }}</span>{% endif %}
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Results Table -->
+    {% if results %}
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 160px;">
+                                <i class="bi bi-clock me-1"></i>Timestamp
+                            </th>
+                            <th style="width: 90px;">
+                                <i class="bi bi-tag me-1"></i>Level
+                            </th>
+                            <th style="width: 200px;">
+                                <i class="bi bi-diagram-3 me-1"></i>Logger
+                            </th>
+                            <th style="min-width: 300px;">
+                                <i class="bi bi-chat-left-text me-1"></i>Message
+                            </th>
+                            <th style="width: 100px;">
+                                <i class="bi bi-person me-1"></i>User
+                            </th>
+                            <th style="width: 150px;">
+                                <i class="bi bi-link-45deg me-1"></i>Path
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in results %}
+                        <tr class="clickable-row" data-bs-toggle="collapse" data-bs-target="#log-{{ forloop.counter }}"
+                            style="cursor: pointer;" title="Click to view details">
+                            <!-- Timestamp -->
+                            <td class="small">
+                                <i class="bi bi-clock-history text-muted me-1"></i>
+                                {{ log.timestamp_formatted|default:"-" }}
+                            </td>
+
+                            <!-- Level Badge -->
+                            <td>
+                                {% if log.level == 'ERROR' %}
+                                    <span class="badge bg-danger">ERROR</span>
+                                {% elif log.level == 'WARNING' %}
+                                    <span class="badge bg-warning text-dark">WARN</span>
+                                {% elif log.level == 'INFO' %}
+                                    <span class="badge bg-info">INFO</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ log.level }}</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Logger Name with tooltip -->
+                            <td class="small text-muted" title="{{ log.logger_name }}">
+                                {{ log.logger_name|default:"-" }}
+                            </td>
+
+                            <!-- Message with tooltip for long messages -->
+                            <td title="{{ log.message }}">
+                                {% if log.message|length > 80 %}
+                                    {{ log.message|truncatechars:80 }}
+                                {% else %}
+                                    {{ log.message }}
+                                {% endif %}
+                            </td>
+
+                            <!-- User (Access logs) -->
+                            <td class="small">
+                                {% if log.user %}
+                                    <i class="bi bi-person-fill text-primary me-1"></i>
+                                    {{ log.user }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+
+                            <!-- Path (Access logs) with tooltip -->
+                            <td class="small" title="{{ log.path }}">
+                                {% if log.path %}
+                                    {% if log.method %}
+                                        <span class="badge badge-sm bg-secondary">{{ log.method }}</span>
+                                    {% endif %}
+                                    {{ log.path|truncatechars:20 }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr class="collapse" id="log-{{ forloop.counter }}">
+                            <td colspan="6" class="bg-light">
+                                <div class="p-3">
+                                    <h6 class="mb-3"><i class="bi bi-info-circle me-2"></i>Log Details</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <dl class="row mb-0">
+                                                <dt class="col-sm-4">Timestamp:</dt>
+                                                <dd class="col-sm-8">{{ log.timestamp_formatted }}</dd>
+
+                                                <dt class="col-sm-4">Level:</dt>
+                                                <dd class="col-sm-8">
+                                                    {% if log.level == 'ERROR' %}
+                                                        <span class="badge bg-danger">ERROR</span>
+                                                    {% elif log.level == 'WARNING' %}
+                                                        <span class="badge bg-warning text-dark">WARNING</span>
+                                                    {% elif log.level == 'INFO' %}
+                                                        <span class="badge bg-info">INFO</span>
+                                                    {% else %}
+                                                        {{ log.level }}
+                                                    {% endif %}
+                                                </dd>
+
+                                                <dt class="col-sm-4">Logger:</dt>
+                                                <dd class="col-sm-8"><code>{{ log.logger_name }}</code></dd>
+
+                                                <dt class="col-sm-4">Source:</dt>
+                                                <dd class="col-sm-8"><span class="badge bg-secondary">{{ log.log_source }}</span></dd>
+                                            </dl>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <dl class="row mb-0">
+                                                {% if log.user %}
+                                                <dt class="col-sm-4">User:</dt>
+                                                <dd class="col-sm-8"><i class="bi bi-person-fill text-primary me-1"></i>{{ log.user }}</dd>
+                                                {% endif %}
+
+                                                {% if log.path %}
+                                                <dt class="col-sm-4">Path:</dt>
+                                                <dd class="col-sm-8"><code>{{ log.path }}</code></dd>
+                                                {% endif %}
+
+                                                {% if log.method %}
+                                                <dt class="col-sm-4">Method:</dt>
+                                                <dd class="col-sm-8"><span class="badge bg-primary">{{ log.method }}</span></dd>
+                                                {% endif %}
+
+                                                {% if log.status_code %}
+                                                <dt class="col-sm-4">Status:</dt>
+                                                <dd class="col-sm-8"><span class="badge {% if log.status_code < 400 %}bg-success{% else %}bg-danger{% endif %}">{{ log.status_code }}</span></dd>
+                                                {% endif %}
+
+                                                {% if log.response_time_ms %}
+                                                <dt class="col-sm-4">Response Time:</dt>
+                                                <dd class="col-sm-8">{{ log.response_time_ms }} ms</dd>
+                                                {% endif %}
+                                            </dl>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <dt class="mb-1">Full Message:</dt>
+                                        <dd><pre class="bg-white p-2 border rounded mb-0">{{ log.message }}</pre></dd>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="card-footer bg-light">
+            <nav aria-label="Log pagination">
+                <ul class="pagination pagination-sm mb-0 justify-content-center">
+                    <!-- Previous Button -->
+                    <li class="page-item {% if not has_prev %}disabled{% endif %}">
+                        {% if has_prev %}
+                            <a class="page-link" href="?page={{ page|add:'-1' }}&q={{ query }}&level={{ level }}&date_from={{ date_from }}&date_to={{ date_to }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </a>
+                        {% else %}
+                            <span class="page-link">
+                                <i class="bi bi-chevron-left"></i>
+                            </span>
+                        {% endif %}
+                    </li>
+
+                    <!-- Page Numbers -->
+                    {% for page_num in page_range %}
+                        <li class="page-item {% if page_num == page %}active{% endif %}">
+                            <a class="page-link" href="?page={{ page_num }}&q={{ query }}&level={{ level }}&date_from={{ date_from }}&date_to={{ date_to }}">
+                                {{ page_num }}
+                            </a>
+                        </li>
+                    {% endfor %}
+
+                    <!-- Next Button -->
+                    <li class="page-item {% if not has_next %}disabled{% endif %}">
+                        {% if has_next %}
+                            <a class="page-link" href="?page={{ page|add:'1' }}&q={{ query }}&level={{ level }}&date_from={{ date_from }}&date_to={{ date_to }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </a>
+                        {% else %}
+                            <span class="page-link">
+                                <i class="bi bi-chevron-right"></i>
+                            </span>
+                        {% endif %}
+                    </li>
+                </ul>
+            </nav>
+            <div class="text-center mt-2 small text-muted">
+                Page {{ page }} of {{ total_pages }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Empty State -->
+    {% elif not results and total == 0 %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-inbox display-1 text-muted mb-3"></i>
+            <h5>No logs found</h5>
+            <p class="text-muted">
+                {% if query or level or date_from or date_to %}
+                    Try adjusting your search filters
+                {% else %}
+                    No logs have been indexed yet. Run <code>python manage.py index_logs</code>
+                {% endif %}
+            </p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
