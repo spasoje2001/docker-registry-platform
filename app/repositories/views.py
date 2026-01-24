@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from .models import Repository, Tag, Star
 from .forms import RepositoryForm, TagForm
 from .services.repositories_service import RepositoryService
@@ -54,6 +54,9 @@ def repository_create(request):
                 )
 
             repo.save()
+            messages.success(
+                request, f'Repository "{repo.full_name}" successfully created!'
+            )
             logger.info(
                 f"Repository created: '{repo.full_name}'  by '{request.user.username}'"
             )
@@ -75,10 +78,6 @@ def repository_create(request):
                     {"form": form, "title": "New Repository"},
                 )
 
-            messages.success(
-                request, f'Repository "{repo.full_name}" successfully created!'
-            )
-
             if from_profile:
                 return redirect("accounts:profile")
             if explore_queries:
@@ -96,21 +95,21 @@ def repository_create(request):
                 return redirect(url)
             return redirect("explore:search")
 
-        # Form invalid
-        if from_profile:
-            request.session["form_data"] = request.POST
-            request.session["form_errors"] = form.errors
-            return redirect("accounts:profile")
+            # Form invalid
+            if from_profile:
+                request.session["form_data"] = request.POST
+                request.session["form_errors"] = form.errors
+                return redirect("accounts:profile")
 
-        return render(
-            request,
-            "repositories/repository_form.html",
-            {
-                "form": form,
-                "title": "New Repository",
-                "from_profile": from_profile,
-            },
-        )
+            return render(
+                request,
+                "repositories/repository_form.html",
+                {
+                    "form": form,
+                    "title": "New Repository",
+                    "from_profile": from_profile,
+                },
+            )
 
     # GET request
     form = RepositoryForm(request=request)
@@ -119,6 +118,29 @@ def repository_create(request):
         "repositories/repository_form.html",
         {"form": form, "title": "New Repository"},
     )
+
+@login_required
+def repository_validate(request):
+    """Validate repository form without saving"""
+    if request.method == "POST" and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        form = RepositoryForm(request.POST, request=request)
+        
+        if form.is_valid():
+            is_official = form.cleaned_data.get('is_official', False)
+            if is_official and not request.user.is_admin:
+                return JsonResponse({
+                    'valid': False,
+                    'errors': {'is_official': ['Only admins can create official repositories.']}
+                })
+            
+            return JsonResponse({'valid': True})
+        else:
+            return JsonResponse({
+                'valid': False,
+                'errors': form.errors
+            })
+    
+    return JsonResponse({'valid': False, 'errors': {'non_field_errors': ['Invalid request']}})
 
 
 def repository_detail(request, owner_username, name):
@@ -653,6 +675,22 @@ def tag_create_official(request, name):
             "explore_queries": explore_queries,
         },
     )
+
+@login_required
+def tag_validate(request):
+    """Validate tag form without saving"""
+    if request.method == "POST" and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        form = TagForm(request.POST)
+
+        if form.is_valid():       
+            return JsonResponse({'valid': True})
+        else:
+            return JsonResponse({
+                'valid': False,
+                'errors': form.errors
+            })
+    
+    return JsonResponse({'valid': False, 'errors': {'non_field_errors': ['Invalid request']}})
 
 
 def tag_detail(request, owner_username, name, tag_name):

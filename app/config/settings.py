@@ -299,5 +299,5 @@ MESSAGE_TAGS = {
     messages.INFO: "info",
     messages.SUCCESS: "success",
     messages.WARNING: "warning",
-    messages.ERROR: "danger",  # ✅ Ovo mapira 'error' na 'danger'
+    messages.ERROR: "danger",
 }

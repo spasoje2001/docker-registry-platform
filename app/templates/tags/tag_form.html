@@ -10,17 +10,6 @@
                         <i class="bi bi-tag text-primary"></i>
                         {{ title }}
                     </h3>
-                    {% if repository.is_official %}
-                        <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% endif %}{% endif %}"
-                        class="btn btn-link text-decoration-none">
-                            <i class="bi bi-arrow-left"></i> Go Back
-                        </a>
-                    {% else %}
-                        <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% elif 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}"
-                        class="btn btn-link text-decoration-none">
-                            <i class="bi bi-arrow-left"></i> Go Back
-                        </a>
-                    {% endif %}
                 </div>
 
                 <div class="card-body p-4">
@@ -156,14 +145,13 @@ docker run localhost:5000/{{ repository.name }}:{{ tag.name }}</code></pre>
                                         </div>
                                     </div>
                                 {% endif %}
-                            {% if user == repository.owner %}
                                 <div class="d-flex gap-2 pt-3 border-top">
                                     {% if not tag %}
                                         <button type="button" class="btn btn-primary" id="nextBtn">
                                             Next <i class="bi bi-arrow-right"></i>
                                         </button>
-                                    {% else %}
-                                        {% if  tag.digest %}
+                                    {% elif user == repository.owner %}
+                                        {% if tag.digest %}
                                             <a href="{% url 'repositories:tag_delete' repository.owner.username repository.name tag.name tag.digest %}{% if request.GET.from_profile %}?from_profile=1{% if 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% endif %}{% endif %}" 
                                                 class="btn btn-danger">
                                                 <i class="bi bi-trash"></i> Delete
@@ -186,7 +174,6 @@ docker run localhost:5000/{{ repository.name }}:{{ tag.name }}</code></pre>
                                             </a>
                                         {% endif %}
                                 </div>
-                            {% endif %}
                         </div>
 
                         {% if not tag %}
@@ -197,11 +184,11 @@ docker run localhost:5000/{{ repository.name }}:{{ tag.name }}</code></pre>
 
                                 <div class="mb-4">
                                     <label class="form-label fw-semibold">
-                                        <i class="bi bi-1-circle"></i> Tag your Docker image
+                                        <i class="bi bi-1-circle"></i> Build new Docker image tag
                                     </label>
                                     <div class="input-group">
-                                        <input type="text" class="form-control font-monospace" id="tagCommand" readonly>
-                                        <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('tagCommand')">
+                                        <input type="text" class="form-control font-monospace" id="buildCommand" readonly>
+                                        <button class="btn btn-outline-secondary" type="button" onclick="copyCmd('buildCommand')">
                                             <i class="bi bi-clipboard"></i>
                                         </button>
                                     </div>
@@ -248,6 +235,7 @@ docker run localhost:5000/{{ repository.name }}:{{ tag.name }}</code></pre>
 </div>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
+    const form = document.getElementById('tagForm');
     const step1 = document.getElementById('step1');
     const step2 = document.getElementById('step2');
     const nextBtn = document.getElementById('nextBtn');
@@ -258,35 +246,82 @@ document.addEventListener('DOMContentLoaded', function() {
     const step1Text = document.getElementById('step1Text');
     const step2Text = document.getElementById('step2Text');
 
-    const tagNameInput = document.getElementById('id_name');
-    if (!tagNameInput) return;
     const registryUrl = window.location.hostname + ':5000';
     const repositoryPath = '{{repository.name}}';
 
-    nextBtn.addEventListener('click', function() {
-        const tagName = tagNameInput.value.trim();
-        if (!tagName) {
-            alert('Please enter a tag name');
-            return;
+    function displayErrors(errors) {
+        document.querySelectorAll('.is-invalid').forEach(el => {
+            el.classList.remove('is-invalid');
+        });
+        document.querySelectorAll('.invalid-feedback').forEach(el => {
+            el.remove();
+        });
+        
+        for (const [field, messages] of Object.entries(errors)) {
+            const input = document.querySelector(`[name="${field}"]`);
+            if (input) {
+                input.classList.add('is-invalid');
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback d-block';
+                errorDiv.textContent = Array.isArray(messages) ? messages[0] : messages;
+                
+                input.parentElement.after(errorDiv);
+            }
         }
+    }
 
-        updateDockerCommands(tagName);
-
-        step1.classList.add('d-none');
-        step2.classList.remove('d-none');
-
-        formProgress.style.width = '100%';
+    nextBtn.addEventListener('click', function() {
+        const tagNameInput = document.getElementById('id_name');
+        const formData = new FormData(form);
         
-        step1Badge.classList.remove('bg-primary');
-        step1Badge.classList.add('bg-success');
-        step1Badge.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
-        step1Text.classList.add('text-success');
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Validating...';
         
-        step2Badge.classList.remove('bg-secondary');
-        step2Badge.classList.add('bg-primary');
-        step2Badge.innerHTML = '<i class="bi bi-2-circle-fill"></i>';
-        step2Text.classList.remove('text-muted');
-        step2Text.classList.add('fw-semibold');
+        fetch("{% url 'repositories:tag_validate' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.valid) {
+                const tagName = tagNameInput.value.trim();
+                updateDockerCommands(tagName);
+                const repoName = document.querySelector('[name="name"]').value;
+                const fullImageName = `${registryUrl}/${repoName}:${tagName}`;
+                
+                step1.classList.add('d-none');
+                step2.classList.remove('d-none');
+
+                formProgress.style.width = '100%';
+                
+                step1Badge.classList.remove('bg-primary');
+                step1Badge.classList.add('bg-success');
+                step1Badge.innerHTML = '<i class="bi bi-check-circle-fill"></i>';
+                step1Text.classList.add('text-success');
+                
+                step2Badge.classList.remove('bg-secondary');
+                step2Badge.classList.add('bg-primary');
+                step2Badge.innerHTML = '<i class="bi bi-2-circle-fill"></i>';
+                step2Text.classList.remove('text-muted');
+                step2Text.classList.add('fw-semibold');
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                displayErrors(data.errors);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        })
+        .finally(() => {
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = 'Next <i class="bi bi-arrow-right"></i>';
+        });
     });
 
     prevBtn.addEventListener('click', function() {
@@ -309,11 +344,10 @@ document.addEventListener('DOMContentLoaded', function() {
 
     function updateDockerCommands(tagName) {
         const fullImageName = `${registryUrl}/${repositoryPath}:${tagName}`;
-        
-        const tagCommand = `docker tag ${repositoryPath}:${tagName} ${fullImageName}`;
+        const buildCommand = `docker build -t ${fullImageName} .`;
         const pushCommand = `docker push ${fullImageName}`;
         
-        document.getElementById('tagCommand').value = tagCommand;
+        document.getElementById('buildCommand').value = buildCommand;
         document.getElementById('pushCommand').value = pushCommand;
     }
 });
