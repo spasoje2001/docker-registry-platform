@@ -675,6 +675,22 @@ def tag_create_official(request, name):
         },
     )
 
+@login_required
+def tag_validate(request):
+    """Validate tag form without saving"""
+    if request.method == "POST" and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        form = TagForm(request.POST)
+        
+        if form.is_valid():       
+            return JsonResponse({'valid': True})
+        else:
+            return JsonResponse({
+                'valid': False,
+                'errors': form.errors
+            })
+    
+    return JsonResponse({'valid': False, 'errors': {'non_field_errors': ['Invalid request']}})
+
 
 def tag_detail(request, owner_username, name, tag_name):
     repository = get_object_or_404(

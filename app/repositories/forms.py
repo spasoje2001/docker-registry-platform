@@ -142,6 +142,9 @@ class TagForm(forms.ModelForm):
         """Validate tag name format"""
         name = self.cleaned_data.get("name")
 
+        if not name:
+            raise forms.ValidationError("Tag name is required.")
+
         if not re.match(r"^[a-zA-Z0-9._-]+$", name):
             raise forms.ValidationError(
                 "Tag name can only contain letters, "
