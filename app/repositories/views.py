@@ -1,7 +1,7 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
-from django.http import Http404
+from django.http import Http404, JsonResponse
 from .models import Repository, Tag, Star
 from .forms import RepositoryForm, TagForm
 from .services.repositories_service import RepositoryService
@@ -29,72 +29,70 @@ def repository_create(request):
 
     if request.method == "POST":
         form = RepositoryForm(request.POST, request=request)
-        if form.is_valid():
-            form.cleaned_data["name"]
-            form.cleaned_data.get("is_official", False)
-            tag_name = form.cleaned_data.get("initial_tag", "latest")
+        form.cleaned_data["name"]
+        form.cleaned_data.get("is_official", False)
+        tag_name = form.cleaned_data.get("initial_tag", "latest")
 
-            repo = form.save(commit=False)
-            repo.owner = request.user
+        repo = form.save(commit=False)
+        repo.owner = request.user
 
-            if repo.is_official and not request.user.is_admin:
-                form.add_error(
-                    "is_official", "Only admins can create official repositories."
-                )
-                logger.error(
-                    f"Repository creation attempt by '{request.user.username}' failed"
-                )
-
-                if from_profile:
-                    return redirect("accounts:profile")
-                return render(
-                    request,
-                    "repositories/repository_form.html",
-                    {"form": form, "title": "New Repository"},
-                )
-
-            repo.save()
-            logger.info(
-                f"Repository created: '{repo.full_name}'  by '{request.user.username}'"
+        if repo.is_official and not request.user.is_admin:
+            form.add_error(
+                "is_official", "Only admins can create official repositories."
             )
-
-            try:
-                Tag.objects.create(name=tag_name, repository=repo)
-                logger.info(
-                    f"Tag created: '{tag_name}' for repository '{repo.full_name}' by '{request.user.username}'"
-                )
-            except Exception as e:
-                form.add_error(None, f"Error creating initial tag: {e}")
-                logger.error(
-                    f"Tag creation attempt for repository '{repo.full_name}' by '{request.user.username}' failed"
-                )
-
-                return render(
-                    request,
-                    "repositories/repository_form.html",
-                    {"form": form, "title": "New Repository"},
-                )
-
-            messages.success(
-                request, f'Repository "{repo.full_name}" successfully created!'
+            logger.error(
+                f"Repository creation attempt by '{request.user.username}' failed"
             )
 
             if from_profile:
                 return redirect("accounts:profile")
-            if explore_queries:
-                url = reverse(
-                    "explore:explore",
-                    kwargs={
-                        "from_profile": from_profile,
-                        "from_explore": from_explore,
-                        "explore_queries": explore_queries,
-                        "tag_q": tag_q,
-                        "tag_sort": tag_sort,
-                    },
-                )
-                url += "&" + explore_queries
-                return redirect(url)
-            return redirect("explore:search")
+            return render(
+                request,
+                "repositories/repository_form.html",
+                {"form": form, "title": "New Repository"},
+            )
+
+        repo.save()
+        messages.success(
+            request, f'Repository "{repo.full_name}" successfully created!'
+        )
+        logger.info(
+            f"Repository created: '{repo.full_name}'  by '{request.user.username}'"
+        )
+
+        try:
+            Tag.objects.create(name=tag_name, repository=repo)
+            logger.info(
+                f"Tag created: '{tag_name}' for repository '{repo.full_name}' by '{request.user.username}'"
+            )
+        except Exception as e:
+            form.add_error(None, f"Error creating initial tag: {e}")
+            logger.error(
+                f"Tag creation attempt for repository '{repo.full_name}' by '{request.user.username}' failed"
+            )
+
+            return render(
+                request,
+                "repositories/repository_form.html",
+                {"form": form, "title": "New Repository"},
+            )
+
+        if from_profile:
+            return redirect("accounts:profile")
+        if explore_queries:
+            url = reverse(
+                "explore:explore",
+                kwargs={
+                    "from_profile": from_profile,
+                    "from_explore": from_explore,
+                    "explore_queries": explore_queries,
+                    "tag_q": tag_q,
+                    "tag_sort": tag_sort,
+                },
+            )
+            url += "&" + explore_queries
+            return redirect(url)
+        return redirect("explore:search")
 
         # Form invalid
         if from_profile:
@@ -119,6 +117,29 @@ def repository_create(request):
         "repositories/repository_form.html",
         {"form": form, "title": "New Repository"},
     )
+
+@login_required
+def repository_validate(request):
+    """Validate repository form without saving"""
+    if request.method == "POST" and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        form = RepositoryForm(request.POST, request=request)
+        
+        if form.is_valid():
+            is_official = form.cleaned_data.get('is_official', False)
+            if is_official and not request.user.is_admin:
+                return JsonResponse({
+                    'valid': False,
+                    'errors': {'is_official': ['Only admins can create official repositories.']}
+                })
+            
+            return JsonResponse({'valid': True})
+        else:
+            return JsonResponse({
+                'valid': False,
+                'errors': form.errors
+            })
+    
+    return JsonResponse({'valid': False, 'errors': {'non_field_errors': ['Invalid request']}})
 
 
 def repository_detail(request, owner_username, name):

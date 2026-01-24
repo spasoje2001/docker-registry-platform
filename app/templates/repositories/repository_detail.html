@@ -284,12 +284,10 @@
                                 </div>
                                 
                                 <div class="col-12 col-lg-1 text-md-end">
-                                    {% if user == repository.owner %}
-                                        <a href="{% url 'repositories:tag_detail' repository.owner.username repository.name tag.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% elif 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}" 
-                                            class="btn btn-sm btn-outline-primary">
-                                            <i class="bi bi-info-circle"></i> Detail
-                                        </a>
-                                    {% endif %}
+                                    <a href="{% url 'repositories:tag_detail' repository.owner.username repository.name tag.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% elif 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}" 
+                                        class="btn btn-sm btn-outline-primary">
+                                        <i class="bi bi-info-circle"></i> Detail
+                                    </a>
                                 </div>
                             </div>                            
                         </div>
