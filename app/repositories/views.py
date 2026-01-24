@@ -29,86 +29,87 @@ def repository_create(request):
 
     if request.method == "POST":
         form = RepositoryForm(request.POST, request=request)
-        form.cleaned_data["name"]
-        form.cleaned_data.get("is_official", False)
-        tag_name = form.cleaned_data.get("initial_tag", "latest")
+        if form.is_valid():
+            form.cleaned_data["name"]
+            form.cleaned_data.get("is_official", False)
+            tag_name = form.cleaned_data.get("initial_tag", "latest")
 
-        repo = form.save(commit=False)
-        repo.owner = request.user
+            repo = form.save(commit=False)
+            repo.owner = request.user
 
-        if repo.is_official and not request.user.is_admin:
-            form.add_error(
-                "is_official", "Only admins can create official repositories."
+            if repo.is_official and not request.user.is_admin:
+                form.add_error(
+                    "is_official", "Only admins can create official repositories."
+                )
+                logger.error(
+                    f"Repository creation attempt by '{request.user.username}' failed"
+                )
+
+                if from_profile:
+                    return redirect("accounts:profile")
+                return render(
+                    request,
+                    "repositories/repository_form.html",
+                    {"form": form, "title": "New Repository"},
+                )
+
+            repo.save()
+            messages.success(
+                request, f'Repository "{repo.full_name}" successfully created!'
             )
-            logger.error(
-                f"Repository creation attempt by '{request.user.username}' failed"
+            logger.info(
+                f"Repository created: '{repo.full_name}'  by '{request.user.username}'"
             )
+
+            try:
+                Tag.objects.create(name=tag_name, repository=repo)
+                logger.info(
+                    f"Tag created: '{tag_name}' for repository '{repo.full_name}' by '{request.user.username}'"
+                )
+            except Exception as e:
+                form.add_error(None, f"Error creating initial tag: {e}")
+                logger.error(
+                    f"Tag creation attempt for repository '{repo.full_name}' by '{request.user.username}' failed"
+                )
+
+                return render(
+                    request,
+                    "repositories/repository_form.html",
+                    {"form": form, "title": "New Repository"},
+                )
 
             if from_profile:
                 return redirect("accounts:profile")
-            return render(
-                request,
-                "repositories/repository_form.html",
-                {"form": form, "title": "New Repository"},
-            )
+            if explore_queries:
+                url = reverse(
+                    "explore:explore",
+                    kwargs={
+                        "from_profile": from_profile,
+                        "from_explore": from_explore,
+                        "explore_queries": explore_queries,
+                        "tag_q": tag_q,
+                        "tag_sort": tag_sort,
+                    },
+                )
+                url += "&" + explore_queries
+                return redirect(url)
+            return redirect("explore:search")
 
-        repo.save()
-        messages.success(
-            request, f'Repository "{repo.full_name}" successfully created!'
-        )
-        logger.info(
-            f"Repository created: '{repo.full_name}'  by '{request.user.username}'"
-        )
-
-        try:
-            Tag.objects.create(name=tag_name, repository=repo)
-            logger.info(
-                f"Tag created: '{tag_name}' for repository '{repo.full_name}' by '{request.user.username}'"
-            )
-        except Exception as e:
-            form.add_error(None, f"Error creating initial tag: {e}")
-            logger.error(
-                f"Tag creation attempt for repository '{repo.full_name}' by '{request.user.username}' failed"
-            )
+            # Form invalid
+            if from_profile:
+                request.session["form_data"] = request.POST
+                request.session["form_errors"] = form.errors
+                return redirect("accounts:profile")
 
             return render(
                 request,
                 "repositories/repository_form.html",
-                {"form": form, "title": "New Repository"},
-            )
-
-        if from_profile:
-            return redirect("accounts:profile")
-        if explore_queries:
-            url = reverse(
-                "explore:explore",
-                kwargs={
+                {
+                    "form": form,
+                    "title": "New Repository",
                     "from_profile": from_profile,
-                    "from_explore": from_explore,
-                    "explore_queries": explore_queries,
-                    "tag_q": tag_q,
-                    "tag_sort": tag_sort,
                 },
             )
-            url += "&" + explore_queries
-            return redirect(url)
-        return redirect("explore:search")
-
-        # Form invalid
-        if from_profile:
-            request.session["form_data"] = request.POST
-            request.session["form_errors"] = form.errors
-            return redirect("accounts:profile")
-
-        return render(
-            request,
-            "repositories/repository_form.html",
-            {
-                "form": form,
-                "title": "New Repository",
-                "from_profile": from_profile,
-            },
-        )
 
     # GET request
     form = RepositoryForm(request=request)
@@ -680,7 +681,7 @@ def tag_validate(request):
     """Validate tag form without saving"""
     if request.method == "POST" and request.headers.get('X-Requested-With') == 'XMLHttpRequest':
         form = TagForm(request.POST)
-        
+
         if form.is_valid():       
             return JsonResponse({'valid': True})
         else:
