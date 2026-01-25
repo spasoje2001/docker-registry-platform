@@ -502,7 +502,7 @@ Password validation rules are covered in detail in:
 - Logged Admin created public repository with name "repo"
 
 **Steps:**
-1. Repeat steps 1-3 from TC-027
+1. Repeat steps 1-3 from TC-028
 2. Check Official Repository
 3. Click "Update" button
 
@@ -536,7 +536,7 @@ Password validation rules are covered in detail in:
   - Navigate to:
     - /repositories/otherUser/repo/delete/?from_explore=1
     - /repositories/otherUser/repo/delete/?from_profile=1
-  - Error massage: "You cannot delete this repository."
+  - Error message: "You cannot delete this repository."
 
 ## TC-031: Delete repository - owned
 
@@ -715,7 +715,7 @@ Password validation rules are covered in detail in:
 
 **Steps:**
 1. Navigate to: /repositories/repo/edit/?from_explore=1
-2. Complete steps 2-4 from TC-027
+2. Complete steps 2-4 from TC-028
 
 **Expected result:**
 - Redirect to Repository detail page
@@ -795,7 +795,7 @@ Password validation rules are covered in detail in:
 - Warning message: "You do not have permission to access this page."
 
 **Note:**
-- Same flow is for users, only diference is:
+- Same flow is for users, only difference is:
   - Navigate to: /accounts/admin_panel/?section=users
 - In case Unauthorized User, expected results include redirection to /accounts/login/
 - In case Logged user is Admin expected results include redirection to /accounts/admin_panel/?section=users
@@ -1076,7 +1076,7 @@ Password validation rules are covered in detail in:
 1. Navigate to: /repositories/testUser/repo/tags/latest/edit/?from_profile=1
 
 **Expected result:**
-- Tags informations are correctly displayed
+- Tags information are correctly displayed
 - Button "Delete" is clickable only if field Digests has valus
 
 **Note:**
@@ -1093,7 +1093,7 @@ Password validation rules are covered in detail in:
 1. Navigate to: /repositories/otherUser/repo/tags/latest/edit/?from_profile=1
 
 **Expected result:**
-- Tags informations are correctly displayed
+- Tags information are correctly displayed
 - Button "Delete" is disabled
 
 **Note:**
@@ -1152,7 +1152,7 @@ Password validation rules are covered in detail in:
 - No one tags contain "example" in name
 
 **Steps:**
-1. Repeat steps 1-3 from TC-058
+1. Repeat steps 1-3 from TC-061
 
 **Expected result:**
 - Search result does not contains any tags
@@ -1285,7 +1285,23 @@ Password validation rules are covered in detail in:
 **Note:**
 - If logs do not exist, Admin will see message "No logs found, No logs have been indexed yet. Run <code>python manage.py index_logs</code>"
 
-## TC-070: Sort logs
+## TC-070: View logs - Information
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one tag exists
+
+**Steps:**
+1. Navigate to: /analytics/
+2. Click to specific log in table
+
+**Expected result:**
+- Log details are correctly displayed
+
+**Note:**
+- If log details are displayed, click to same log will hide log details
+
+## TC-071: Sort logs
 
 **Preconditions:** 
 - Admin with username "testUser" is logged in
@@ -1302,7 +1318,7 @@ Password validation rules are covered in detail in:
 - Logs are sorted by timestamp (oldest are first)
 - Pagination is at the bottom of the page
 
-## TC-071: Search logs - Valid data
+## TC-072: Search logs - Valid data
 
 **Preconditions:** 
 - Admin with username "testUser" is logged in
@@ -1326,14 +1342,14 @@ Password validation rules are covered in detail in:
 - Admin can leave any filter field empty
 - If result of analytics is empty set, information message is: "No logs found, Try adjusting your search filters"
 
-## TC-072: Search logs - Ivalid date interval
+## TC-073: Search logs - Invalid date interval
 
 **Preconditions:** 
 - Admin with username "testUser" is logged in
 - At least one log exists
 
 **Steps:**
-1. Repeat steps 1-4 form TC-071
+1. Repeat steps 1-4 form TC-072
 4. Select from date: 25.01.2025.
 5. Select to date: 12.12.2026.
 6. Click "Search" button 
@@ -1342,7 +1358,13 @@ Password validation rules are covered in detail in:
 - Interval is not correct and there is no logs for displaying
 - Information message: "No logs found, Try adjusting your search filters"
 
-## TC-073: Search logs - SQL injection
+**Note:**
+- Invalid interval can be:
+  - Date in future
+  - To date is before from date
+- Case is same when results of search is empty subset
+
+## TC-074: Search logs - SQL injection
 
 **Preconditions:** 
 - Admin with username "testUser" is logged in
@@ -1358,9 +1380,9 @@ Password validation rules are covered in detail in:
 - Information message: "No logs found, Try adjusting your search filters"
 
 **Note:**
-- Search logs is also resistant to SQL injection treat (similar to case TC-053).
+- Search logs is also resistant to SQL injection treat (similar to case TC-053)
 
-## TC-074: Search logs - Unauthenticated user
+## TC-075: Search logs - Unauthenticated user
 
 **Preconditions:** 
 - User with username "testUser" is logged in
@@ -1375,3 +1397,165 @@ Password validation rules are covered in detail in:
 
 **Note:**
 - Case for not logged in user is similar and user gets information message: "You do not have permission to access this page."
+
+## TC-076: Advanced query - Single group with multiple conditions
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one log exists
+
+**Steps:**
+1. Navigate to: /analytics/advanced/
+2. Enter first condition in group 1: 
+  - Check not
+  - Field: log source
+  - Operator: does not equal
+  - Select: app
+3. Click "+ Add Condition" button
+4. Change condition operator to "Or"
+5. Enter second condition in group 1: 
+  - Field: log level
+  - Operator: equals
+  - Select: info
+6. Click "Search" button
+
+**Expected result:**
+- Result is union of subset of logs where log source is "app" and subset of logs which log level is info (negation of negative condition is positive condition)
+- Information message: "Found 910 logs matching: (NOT Log Source does not equal 'app' OR Log Level equals 'INFO')" (for example)
+- Logs are sorted by timestamp (newest are first)
+- Pagination is at the bottom of the page
+
+## TC-077: Advanced query - Multiple groups
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one log exists
+
+**Steps:**
+1. Navigate to: /analytics/advanced/
+2. Enter first condition in group 1: 
+  - Field: log level
+  - Operator: equals
+  - Select: warning
+3. Click "+ Add Condition" button
+4. Enter second condition in group 1: 
+  - Check not
+  - Field: logger name
+  - Operator: equals
+  - Value...: access
+5. Click "+ Add Group"
+6. Change group operator to "Or"
+7. Enter first condition in group 2:
+  - Check not
+  - Field: log level
+  - Operator: equals
+  - Select: warning
+8. Click "+ Add Condition" button
+9. Enter second condition in group 2:
+  - Field: logger name
+  - Operator: equals
+  - Value...: access
+10. Click "Search" button
+
+**Expected result:**
+- Result is union of subset of logs where logger name is not "access" and log level is warning and subset of logs where logger name is "access" and log level is not warning (XOR operation)
+- Information message: "Found 946 logs matching: (Log Level equals 'WARNING' AND NOT Logger Name equals 'access') OR (NOT Log Level equals 'WARNING' AND Logger Name equals 'access')" (for example)
+- Logs are sorted by timestamp (newest are first)
+- Pagination is at the bottom of the page
+
+## TC-078: Advanced query - Filter dates
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one log exists
+
+**Steps:**
+1. Navigate to: /analytics/advanced/
+2. Select from date: 25.12.2025.
+3. Select to date: 16.01.2026.
+4. Click "Search" button
+
+**Expected result:**
+- Result is subset of logs from interval 25.12.2025. to 16.01.2026.
+- Information message: "Found 270 logs matching: Date: 2025-12-25 to 2026-01-16" (for example)
+- Logs are sorted by timestamp (newest are first)
+- Pagination is at the bottom of the page
+
+**Note:**
+- Case for invalid date is similar as TC-073, only message is different ("No logs found, Build a query above and click Search to find logs.")
+
+## TC-079: Advanced query - Sorting
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one log exists
+
+**Steps:**
+1. Navigate to: /analytics/advanced/
+2. Select sort order: "Oldest first"
+3. Click "Search" button
+
+**Expected result:**
+- Result is all logs
+- Information message: "Found 1856 logs" (for example)
+- Logs are sorted by timestamp (oldest are first)
+- Pagination is at the bottom of the page
+
+## TC-080: Advanced query - Empty field
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one log exists
+
+**Steps:**
+1. Navigate to: /analytics/advanced/
+2. Click "Search" button
+
+**Expected result:**
+- Result is all logs
+- Information message: "Found 1856 logs" (for example)
+- Logs are sorted by timestamp (newest are first)
+- Pagination is at the bottom of the page
+
+**Note:**
+- No matter how many groups and conditions are added, if every field is empty, result is all logs
+
+## TC-081: Advanced query - Incomplete conditions
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one log exists
+
+**Steps:**
+1. Navigate to: /analytics/advanced/
+2. Enter parameter for condition (for example only "field")
+
+**Expected result:**
+- Warning message: "Incomplete conditions (highlighted in yellow) will be ignored."
+- If click "Search" button, entered parameter will be reset and the result of search will be all logs
+
+## TC-082: Advanced query - Clear all
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one log exists
+- Admin enter some query for advanced search
+
+**Steps:**
+1. Click "Clear all" button
+
+**Expected result:**
+- Information message: "No logs found, Build a query above and click Search to find logs."
+
+## TC-083: Advanced query - Query preview
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one log exists
+
+**Steps:**
+1. Navigate to: /analytics/advanced/
+2. Change conditions, groups, filter and sort options 
+
+**Expected result:**
+- Query preview at the moment changed value
