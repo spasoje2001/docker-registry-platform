@@ -7,4 +7,5 @@ app_name = "analytics"
 
 urlpatterns = [
     path('', views.log_search, name='search'),
+    path('advanced/', views.advanced_search, name='advanced_search'),
 ]

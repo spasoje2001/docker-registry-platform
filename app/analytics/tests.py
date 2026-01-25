@@ -8,6 +8,7 @@ from django.test import TestCase, override_settings, Client
 from django.urls import reverse
 
 from .services import LogIndexer, LogSearchService
+from .services.query_builder import QueryBuilder
 
 User = get_user_model()
 
@@ -324,3 +325,560 @@ class AnalyticsViewTest(TestCase):
         messages = list(response.wsgi_request._messages)
         self.assertEqual(len(messages), 1)
         self.assertIn('Elasticsearch', str(messages[0]))
+
+class QueryBuilderBasicTests(TestCase):
+    """Tests for basic QueryBuilder functionality."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_empty_conditions_returns_match_all(self):
+        """Empty conditions list should return match_all query."""
+        result = self.builder.build_query([])
+        self.assertEqual(result, {'match_all': {}})
+
+    def test_invalid_field_returns_match_all(self):
+        """Invalid field should be ignored, returning match_all."""
+        conditions = [
+            {'field': 'nonexistent_field', 'operator': 'equals', 'value': 'test'}
+        ]
+        result = self.builder.build_query(conditions)
+        self.assertEqual(result, {'match_all': {}})
+
+    def test_empty_value_returns_match_all(self):
+        """Empty value should be ignored, returning match_all."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': ''}
+        ]
+        result = self.builder.build_query(conditions)
+        self.assertEqual(result, {'match_all': {}})
+
+    def test_whitespace_value_returns_match_all(self):
+        """Whitespace-only value should be ignored."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': '   '}
+        ]
+        result = self.builder.build_query(conditions)
+        self.assertEqual(result, {'match_all': {}})
+
+class QueryBuilderKeywordFieldTests(TestCase):
+    """Tests for keyword field queries."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_single_keyword_equals(self):
+        """Single keyword field with equals operator."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'}
+        ]
+        result = self.builder.build_query(conditions)
+        self.assertEqual(result, {'term': {'level': 'ERROR'}})
+
+    def test_keyword_field_method(self):
+        """Keyword field 'method' with equals operator."""
+        conditions = [
+            {'field': 'method', 'operator': 'equals', 'value': 'POST'}
+        ]
+        result = self.builder.build_query(conditions)
+        self.assertEqual(result, {'term': {'method': 'POST'}})
+
+    def test_keyword_field_user(self):
+        """Keyword field 'user' with equals operator."""
+        conditions = [
+            {'field': 'user', 'operator': 'equals', 'value': 'admin'}
+        ]
+        result = self.builder.build_query(conditions)
+        self.assertEqual(result, {'term': {'user': 'admin'}})
+
+class QueryBuilderTextFieldTests(TestCase):
+    """Tests for text field queries."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_single_text_contains(self):
+        """Single text field with contains operator."""
+        conditions = [
+            {'field': 'message', 'operator': 'contains', 'value': 'failed'}
+        ]
+        result = self.builder.build_query(conditions)
+        expected = {
+            'match': {
+                'message': {
+                    'query': 'failed',
+                    'operator': 'and'
+                }
+            }
+        }
+        self.assertEqual(result, expected)
+
+    def test_text_contains_multiple_words(self):
+        """Text field with multiple words should use AND operator."""
+        conditions = [
+            {'field': 'message', 'operator': 'contains', 'value': 'connection timeout'}
+        ]
+        result = self.builder.build_query(conditions)
+        self.assertEqual(result['match']['message']['query'], 'connection timeout')
+        self.assertEqual(result['match']['message']['operator'], 'and')
+
+    def test_text_value_trimmed(self):
+        """Text value should be trimmed of whitespace."""
+        conditions = [
+            {'field': 'message', 'operator': 'contains', 'value': '  failed  '}
+        ]
+        result = self.builder.build_query(conditions)
+        self.assertEqual(result['match']['message']['query'], 'failed')
+
+class QueryBuilderAndLogicTests(TestCase):
+    """Tests for AND logic between conditions."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_two_conditions_and(self):
+        """Two conditions with AND logic."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        self.assertEqual(len(result['bool']['must']), 2)
+
+    def test_three_conditions_and(self):
+        """Three conditions with AND logic."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND'},
+            {'field': 'method', 'operator': 'equals', 'value': 'POST', 'logic': 'AND'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        self.assertEqual(len(result['bool']['must']), 3)
+
+    def test_default_logic_is_and(self):
+        """Missing logic should default to AND."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'message', 'operator': 'contains', 'value': 'failed'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+
+class QueryBuilderOrLogicTests(TestCase):
+    """Tests for OR logic between conditions."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_two_conditions_or(self):
+        """Two conditions with OR logic."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('should', result['bool'])
+        self.assertEqual(result['bool']['minimum_should_match'], 1)
+        self.assertEqual(len(result['bool']['should']), 2)
+
+    def test_three_conditions_or(self):
+        """Three conditions with OR logic."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR'},
+            {'field': 'level', 'operator': 'equals', 'value': 'INFO', 'logic': 'OR'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('should', result['bool'])
+        self.assertEqual(len(result['bool']['should']), 3)
+
+class QueryBuilderNegationTests(TestCase):
+    """Tests for NOT operator (negation)."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_single_negated_condition(self):
+        """Single negated condition should use must_not."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'INFO', 'negate': True}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must_not', result['bool'])
+        self.assertEqual(len(result['bool']['must_not']), 1)
+
+    def test_regular_and_negated_condition(self):
+        """Mix of regular and negated conditions."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'message', 'operator': 'contains', 'value': 'debug', 'logic': 'AND', 'negate': True}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        self.assertIn('must_not', result['bool'])
+        self.assertEqual(len(result['bool']['must']), 1)
+        self.assertEqual(len(result['bool']['must_not']), 1)
+
+    def test_multiple_negated_conditions(self):
+        """Multiple negated conditions."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'INFO', 'negate': True},
+            {'field': 'level', 'operator': 'equals', 'value': 'DEBUG', 'logic': 'AND', 'negate': True}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must_not', result['bool'])
+        self.assertEqual(len(result['bool']['must_not']), 2)
+
+class QueryBuilderGroupTests(TestCase):
+    """Tests for grouped conditions (parentheses support)."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_two_groups_and(self):
+        """Two groups combined with AND: (A OR B) AND C."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
+            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR', 'group': 1},
+            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND', 'group': 2}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        self.assertEqual(len(result['bool']['must']), 2)
+
+        # First item should be nested bool with should
+        first_group = result['bool']['must'][0]
+        self.assertIn('bool', first_group)
+        self.assertIn('should', first_group['bool'])
+
+    def test_two_groups_or(self):
+        """Two groups combined with OR: (A) OR (B)."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
+            {'field': 'method', 'operator': 'equals', 'value': 'POST', 'logic': 'OR', 'group': 2}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('should', result['bool'])
+        self.assertEqual(result['bool']['minimum_should_match'], 1)
+
+    def test_three_groups(self):
+        """Three groups: (A OR B) AND (C) AND (D)."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
+            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR', 'group': 1},
+            {'field': 'method', 'operator': 'equals', 'value': 'POST', 'logic': 'AND', 'group': 2},
+            {'field': 'user', 'operator': 'equals', 'value': 'admin', 'logic': 'AND', 'group': 3}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        self.assertEqual(len(result['bool']['must']), 3)
+
+    def test_default_group_is_one(self):
+        """Conditions without group should default to group 1."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        # Should behave as single group with AND
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+
+class QueryBuilderDateRangeTests(TestCase):
+    """Tests for date range filtering."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_only_date_range(self):
+        """Only date range, no conditions."""
+        result = self.builder.build_query([], date_from='2025-01-01', date_to='2025-01-31')
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        range_clause = result['bool']['must'][0]
+        self.assertIn('range', range_clause)
+        self.assertIn('timestamp', range_clause['range'])
+        self.assertEqual(range_clause['range']['timestamp']['gte'], '2025-01-01T00:00:00')
+        self.assertEqual(range_clause['range']['timestamp']['lte'], '2025-01-31T23:59:59')
+
+    def test_only_date_from(self):
+        """Only date_from specified."""
+        result = self.builder.build_query([], date_from='2025-01-15')
+
+        range_clause = result['bool']['must'][0]
+        self.assertIn('gte', range_clause['range']['timestamp'])
+        self.assertNotIn('lte', range_clause['range']['timestamp'])
+
+    def test_only_date_to(self):
+        """Only date_to specified."""
+        result = self.builder.build_query([], date_to='2025-01-31')
+
+        range_clause = result['bool']['must'][0]
+        self.assertNotIn('gte', range_clause['range']['timestamp'])
+        self.assertIn('lte', range_clause['range']['timestamp'])
+
+    def test_condition_with_date_range(self):
+        """Single condition with date range."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'}
+        ]
+        result = self.builder.build_query(conditions, date_from='2025-01-01')
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        self.assertEqual(len(result['bool']['must']), 2)
+
+    def test_multiple_conditions_with_date_range(self):
+        """Multiple conditions with date range."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND'}
+        ]
+        result = self.builder.build_query(conditions, date_from='2025-01-01', date_to='2025-01-31')
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        self.assertEqual(len(result['bool']['must']), 3)
+
+    def test_invalid_date_format_ignored(self):
+        """Invalid date format should be ignored."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'}
+        ]
+        result = self.builder.build_query(conditions, date_from='invalid-date')
+
+        # Should just have the term clause, no date range
+        self.assertEqual(result, {'term': {'level': 'ERROR'}})
+
+class QueryBuilderPreviewTests(TestCase):
+    """Tests for preview generation."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_empty_conditions_returns_empty_string(self):
+        """Empty conditions should return empty preview."""
+        preview = self.builder.generate_preview([])
+        self.assertEqual(preview, "")
+
+    def test_single_condition_preview(self):
+        """Single condition preview."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'}
+        ]
+        preview = self.builder.generate_preview(conditions)
+        self.assertEqual(preview, "Log Level equals 'ERROR'")
+
+    def test_two_conditions_and_preview(self):
+        """Two conditions with AND preview."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND'}
+        ]
+        preview = self.builder.generate_preview(conditions)
+        self.assertIn('Log Level equals', preview)
+        self.assertIn('AND', preview)
+        self.assertIn('Message contains', preview)
+
+    def test_two_conditions_or_preview(self):
+        """Two conditions with OR preview."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR'}
+        ]
+        preview = self.builder.generate_preview(conditions)
+        self.assertIn('OR', preview)
+        self.assertIn("'ERROR'", preview)
+        self.assertIn("'WARNING'", preview)
+
+    def test_negated_condition_preview(self):
+        """Negated condition should show NOT."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'INFO', 'negate': True}
+        ]
+        preview = self.builder.generate_preview(conditions)
+        self.assertIn('NOT', preview)
+        self.assertIn("Log Level equals 'INFO'", preview)
+
+    def test_grouped_conditions_preview(self):
+        """Grouped conditions should show parentheses."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
+            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR', 'group': 1},
+            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND', 'group': 2}
+        ]
+        preview = self.builder.generate_preview(conditions)
+        self.assertIn('(', preview)
+        self.assertIn(')', preview)
+        self.assertIn('OR', preview)
+        self.assertIn('AND', preview)
+
+    def test_date_range_preview(self):
+        """Date range preview."""
+        preview = self.builder.generate_preview([], date_from='2025-01-01', date_to='2025-01-31')
+        self.assertIn('Date:', preview)
+        self.assertIn('2025-01-01', preview)
+        self.assertIn('2025-01-31', preview)
+
+    def test_condition_with_date_range_preview(self):
+        """Condition with date range preview."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'}
+        ]
+        preview = self.builder.generate_preview(conditions, date_from='2025-01-01')
+        self.assertIn("Log Level equals 'ERROR'", preview)
+        self.assertIn('AND', preview)
+        self.assertIn('Date:', preview)
+
+    def test_date_from_only_preview(self):
+        """Date from only preview."""
+        preview = self.builder.generate_preview([], date_from='2025-01-15')
+        self.assertEqual(preview, "Date: from 2025-01-15")
+
+    def test_date_to_only_preview(self):
+        """Date to only preview."""
+        preview = self.builder.generate_preview([], date_to='2025-01-31')
+        self.assertEqual(preview, "Date: until 2025-01-31")
+
+class QueryBuilderUIHelperTests(TestCase):
+    """Tests for UI helper methods."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_get_fields_for_ui(self):
+        """get_fields_for_ui should return all fields with proper structure."""
+        fields = self.builder.get_fields_for_ui()
+
+        self.assertIsInstance(fields, list)
+        self.assertTrue(len(fields) > 0)
+
+        # Check structure of first field
+        first_field = fields[0]
+        self.assertIn('value', first_field)
+        self.assertIn('label', first_field)
+        self.assertIn('type', first_field)
+
+    def test_get_fields_for_ui_contains_level(self):
+        """Fields should contain 'level' field."""
+        fields = self.builder.get_fields_for_ui()
+        field_values = [f['value'] for f in fields]
+        self.assertIn('level', field_values)
+
+    def test_get_operators_for_keyword_field(self):
+        """Keyword field should have equals operator."""
+        operators = self.builder.get_operators_for_field('level')
+
+        self.assertIsInstance(operators, list)
+        self.assertTrue(len(operators) > 0)
+
+        op_values = [op['value'] for op in operators]
+        self.assertIn('equals', op_values)
+
+    def test_get_operators_for_text_field(self):
+        """Text field should have contains operator."""
+        operators = self.builder.get_operators_for_field('message')
+
+        op_values = [op['value'] for op in operators]
+        self.assertIn('contains', op_values)
+
+    def test_get_operators_for_invalid_field(self):
+        """Invalid field should return empty list."""
+        operators = self.builder.get_operators_for_field('nonexistent')
+        self.assertEqual(operators, [])
+
+class QueryBuilderNegativeOperatorTests(TestCase):
+    """Tests for not_equals and not_contains operators."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_keyword_not_equals(self):
+        """Keyword field with not_equals operator."""
+        conditions = [
+            {'field': 'level', 'operator': 'not_equals', 'value': 'INFO'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must_not', result['bool'])
+        self.assertEqual(len(result['bool']['must_not']), 1)
+        self.assertEqual(result['bool']['must_not'][0], {'term': {'level': 'INFO'}})
+
+    def test_text_not_contains(self):
+        """Text field with not_contains operator."""
+        conditions = [
+            {'field': 'message', 'operator': 'not_contains', 'value': 'debug'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must_not', result['bool'])
+        self.assertEqual(len(result['bool']['must_not']), 1)
+
+    def test_equals_and_not_equals_same_value(self):
+        """Equals AND not_equals same value should produce valid query (returns 0 results)."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'INFO'},
+            {'field': 'level', 'operator': 'not_equals', 'value': 'INFO', 'logic': 'AND'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        # Should produce a bool query with both conditions
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+
+    def test_not_equals_preview(self):
+        """Not equals should show 'does not equal' in preview."""
+        conditions = [
+            {'field': 'level', 'operator': 'not_equals', 'value': 'INFO'}
+        ]
+        preview = self.builder.generate_preview(conditions)
+        self.assertIn('does not equal', preview)
+        self.assertIn('INFO', preview)
+
+    def test_not_contains_preview(self):
+        """Not contains should show 'does not contain' in preview."""
+        conditions = [
+            {'field': 'message', 'operator': 'not_contains', 'value': 'debug'}
+        ]
+        preview = self.builder.generate_preview(conditions)
+        self.assertIn('does not contain', preview)
+        self.assertIn('debug', preview)
