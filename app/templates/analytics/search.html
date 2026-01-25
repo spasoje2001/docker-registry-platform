@@ -15,6 +15,20 @@
         </div>
     </div>
 
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link active" href="{% url 'analytics:search' %}">
+                <i class="bi bi-search me-1"></i>Simple Search
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'analytics:advanced_search' %}">
+                <i class="bi bi-sliders me-1"></i>Advanced Query
+            </a>
+        </li>
+    </ul>
+
     <!-- Search Filters Card -->
     <div class="card shadow-sm mb-4">
         <div class="card-body">

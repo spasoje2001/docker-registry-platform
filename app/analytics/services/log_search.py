@@ -1,10 +1,12 @@
 import logging
 from datetime import datetime
-from typing import Dict, Optional
+from typing import Dict, List, Optional
 
 from django.conf import settings
 from elasticsearch import Elasticsearch
 from elasticsearch.exceptions import NotFoundError, ConnectionError as ESConnectionError
+
+from .query_builder import QueryBuilder
 
 logger = logging.getLogger(__name__)
 
@@ -144,6 +146,119 @@ class LogSearchService:
                 'total_pages': 0,
                 'has_next': False,
                 'has_prev': False,
+                'error': 'Search error occurred'
+            }
+
+    def search_logs_advanced(
+            self,
+            conditions: List[Dict],
+            date_from: Optional[str] = None,
+            date_to: Optional[str] = None,
+            page: int = 1,
+            page_size: int = DEFAULT_PAGE_SIZE,
+            sort_order: str = 'desc'
+    ) -> Dict:
+        """
+        Search logs using advanced query builder conditions.
+
+        Args:
+            conditions: List of condition dicts for QueryBuilder
+            date_from: Optional start date (YYYY-MM-DD)
+            date_to: Optional end date (YYYY-MM-DD)
+            page: Page number (1-indexed)
+            page_size: Results per page
+            sort_order: 'asc' or 'desc' for timestamp sorting
+
+        Returns:
+            dict with 'results', 'total', 'page', 'total_pages', 'has_next', 'has_prev',
+            plus 'query_preview' for displaying the human-readable query
+        """
+        if not self.connect():
+            return {
+                'results': [],
+                'total': 0,
+                'page': 1,
+                'total_pages': 0,
+                'has_next': False,
+                'has_prev': False,
+                'error': 'Elasticsearch unavailable'
+            }
+
+        # Build query using QueryBuilder
+        query_builder = QueryBuilder()
+        es_query = query_builder.build_query(conditions, date_from, date_to)
+        query_preview = query_builder.generate_preview(conditions, date_from, date_to)
+
+        # Pagination
+        page = max(1, page)
+        page_size = min(page_size, 100)
+        from_result = (page - 1) * page_size
+
+        if from_result >= self.MAX_RESULTS:
+            return {
+                'results': [],
+                'total': 0,
+                'page': page,
+                'total_pages': 0,
+                'has_next': False,
+                'has_prev': page > 1,
+                'query_preview': query_preview,
+                'error': f'Cannot retrieve results beyond {self.MAX_RESULTS} documents'
+            }
+
+        try:
+            response = self.es.search(
+                index=self._get_index_pattern(),
+                body={
+                    'query': es_query,
+                    'sort': [{'timestamp': {'order': sort_order}}],
+                    'from': from_result,
+                    'size': page_size
+                }
+            )
+
+            hits = response.get('hits', {})
+            total = hits.get('total', {}).get('value', 0)
+            results = [hit['_source'] for hit in hits.get('hits', [])]
+
+            total_pages = (total + page_size - 1) // page_size if total > 0 else 0
+            has_next = page < total_pages
+            has_prev = page > 1
+
+            return {
+                'results': results,
+                'total': total,
+                'page': page,
+                'total_pages': total_pages,
+                'page_size': page_size,
+                'has_next': has_next,
+                'has_prev': has_prev,
+                'query_preview': query_preview
+            }
+
+        except NotFoundError:
+            logger.warning("No Elasticsearch indices found")
+            return {
+                'results': [],
+                'total': 0,
+                'page': 1,
+                'total_pages': 0,
+                'has_next': False,
+                'has_prev': False,
+                'query_preview': query_preview,
+                'error': 'No log data available. Run index_logs command first.'
+            }
+
+        except (ESConnectionError, Exception) as e:
+            logger.error("Elasticsearch search error: %s", e)
+            return {
+                'results': [],
+                'total': 0,
+                'page': 1,
+                'total_pages': 0,
+                'has_next': False,
+                'has_prev': False,
+                'query_preview': query_preview,
                 'error': 'Search error occurred'
             }
 
