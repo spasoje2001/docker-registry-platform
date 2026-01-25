@@ -190,9 +190,9 @@
 ## TC-012: Super admin first login (Change password) - Valid data
 
 **Preconditions:** 
-- Super Admin with username "admin" and generated password "GenPass123!" is generated
-- Super Admin is logged in with generated password
-- Super Admin is navigated to /password/change/
+- Super admin with username "admin" and generated password "GenPass123!" is generated
+- Super admin is logged in with generated password
+- Super admin is navigated to /password/change/
 
 **Steps:**
 1. Enter current password: GenPass123!
@@ -201,16 +201,16 @@
 4. Click "Change password" button
 
 **Expected result:**
-- Super Admin remains logged in
+- Super admin remains logged in
 - Redirect to home page
 - Success message: "Password changed successfully! You now have full access to the application."
 
 ## TC-013: Super admin first login (Change password) - Incorrect current password
 
 **Preconditions:** 
-- Super Admin with username "admin" and generated password "GenPass123!" is generated
-- Super Admin is logged in with generated password
-- Super Admin is navigated to /password/change/
+- Super admin with username "admin" and generated password "GenPass123!" is generated
+- Super admin is logged in with generated password
+- Super admin is navigated to /password/change/
 
 **Steps:**
 1. Enter current password: Gen123Pass123!
@@ -219,22 +219,22 @@
 4. Click "Change password" button
 
 **Expected result:**
-- Super Admin password is not changed
+- Super admin password is not changed
 - Error message: "Your old password was entered incorrectly. Please enter it again."
 
 ## TC-014: Super admin first login (Change password) - Incorrect password
 
 **Preconditions:** 
-- Super Admin with username "admin" and generated password "GenPass123!" is generated
-- Super Admin is logged in with generated password
-- Super Admin is navigated to /password/change/
+- Super admin with username "admin" and generated password "GenPass123!" is generated
+- Super admin is logged in with generated password
+- Super admin is navigated to /password/change/
 
 **Steps:**
 1. Enter invalid password (e.g. too short)
 2. Click "Change password" button
 
 **Expected result:**
-- Super Admin password is not changed
+- Super admin password is not changed
 - Password validation error displayed
 - Same password rules apply as in /accounts/register/
 
@@ -770,7 +770,7 @@ Password validation rules are covered in detail in:
 # TC-044: Admin lists of - Admin users
 
 **Preconditions:**
-- Logged user is Super Admin
+- Logged user is Super admin
 - Users exist
 
 **Steps:**
@@ -816,7 +816,7 @@ Password validation rules are covered in detail in:
 # TC-047: Super admin creates admin - Valid data
 
 **Preconditions:**
-- Logged user is Super Admin
+- Logged user is Super admin
 - User with username "testUser" and email "test@example.com" does not exist
 
 **Steps:**
@@ -835,7 +835,7 @@ Password validation rules are covered in detail in:
 
 **Note:**
 - Alternative navigation is: Tab Admin panel → Admin management → Create Admin
-- Flow is similar when Super Admin does not want generated password
+- Flow is similar when Super admin does not want generated password
   1. Steps 1-5 are the same
   2. Uncheck "Generate random password"
   3. Enter password: password
@@ -845,7 +845,7 @@ Password validation rules are covered in detail in:
 # TC-048: Super admin creates admin - Invalid data
 
 **Preconditions:**
-- Logged user is Super Admin
+- Logged user is Super admin
 - User with username "testUser" and email "test@example.com" does exist
 
 **Steps:**
@@ -861,7 +861,7 @@ Password validation rules are covered in detail in:
 - Error message: "Please correct the errors below."
 
 **Note:**
-- Super Admin can enter existing value for one of two attributes and Admin won't be created
+- Super admin can enter existing value for one of two attributes and Admin won't be created
 
 # TC-049: Admin searches users - Users exist
 
@@ -1082,9 +1082,26 @@ Password validation rules are covered in detail in:
 **Note:**
 - If user is not logged in, button "Delete" is not visible
 
-<!-- TC za neautorizovanog korisnika -->
+## TC-059: View tags - Unauthenticated user
 
-## TC-059: Sort tags
+**Preconditions:** 
+- User with username "testUser" is logged in
+- Other user with username "otherUser" has repository with name "repo" 
+- "repo" has multiple tags (at least "latest") 
+
+**Steps:**
+1. Navigate to: /repositories/otherUser/repo/tags/latest/edit/?from_profile=1
+
+**Expected result:**
+- Tags informations are correctly displayed
+- Button "Delete" is disabled
+
+**Note:**
+- User testUser must know name of repo and name of tag to access tag view page
+- User testUser can not edit or delete "latest" tag
+- Case is the same for unlogged user
+
+## TC-060: Sort tags
 
 **Preconditions:**
 - Public repository "repo" at least have one tag
@@ -1112,7 +1129,7 @@ Password validation rules are covered in detail in:
     - URL is: /repositories/testUser/repo/?tag_sort=size&tag_q=
     - Repositories are sorted by relevance name
 
-## TC-060: Search tags - With results
+## TC-061: Search tags - With results
 
 **Preconditions:**
 - At least one tag is built for public repository with name "repo"
@@ -1128,7 +1145,7 @@ Password validation rules are covered in detail in:
 - URL is changed to /repositories/testUser/repo/?tag_sort=newest&tag_q=example
 - Button "Clean" is visible
 
-## TC-061: Search tags - Without results
+## TC-062: Search tags - Without results
 
 **Preconditions:**
 - At least one tag is built for public repository with name "repo"
@@ -1146,7 +1163,7 @@ Password validation rules are covered in detail in:
 **Note:**
 - Search tags is also resistant to SQL injection treat (similar to case TC-053)
 
-## TC-062: Clean filter
+## TC-063: Clean filter
 
 **Preconditions:**
 - Repository detail page is displayed
@@ -1162,7 +1179,7 @@ Password validation rules are covered in detail in:
 - URL is changed to /repositories/testUser/repo/
 - Tags are sorted by newest date (default)
 
-## TC-063: Delete tag - Authorized user
+## TC-064: Delete tag - Authorized user
 
 **Preconditions:**
 - User is logged in
@@ -1179,22 +1196,22 @@ Password validation rules are covered in detail in:
 - Chosen tag is deleted
 - URL is changed to /repositories/testUser/repo/
 
-## TC-064: Delete tag - Unauthorized user
+## TC-065: Delete tag - Unauthorized user
 
 **Preconditions:**
 - User is not logged in
 
 **Steps:**
-1. Navigate to: /repositories/testUser/repo/tags/latest/delete/
+1. Navigate to: /repositories/testUser/repo/tags/latest/delete/sha256:123456
 
 **Expected result:**
 - Choosen tag is not deleted
-<!-- - Information message: PUCAAA? -->
+- Error message: "You cannot delete tags from this repository."
 - URL is changed to /repositories/testUser/repo/
 
 # Stars
 
-## TC-065: Staring repository
+## TC-066: Staring repository
 
 **Preconditions:** 
 - User is logged in
@@ -1215,7 +1232,7 @@ Password validation rules are covered in detail in:
 - Unauthorized user does not have button "Star"
 - Official repositories can not be starred
 
-## TC-066: Unstaring repository
+## TC-067: Unstaring repository
 
 **Preconditions:** 
 - User is logged in
@@ -1235,7 +1252,7 @@ Password validation rules are covered in detail in:
 - Unauthorized user does not have button "Unstar"
 - Official repositories can not be unstarred
 
-## TC-067: Starred repositories
+## TC-068: Starred repositories
 
 **Preconditions:** 
 - User is logged in
@@ -1247,3 +1264,114 @@ Password validation rules are covered in detail in:
 
 **Expected result:**
 - All starred repositories (for logged user) are displayed
+
+# Analytics
+
+## TC-069: View logs
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one tag exists
+
+**Steps:**
+1. Navigate to: /analytics/
+
+**Expected result:**
+- All logs are displayed correctly
+- Information message: for example "Found 12345 logs"
+- Logs are sorted by timestamp (newest are first)
+- Pagination is at the bottom of the page
+
+**Note:**
+- If logs do not exist, Admin will see message "No logs found, No logs have been indexed yet. Run <code>python manage.py index_logs</code>"
+
+## TC-070: Sort logs
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one tag exists
+
+**Steps:**
+1. Navigate to: /analytics/
+2. Click to an arrow nex to "timestamp"
+
+**Expected result:**
+- Sort direction indicator (arrow) changes state
+- All logs are displayed correctly
+- Information message: for example "Found 12345 logs"
+- Logs are sorted by timestamp (oldest are first)
+- Pagination is at the bottom of the page
+
+## TC-071: Search logs - Valid data
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one log exists
+
+**Steps:**
+1. Navigate to: /analytics/
+2. Enter term for search messages: example
+3. Enter level: INFO
+4. Select from date: 12.12.2025.
+5. Select to date: 25.01.2026.
+6. Click "Search" button
+
+**Expected result:**
+- Logs are filtered by inputed fields
+- Information message: for example "Found 123 logs"
+- Logs are sorted by timestamp (newest are first)
+- Pagination is at the bottom of the page
+
+**Note:**
+- Admin can leave any filter field empty
+- If result of analytics is empty set, information message is: "No logs found, Try adjusting your search filters"
+
+## TC-072: Search logs - Ivalid date interval
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one log exists
+
+**Steps:**
+1. Repeat steps 1-4 form TC-071
+4. Select from date: 25.01.2025.
+5. Select to date: 12.12.2026.
+6. Click "Search" button 
+
+**Expected result:**
+- Interval is not correct and there is no logs for displaying
+- Information message: "No logs found, Try adjusting your search filters"
+
+## TC-073: Search logs - SQL injection
+
+**Preconditions:** 
+- Admin with username "testUser" is logged in
+- At least one log exists
+
+**Steps:**
+1. Navigate to: /analytics/
+2. Enter term for search messages: ' OR '1'='1
+6. Click "Search" button
+
+**Expected result:**
+- Result not contains any logs
+- Information message: "No logs found, Try adjusting your search filters"
+
+**Note:**
+- Search logs is also resistant to SQL injection treat (similar to case TC-053).
+
+## TC-074: Search logs - Unauthenticated user
+
+**Preconditions:** 
+- User with username "testUser" is logged in
+- At least one log exists
+
+**Steps:**
+1. Navigate to: /analytics/
+
+**Expected result:**
+- Information message: "No logs found, Try adjusting your search filters"
+- Redirect to Home page
+
+**Note:**
+- Case for not logged in user is similar and user gets information message: "You do not have permission to access this page."
