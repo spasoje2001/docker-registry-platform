@@ -12,11 +12,17 @@ User = get_user_model()
 class ExploreRepositoriesTests(TestCase):
 
     def setUp(self):
-        self.registry_patcher = patch('repositories.services.repositories_service.RegistryClient.get_all_repositories')
+        self.registry_patcher = patch(
+            "repositories.services.repositories_service.RegistryClient.get_all_repositories"
+        )
         self.mock_registry = self.registry_patcher.start()
         self.mock_registry.return_value = [
-            'nginx', 'webserver', 'redis', 
-            'searchterm-repo', 'other-app', 'unverified-repo'
+            "nginx",
+            "webserver",
+            "redis",
+            "searchterm-repo",
+            "other-app",
+            "unverified-repo",
         ]
 
         self.user1 = User.objects.create_user(username="alice", password="password123")
@@ -24,17 +30,28 @@ class ExploreRepositoriesTests(TestCase):
         self.user1.save()
 
         self.repo_nginx = Repository.objects.create(
-            name="nginx", owner=self.user1, visibility=Repository.VisibilityChoices.PUBLIC, is_official=True
+            name="nginx",
+            owner=self.user1,
+            visibility=Repository.VisibilityChoices.PUBLIC,
+            is_official=True,
         )
         self.repo_web = Repository.objects.create(
-            name="webserver", owner=self.user1, visibility=Repository.VisibilityChoices.PUBLIC, is_official=False
+            name="webserver",
+            owner=self.user1,
+            visibility=Repository.VisibilityChoices.PUBLIC,
+            is_official=False,
         )
         self.repo_redis = Repository.objects.create(
-            name="redis", owner=self.user1, visibility=Repository.VisibilityChoices.PUBLIC, is_official=False
+            name="redis",
+            owner=self.user1,
+            visibility=Repository.VisibilityChoices.PUBLIC,
+            is_official=False,
         )
 
         Repository.objects.create(
-            name="secret", owner=self.user1, visibility=Repository.VisibilityChoices.PRIVATE
+            name="secret",
+            owner=self.user1,
+            visibility=Repository.VisibilityChoices.PRIVATE,
         )
 
         self.url = reverse("explore:explore")
@@ -68,7 +85,12 @@ class ExploreRepositoriesTests(TestCase):
         response = self.client.get(self.url)
         repos = response.context["page_obj"]
         self.assertEqual(len(repos.object_list), 3)
-        self.assertTrue(all(r.visibility == Repository.VisibilityChoices.PUBLIC for r in repos.object_list))
+        self.assertTrue(
+            all(
+                r.visibility == Repository.VisibilityChoices.PUBLIC
+                for r in repos.object_list
+            )
+        )
 
     def test_search_filters_repositories_correctly(self):
         response = self.client.get(self.url, {"q": "redis"})
@@ -78,16 +100,16 @@ class ExploreRepositoriesTests(TestCase):
 
     def test_relevance_sorting_name_before_description(self):
         Repository.objects.create(
-            name="other-app", 
-            description="searchterm", 
-            owner=self.user1, 
-            visibility=Repository.VisibilityChoices.PUBLIC
+            name="other-app",
+            description="searchterm",
+            owner=self.user1,
+            visibility=Repository.VisibilityChoices.PUBLIC,
         )
         Repository.objects.create(
-            name="searchterm-repo", 
-            description="blah", 
-            owner=self.user1, 
-            visibility=Repository.VisibilityChoices.PUBLIC
+            name="searchterm-repo",
+            description="blah",
+            owner=self.user1,
+            visibility=Repository.VisibilityChoices.PUBLIC,
         )
 
         response = self.client.get(self.url, {"q": "searchterm"})
@@ -112,9 +134,9 @@ class ExploreRepositoriesTests(TestCase):
         bad_user.is_verified_publisher = False
         bad_user.save()
         Repository.objects.create(
-            name="unverified-repo", 
-            owner=bad_user, 
-            visibility=Repository.VisibilityChoices.PUBLIC
+            name="unverified-repo",
+            owner=bad_user,
+            visibility=Repository.VisibilityChoices.PUBLIC,
         )
         response = self.client.get(self.url, {"filter": "verified"})
         repos = response.context["page_obj"]
@@ -132,7 +154,7 @@ class ExploreRepositoriesTests(TestCase):
         self.assertEqual(repos, sorted(repos, reverse=True))
 
     def test_sort_by_recently_updated(self):
-        self.repo_web.save() 
+        self.repo_web.save()
         response = self.client.get(self.url, {"sort": "updated"})
         repos = list(response.context["page_obj"].object_list)
         self.assertTrue(len(repos) > 0)

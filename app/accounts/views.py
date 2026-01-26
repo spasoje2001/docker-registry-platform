@@ -24,6 +24,7 @@ from .utils import (
 
 from repositories.forms import RepositoryForm
 from repositories.services.repositories_service import RepositoryService
+from repositories.models import Repository, Star
 
 
 User = get_user_model()
@@ -210,9 +211,8 @@ def register(request):
             user = form.save()
             login(request, user)
             messages.success(
-                request,
-                f"Welcome, {user.username}! Your account has been created successfully.",
-            )
+                request, f"Welcome, {
+                    user.username}! Your account has been created successfully.", )
 
             return redirect("core:home")
 
@@ -266,10 +266,10 @@ def profile_view(request):
     repositories = service.get_initial_repositories(True, request.user)
 
     if not service.health_check():
-        if request.GET.get('tab') == 'repos' or not request.GET.get('tab'):
+        if request.GET.get("tab") == "repos" or not request.GET.get("tab"):
             messages.error(
                 request,
-                "Registry is unavailable at this moment. Please try again later."
+                "Registry is unavailable at this moment. Please try again later.",
             )
     else:
         try:
@@ -278,7 +278,12 @@ def profile_view(request):
             messages.error(request, "Error fetching repositories from registry.")
             repositories = service.get_initial_repositories(True, request.user)
 
-    repositories = repositories.order_by('-updated_at')
+    repositories = repositories.order_by("-updated_at")
+    starred_repositories = (
+        Repository.objects.filter(stars__user=request.user)
+        .select_related("owner")
+        .order_by("-stars__starred_at")
+    )
 
     if form_data:
         repo_form = RepositoryForm(form_data, request=request)
@@ -296,6 +301,7 @@ def profile_view(request):
             "repo_form": repo_form,
             "active_tab": active_tab,
             "repositories": repositories,
+            "starred_repositories": starred_repositories,
             "from_profile": True,
         },
     )

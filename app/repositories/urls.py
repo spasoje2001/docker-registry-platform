@@ -9,6 +9,9 @@ urlpatterns = [
     # ===== GENERAL =====
     # path("", views.repository_list, name="list"),
     path("new/", views.repository_create, name="create"),
+    path("<str:name>/star/", views.star_repository, name="star"),
+    path('validate/', views.repository_validate, name='validate'),
+    path('validate/tag/', views.tag_validate, name='tag_validate'),
     # ===== OFFICIAL REPOS =====
     path("<str:name>/", views.repository_detail_official, name="detail_official"),
     path("<str:name>/edit/", views.repository_update_official, name="update_official"),

@@ -74,7 +74,7 @@ class RepositoryForm(forms.ModelForm):
             raise forms.ValidationError({"initial_tag": "Initial tag is required."})
 
         if is_official and visibility == Repository.VisibilityChoices.PRIVATE:
-            self.add_error("is_official", "Official repositories must be public.")
+            raise forms.ValidationError({"is_official": "Official repositories must be public."})
 
         if self.instance.pk:
             if is_official:
@@ -98,20 +98,11 @@ class RepositoryForm(forms.ModelForm):
             if not self.request:
                 return cleaned_data
 
-            if is_official:
-                duplicates = Repository.objects.filter(name=name, is_official=True)
-                if duplicates.exists():
-                    self.add_error(
-                        "name", "Official repository with this name already exists."
-                    )
-            else:
-                duplicates = Repository.objects.filter(
-                    name=name, is_official=False, owner=self.request.user
+            duplicates = Repository.objects.filter(name=name)
+            if duplicates.exists():
+                self.add_error(
+                    "name", "You already have a repository with this name."
                 )
-                if duplicates.exists():
-                    self.add_error(
-                        "name", "You already have a repository with this name."
-                    )
 
         return cleaned_data
 
@@ -150,6 +141,9 @@ class TagForm(forms.ModelForm):
     def clean_name(self):
         """Validate tag name format"""
         name = self.cleaned_data.get("name")
+
+        if not name:
+            raise forms.ValidationError("Tag name is required.")
 
         if not re.match(r"^[a-zA-Z0-9._-]+$", name):
             raise forms.ValidationError(

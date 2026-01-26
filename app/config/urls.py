@@ -25,5 +25,5 @@ urlpatterns = [
     path("accounts/", include("accounts.urls")),
     # Apps (will be implemented in future sprints)
     path("explore/", include("explore.urls")),
-    # path('analytics/', include('analytics.urls')),    # Sprint 3
+    path('analytics/', include('analytics.urls')),
 ]

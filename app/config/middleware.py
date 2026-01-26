@@ -1,6 +1,7 @@
 """
 Request logging middleware for capturing HTTP requests.
 """
+
 import logging
 import time
 
@@ -47,7 +48,7 @@ class RequestLoggingMiddleware:
                 "query_string": request.META.get("QUERY_STRING", ""),
                 "user_agent": request.META.get("HTTP_USER_AGENT", ""),
                 "ip_address": self._get_client_ip(request),
-            }
+            },
         )
 
         return response

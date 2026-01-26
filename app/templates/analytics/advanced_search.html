@@ -1,0 +1,1155 @@
+{% extends "base.html" %}
+{% load static %}
+
+{% block title %}Analytics - Advanced Query Builder{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col">
+            <h2>
+                <i class="bi bi-graph-up text-primary me-2"></i>
+                Analytics - Log Search
+            </h2>
+            <p class="text-muted">Search and filter application logs</p>
+        </div>
+    </div>
+
+    <!-- Tab Navigation -->
+    <ul class="nav nav-tabs mb-4">
+        <li class="nav-item">
+            <a class="nav-link" href="{% url 'analytics:search' %}">
+                <i class="bi bi-search me-1"></i>Simple Search
+            </a>
+        </li>
+        <li class="nav-item">
+            <a class="nav-link active" href="{% url 'analytics:advanced_search' %}">
+                <i class="bi bi-sliders me-1"></i>Advanced Query
+            </a>
+        </li>
+    </ul>
+
+    <!-- Query Builder Card -->
+    <div class="card shadow-sm mb-4">
+        <div class="card-header bg-primary text-white">
+            <h5 class="mb-0">
+                <i class="bi bi-tools me-2"></i>Query Builder
+            </h5>
+        </div>
+        <div class="card-body">
+            <form method="post" action="{% url 'analytics:advanced_search' %}" id="advancedSearchForm">
+                {% csrf_token %}
+                
+                <!-- Query Groups Container -->
+                <div id="queryGroups">
+                    <!-- Group 1 -->
+                    <div class="query-group card mb-3" data-group-id="1">
+                        <div class="card-header bg-light d-flex justify-content-between align-items-center py-2">
+                            <span class="fw-semibold">Group 1</span>
+                            <button type="button" class="btn btn-sm btn-outline-danger btn-delete-group" title="Delete group" disabled>
+                                <i class="bi bi-trash"></i>
+                            </button>
+                        </div>
+                        <div class="card-body">
+                            <!-- Conditions in Group 1 -->
+                            <div class="group-conditions">
+                                <!-- Condition 1 -->
+                                <div class="condition-row d-flex align-items-center gap-2 mb-2" data-condition-index="0">
+                                    <!-- NOT checkbox -->
+                                    <div class="form-check">
+                                        <input type="checkbox" class="form-check-input condition-negate" id="negate-1-0">
+                                        <label class="form-check-label small" for="negate-1-0">NOT</label>
+                                    </div>
+
+                                    <!-- Field select -->
+                                    <select class="form-select form-select-sm condition-field" style="width: 150px;">
+                                        <option value="">-- Field --</option>
+                                        <option value="level">Log Level</option>
+                                        <option value="logger_name">Logger Name</option>
+                                        <option value="message">Message</option>
+                                        <option value="user">User</option>
+                                        <option value="path">Request Path</option>
+                                        <option value="method">HTTP Method</option>
+                                        <option value="status_code">Status Code</option>
+                                        <option value="log_source">Log Source</option>
+                                    </select>
+
+                                    <!-- Operator select -->
+                                    <select class="form-select form-select-sm condition-operator" style="width: 140px;">
+                                        <option value="">-- Operator --</option>
+                                        <option value="equals">equals</option>
+                                        <option value="not_equals">does not equal</option>
+                                        <option value="contains">contains</option>
+                                        <option value="not_contains">does not contain</option>
+                                    </select>
+
+                                    <!-- Value input/select -->
+                                    <input type="text" class="form-control form-control-sm condition-value" placeholder="Value..." style="width: 150px;">
+
+                                    <!-- Delete condition button -->
+                                    <button type="button" class="btn btn-sm btn-outline-danger btn-delete-condition" title="Delete condition" disabled>
+                                        <i class="bi bi-x-lg"></i>
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- Add Condition Button -->
+                            <button type="button" class="btn btn-sm btn-outline-primary btn-add-condition mt-2">
+                                <i class="bi bi-plus-lg me-1"></i>Add Condition
+                            </button>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Add Group Button -->
+                <button type="button" class="btn btn-outline-secondary mb-4" id="btnAddGroup">
+                    <i class="bi bi-plus-lg me-1"></i>Add Group
+                </button>
+
+                <!-- Date Range -->
+                <div class="row mb-3">
+                    <div class="col-md-3">
+                        <label for="dateFrom" class="form-label">
+                            <i class="bi bi-calendar me-1"></i>From Date
+                        </label>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="dateFrom"
+                            name="date_from"
+                            value="{{ date_from }}"
+                        >
+                    </div>
+                    <div class="col-md-3">
+                        <label for="dateTo" class="form-label">
+                            <i class="bi bi-calendar-check me-1"></i>To Date
+                        </label>
+                        <input
+                            type="date"
+                            class="form-control"
+                            id="dateTo"
+                            name="date_to"
+                            value="{{ date_to }}"
+                        >
+                    </div>
+                    <div class="col-md-3">
+                        <label for="sortOrder" class="form-label">
+                            <i class="bi bi-sort-down me-1"></i>Sort Order
+                        </label>
+                        <select class="form-select" id="sortOrder" name="sort_order">
+                            <option value="desc" {% if sort_order == 'desc' %}selected{% endif %}>Newest First</option>
+                            <option value="asc" {% if sort_order == 'asc' %}selected{% endif %}>Oldest First</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Hidden field for conditions JSON -->
+                <input type="hidden" name="conditions_json" id="conditionsJson" value="{{ conditions_json }}">
+                <input type="hidden" name="page" id="pageInput" value="{{ page }}">
+
+                <!-- Preview Box -->
+                <div class="mb-3">
+                    <label class="form-label">
+                        <i class="bi bi-eye me-1"></i>Query Preview
+                    </label>
+                    <div class="form-control bg-light" id="queryPreview" style="min-height: 38px;">
+                        {% if query_preview %}
+                            {{ query_preview }}
+                        {% else %}
+                            <span class="text-muted">Your query will appear here...</span>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <!-- Buttons -->
+                <div class="d-flex gap-2">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="bi bi-search me-1"></i>Search
+                    </button>
+                    <a href="{% url 'analytics:advanced_search' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Clear All
+                    </a>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Results Summary -->
+    {% if total > 0 %}
+    <div class="alert alert-info d-flex align-items-center" role="alert">
+        <i class="bi bi-info-circle-fill me-2"></i>
+        <div>
+            Found <strong>{{ total }}</strong> log{% if total != 1 %}s{% endif %}
+            {% if query_preview %}
+                matching: <strong>{{ query_preview }}</strong>
+            {% endif %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Results Table -->
+    {% if results %}
+    <div class="card shadow-sm">
+        <div class="card-body p-0">
+            <div class="table-responsive">
+                <table class="table table-hover table-striped mb-0">
+                    <thead class="table-dark">
+                        <tr>
+                            <th style="width: 160px;">
+                                <i class="bi bi-clock me-1"></i>Timestamp
+                            </th>
+                            <th style="width: 90px;">
+                                <i class="bi bi-tag me-1"></i>Level
+                            </th>
+                            <th style="width: 200px;">
+                                <i class="bi bi-diagram-3 me-1"></i>Logger
+                            </th>
+                            <th style="min-width: 300px;">
+                                <i class="bi bi-chat-left-text me-1"></i>Message
+                            </th>
+                            <th style="width: 100px;">
+                                <i class="bi bi-person me-1"></i>User
+                            </th>
+                            <th style="width: 150px;">
+                                <i class="bi bi-link-45deg me-1"></i>Path
+                            </th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for log in results %}
+                        <tr class="clickable-row" data-bs-toggle="collapse" data-bs-target="#log-{{ forloop.counter }}"
+                            style="cursor: pointer;" title="Click to view details">
+                            <td class="small">
+                                <i class="bi bi-clock-history text-muted me-1"></i>
+                                {{ log.timestamp_formatted|default:"-" }}
+                            </td>
+                            <td>
+                                {% if log.level == 'ERROR' %}
+                                    <span class="badge bg-danger">ERROR</span>
+                                {% elif log.level == 'WARNING' %}
+                                    <span class="badge bg-warning text-dark">WARN</span>
+                                {% elif log.level == 'INFO' %}
+                                    <span class="badge bg-info">INFO</span>
+                                {% else %}
+                                    <span class="badge bg-secondary">{{ log.level }}</span>
+                                {% endif %}
+                            </td>
+                            <td class="small text-muted" title="{{ log.logger_name }}">
+                                {{ log.logger_name|default:"-" }}
+                            </td>
+                            <td title="{{ log.message }}">
+                                {% if log.message|length > 80 %}
+                                    {{ log.message|truncatechars:80 }}
+                                {% else %}
+                                    {{ log.message }}
+                                {% endif %}
+                            </td>
+                            <td class="small">
+                                {% if log.user %}
+                                    <i class="bi bi-person-fill text-primary me-1"></i>
+                                    {{ log.user }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                            <td class="small" title="{{ log.path }}">
+                                {% if log.path %}
+                                    {% if log.method %}
+                                        <span class="badge badge-sm bg-secondary">{{ log.method }}</span>
+                                    {% endif %}
+                                    {{ log.path|truncatechars:20 }}
+                                {% else %}
+                                    <span class="text-muted">-</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr class="collapse" id="log-{{ forloop.counter }}">
+                            <td colspan="6" class="bg-light">
+                                <div class="p-3">
+                                    <h6 class="mb-3"><i class="bi bi-info-circle me-2"></i>Log Details</h6>
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <dl class="row mb-0">
+                                                <dt class="col-sm-4">Timestamp:</dt>
+                                                <dd class="col-sm-8">{{ log.timestamp_formatted }}</dd>
+                                                <dt class="col-sm-4">Level:</dt>
+                                                <dd class="col-sm-8">
+                                                    {% if log.level == 'ERROR' %}
+                                                        <span class="badge bg-danger">ERROR</span>
+                                                    {% elif log.level == 'WARNING' %}
+                                                        <span class="badge bg-warning text-dark">WARNING</span>
+                                                    {% elif log.level == 'INFO' %}
+                                                        <span class="badge bg-info">INFO</span>
+                                                    {% else %}
+                                                        {{ log.level }}
+                                                    {% endif %}
+                                                </dd>
+                                                <dt class="col-sm-4">Logger:</dt>
+                                                <dd class="col-sm-8"><code>{{ log.logger_name }}</code></dd>
+                                                <dt class="col-sm-4">Source:</dt>
+                                                <dd class="col-sm-8"><span class="badge bg-secondary">{{ log.log_source }}</span></dd>
+                                            </dl>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <dl class="row mb-0">
+                                                {% if log.user %}
+                                                <dt class="col-sm-4">User:</dt>
+                                                <dd class="col-sm-8"><i class="bi bi-person-fill text-primary me-1"></i>{{ log.user }}</dd>
+                                                {% endif %}
+                                                {% if log.path %}
+                                                <dt class="col-sm-4">Path:</dt>
+                                                <dd class="col-sm-8"><code>{{ log.path }}</code></dd>
+                                                {% endif %}
+                                                {% if log.method %}
+                                                <dt class="col-sm-4">Method:</dt>
+                                                <dd class="col-sm-8"><span class="badge bg-primary">{{ log.method }}</span></dd>
+                                                {% endif %}
+                                                {% if log.status_code %}
+                                                <dt class="col-sm-4">Status:</dt>
+                                                <dd class="col-sm-8"><span class="badge {% if log.status_code < 400 %}bg-success{% else %}bg-danger{% endif %}">{{ log.status_code }}</span></dd>
+                                                {% endif %}
+                                                {% if log.response_time_ms %}
+                                                <dt class="col-sm-4">Response Time:</dt>
+                                                <dd class="col-sm-8">{{ log.response_time_ms }} ms</dd>
+                                                {% endif %}
+                                            </dl>
+                                        </div>
+                                    </div>
+                                    <div class="mt-3">
+                                        <dt class="mb-1">Full Message:</dt>
+                                        <dd><pre class="bg-white p-2 border rounded mb-0">{{ log.message }}</pre></dd>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Pagination -->
+        {% if total_pages > 1 %}
+        <div class="card-footer bg-light">
+            <nav aria-label="Log pagination">
+                <ul class="pagination pagination-sm mb-0 justify-content-center">
+                    <li class="page-item {% if not has_prev %}disabled{% endif %}">
+                        {% if has_prev %}
+                            <button type="button" class="page-link btn-page" data-page="{{ page|add:'-1' }}">
+                                <i class="bi bi-chevron-left"></i>
+                            </button>
+                        {% else %}
+                            <span class="page-link"><i class="bi bi-chevron-left"></i></span>
+                        {% endif %}
+                    </li>
+                    {% for page_num in page_range %}
+                        <li class="page-item {% if page_num == page %}active{% endif %}">
+                            <button type="button" class="page-link btn-page" data-page="{{ page_num }}">
+                                {{ page_num }}
+                            </button>
+                        </li>
+                    {% endfor %}
+                    <li class="page-item {% if not has_next %}disabled{% endif %}">
+                        {% if has_next %}
+                            <button type="button" class="page-link btn-page" data-page="{{ page|add:'1' }}">
+                                <i class="bi bi-chevron-right"></i>
+                            </button>
+                        {% else %}
+                            <span class="page-link"><i class="bi bi-chevron-right"></i></span>
+                        {% endif %}
+                    </li>
+                </ul>
+            </nav>
+            <div class="text-center mt-2 small text-muted">
+                Page {{ page }} of {{ total_pages }}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Empty State -->
+    {% elif not results and total == 0 %}
+    <div class="card shadow-sm">
+        <div class="card-body text-center py-5">
+            <i class="bi bi-inbox display-1 text-muted mb-3"></i>
+            <h5>No logs found</h5>
+            <p class="text-muted">
+                Build a query above and click Search to find logs.
+            </p>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<!-- Field Configuration (for JavaScript) -->
+<script type="application/json" id="fieldConfig">
+{
+    "fields": [
+        {"value": "level", "label": "Log Level", "type": "keyword", "choices": ["INFO", "WARNING", "ERROR"]},
+        {"value": "logger_name", "label": "Logger Name", "type": "keyword", "choices": null},
+        {"value": "message", "label": "Message", "type": "text", "choices": null},
+        {"value": "user", "label": "User", "type": "keyword", "choices": null},
+        {"value": "path", "label": "Request Path", "type": "keyword", "choices": null},
+        {"value": "method", "label": "HTTP Method", "type": "keyword", "choices": ["GET", "POST", "PUT", "PATCH", "DELETE"]},
+        {"value": "status_code", "label": "Status Code", "type": "integer", "choices": null},
+        {"value": "log_source", "label": "Log Source", "type": "keyword", "choices": ["app", "access", "error"]}
+    ],
+    "operators": {
+        "keyword": [
+            {"value": "equals", "label": "equals"},
+            {"value": "not_equals", "label": "does not equal"}
+        ],
+        "text": [
+            {"value": "contains", "label": "contains"},
+            {"value": "not_contains", "label": "does not contain"}
+        ],
+        "integer": [
+            {"value": "equals", "label": "equals"},
+            {"value": "not_equals", "label": "does not equal"},
+            {"value": "gt", "label": "greater than"},
+            {"value": "gte", "label": "greater than or equal"},
+            {"value": "lt", "label": "less than"},
+            {"value": "lte", "label": "less than or equal"}
+        ]
+    }
+}
+</script>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // =====================
+    // Configuration
+    // =====================
+    const config = JSON.parse(document.getElementById('fieldConfig').textContent);
+    const FIELDS = config.fields;
+    const OPERATORS = config.operators;
+
+    // =====================
+    // State Management
+    // =====================
+    let state = {
+        groups: [],
+        nextGroupId: 1
+    };
+
+    // =====================
+    // DOM References
+    // =====================
+    const queryGroupsContainer = document.getElementById('queryGroups');
+    const conditionsJsonInput = document.getElementById('conditionsJson');
+    const queryPreviewDiv = document.getElementById('queryPreview');
+    const pageInput = document.getElementById('pageInput');
+    const form = document.getElementById('advancedSearchForm');
+
+    // =====================
+    // Helper Functions
+    // =====================
+
+    /**
+     * Get field configuration by field value
+     */
+    function getFieldConfig(fieldValue) {
+        return FIELDS.find(f => f.value === fieldValue) || null;
+    }
+
+    /**
+     * Get operators for a field type
+     */
+    function getOperatorsForType(fieldType) {
+        return OPERATORS[fieldType] || [];
+    }
+
+    /**
+     * Get field label by value
+     */
+    function getFieldLabel(fieldValue) {
+        const field = getFieldConfig(fieldValue);
+        return field ? field.label : fieldValue;
+    }
+
+    /**
+     * Get operator label by field and operator value
+     */
+    function getOperatorLabel(fieldValue, operatorValue) {
+        const fieldConfig = getFieldConfig(fieldValue);
+        if (!fieldConfig) return operatorValue;
+
+        const operators = getOperatorsForType(fieldConfig.type);
+        const operator = operators.find(o => o.value === operatorValue);
+        return operator ? operator.label : operatorValue;
+    }
+
+    /**
+     * Create a select element with options
+     */
+    function createSelect(className, options, selectedValue, placeholder) {
+        const select = document.createElement('select');
+        select.className = `form-select form-select-sm ${className}`;
+
+        // Placeholder option
+        const placeholderOpt = document.createElement('option');
+        placeholderOpt.value = '';
+        placeholderOpt.textContent = placeholder;
+        select.appendChild(placeholderOpt);
+
+        // Add options
+        options.forEach(opt => {
+            const option = document.createElement('option');
+            option.value = opt.value;
+            option.textContent = opt.label;
+            if (opt.value === selectedValue) {
+                option.selected = true;
+            }
+            select.appendChild(option);
+        });
+
+        return select;
+    }
+
+    /**
+     * Create value input - either text input or select based on field choices
+     */
+    function createValueInput(fieldValue, currentValue) {
+        const fieldConfig = getFieldConfig(fieldValue);
+
+        if (fieldConfig && fieldConfig.choices && fieldConfig.choices.length > 0) {
+            // Create select for fields with predefined choices
+            const select = document.createElement('select');
+            select.className = 'form-select form-select-sm condition-value';
+            select.style.width = '150px';
+
+            const placeholder = document.createElement('option');
+            placeholder.value = '';
+            placeholder.textContent = '-- Select --';
+            select.appendChild(placeholder);
+
+            fieldConfig.choices.forEach(choice => {
+                const option = document.createElement('option');
+                option.value = choice;
+                option.textContent = choice;
+                if (choice === currentValue) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+
+            return select;
+        } else {
+            // Create text input for free-form fields
+            const input = document.createElement('input');
+            input.type = 'text';
+            input.className = 'form-control form-control-sm condition-value';
+            input.placeholder = 'Value...';
+            input.style.width = '150px';
+            input.value = currentValue || '';
+            return input;
+        }
+    }
+
+    /**
+     * Check if a condition is complete (all required fields filled)
+     */
+    function isConditionComplete(condition) {
+        return condition.field && condition.operator && condition.value;
+    }
+
+    /**
+     * Check if a condition is partially filled (some fields but not all)
+     */
+    function isConditionPartial(condition) {
+        const hasField = !!condition.field;
+        const hasOperator = !!condition.operator;
+        const hasValue = !!condition.value;
+        const filledCount = [hasField, hasOperator, hasValue].filter(Boolean).length;
+        return filledCount > 0 && filledCount < 3;
+    }
+
+    // =====================
+    // Render Functions
+    // =====================
+
+    /**
+     * Render the entire query builder from state
+     */
+    function render() {
+        queryGroupsContainer.innerHTML = '';
+
+        state.groups.forEach((group, groupIndex) => {
+            const groupElement = renderGroup(group, groupIndex);
+            queryGroupsContainer.appendChild(groupElement);
+        });
+
+        updateConditionsJson();
+    }
+
+    /**
+     * Render a single group
+     */
+    function renderGroup(group, groupIndex) {
+        const groupDiv = document.createElement('div');
+        groupDiv.className = 'query-group card mb-3';
+        groupDiv.dataset.groupId = group.id;
+
+        // Group logic selector (between groups) - only show for 2nd+ groups
+        if (groupIndex > 0) {
+            const logicDiv = document.createElement('div');
+            logicDiv.className = 'mb-2';
+
+            const logicSelect = document.createElement('select');
+            logicSelect.className = 'form-select form-select-sm group-logic';
+            logicSelect.style.width = '100px';
+
+            ['AND', 'OR'].forEach(logic => {
+                const option = document.createElement('option');
+                option.value = logic;
+                option.textContent = logic;
+                if (logic === group.logic) {
+                    option.selected = true;
+                }
+                logicSelect.appendChild(option);
+            });
+
+            logicSelect.addEventListener('change', function() {
+                group.logic = this.value;
+                updateConditionsJson();
+            });
+
+            logicDiv.appendChild(logicSelect);
+            groupDiv.appendChild(logicDiv);
+        }
+
+        // Group header
+        const header = document.createElement('div');
+        header.className = 'card-header bg-light d-flex justify-content-between align-items-center py-2';
+
+        const title = document.createElement('span');
+        title.className = 'fw-semibold';
+        title.textContent = `Group ${groupIndex + 1}`;
+
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'btn btn-sm btn-outline-danger btn-delete-group';
+        deleteBtn.title = 'Delete group';
+        deleteBtn.innerHTML = '<i class="bi bi-trash"></i>';
+        deleteBtn.disabled = state.groups.length === 1;
+        deleteBtn.addEventListener('click', function() {
+            deleteGroup(group.id);
+        });
+
+        header.appendChild(title);
+        header.appendChild(deleteBtn);
+        groupDiv.appendChild(header);
+
+        // Group body with conditions
+        const body = document.createElement('div');
+        body.className = 'card-body';
+
+        const conditionsDiv = document.createElement('div');
+        conditionsDiv.className = 'group-conditions';
+
+        group.conditions.forEach((condition, condIndex) => {
+            const conditionRow = renderCondition(group, condition, condIndex);
+            conditionsDiv.appendChild(conditionRow);
+        });
+
+        body.appendChild(conditionsDiv);
+
+        // Add condition button
+        const addCondBtn = document.createElement('button');
+        addCondBtn.type = 'button';
+        addCondBtn.className = 'btn btn-sm btn-outline-primary btn-add-condition mt-2';
+        addCondBtn.innerHTML = '<i class="bi bi-plus-lg me-1"></i>Add Condition';
+        addCondBtn.addEventListener('click', function() {
+            addCondition(group.id);
+        });
+
+        body.appendChild(addCondBtn);
+        groupDiv.appendChild(body);
+
+        return groupDiv;
+    }
+
+    /**
+     * Render a single condition row
+     */
+    function renderCondition(group, condition, condIndex) {
+        const row = document.createElement('div');
+        row.className = 'condition-row mb-2';
+        row.dataset.conditionIndex = condIndex;
+
+        // Condition logic (AND/OR) - only for 2nd+ conditions
+        if (condIndex > 0) {
+            const logicDiv = document.createElement('div');
+            logicDiv.className = 'mb-1';
+
+            const logicSelect = document.createElement('select');
+            logicSelect.className = 'form-select form-select-sm condition-logic';
+            logicSelect.style.width = '80px';
+
+            ['AND', 'OR'].forEach(logic => {
+                const option = document.createElement('option');
+                option.value = logic;
+                option.textContent = logic;
+                if (logic === condition.logic) {
+                    option.selected = true;
+                }
+                logicSelect.appendChild(option);
+            });
+
+            logicSelect.addEventListener('change', function() {
+                condition.logic = this.value;
+                updateConditionsJson();
+            });
+
+            logicDiv.appendChild(logicSelect);
+            row.appendChild(logicDiv);
+        }
+
+        // Main condition row
+        const mainRow = document.createElement('div');
+        mainRow.className = 'd-flex align-items-center gap-2';
+
+        // Add visual indicator for incomplete conditions
+        if (isConditionPartial(condition)) {
+            mainRow.classList.add('border', 'border-warning', 'rounded', 'p-1');
+        }
+
+        // NOT checkbox
+        const negateDiv = document.createElement('div');
+        negateDiv.className = 'form-check';
+
+        const negateInput = document.createElement('input');
+        negateInput.type = 'checkbox';
+        negateInput.className = 'form-check-input condition-negate';
+        negateInput.id = `negate-${group.id}-${condIndex}`;
+        negateInput.checked = condition.negate;
+        negateInput.addEventListener('change', function() {
+            condition.negate = this.checked;
+            updateConditionsJson();
+        });
+
+        const negateLabel = document.createElement('label');
+        negateLabel.className = 'form-check-label small';
+        negateLabel.htmlFor = negateInput.id;
+        negateLabel.textContent = 'NOT';
+
+        negateDiv.appendChild(negateInput);
+        negateDiv.appendChild(negateLabel);
+        mainRow.appendChild(negateDiv);
+
+        // Field select
+        const fieldSelect = createSelect(
+            'condition-field',
+            FIELDS.map(f => ({ value: f.value, label: f.label })),
+            condition.field,
+            '-- Field --'
+        );
+        fieldSelect.style.width = '150px';
+        fieldSelect.addEventListener('change', function() {
+            condition.field = this.value;
+            condition.operator = '';  // Reset operator when field changes
+            condition.value = '';     // Reset value when field changes
+            render();  // Re-render to update operator options and value input
+        });
+        mainRow.appendChild(fieldSelect);
+
+        // Operator select
+        const fieldConfig = getFieldConfig(condition.field);
+        const fieldType = fieldConfig ? fieldConfig.type : 'keyword';
+        const operators = getOperatorsForType(fieldType);
+
+        const operatorSelect = createSelect(
+            'condition-operator',
+            operators,
+            condition.operator,
+            '-- Operator --'
+        );
+        operatorSelect.style.width = '140px';
+        operatorSelect.addEventListener('change', function() {
+            condition.operator = this.value;
+            updateConditionsJson();
+        });
+        mainRow.appendChild(operatorSelect);
+
+        // Value input
+        const valueInput = createValueInput(condition.field, condition.value);
+        valueInput.addEventListener('change', function() {
+            condition.value = this.value;
+            updateConditionsJson();
+        });
+        valueInput.addEventListener('input', function() {
+            condition.value = this.value;
+            updateConditionsJson();
+        });
+        mainRow.appendChild(valueInput);
+
+        // Delete condition button
+        const deleteBtn = document.createElement('button');
+        deleteBtn.type = 'button';
+        deleteBtn.className = 'btn btn-sm btn-outline-danger btn-delete-condition';
+        deleteBtn.title = 'Delete condition';
+        deleteBtn.innerHTML = '<i class="bi bi-x-lg"></i>';
+        deleteBtn.disabled = group.conditions.length === 1;
+        deleteBtn.addEventListener('click', function() {
+            deleteCondition(group.id, condIndex);
+        });
+        mainRow.appendChild(deleteBtn);
+
+        row.appendChild(mainRow);
+        return row;
+    }
+
+    // =====================
+    // State Update Functions
+    // =====================
+
+    /**
+     * Update the hidden JSON input with current conditions
+     */
+    function updateConditionsJson() {
+        const conditions = [];
+
+        state.groups.forEach((group, groupIndex) => {
+            group.conditions.forEach((cond, condIndex) => {
+                // Skip empty conditions
+                if (!cond.field || !cond.operator) {
+                    return;
+                }
+
+                const conditionObj = {
+                    field: cond.field,
+                    operator: cond.operator,
+                    value: cond.value,
+                    group: group.id
+                };
+
+                // Add negate if true
+                if (cond.negate) {
+                    conditionObj.negate = true;
+                }
+
+                // Add logic (for conditions after the first in each group, and for groups after the first)
+                if (condIndex > 0) {
+                    conditionObj.logic = cond.logic;
+                } else if (groupIndex > 0) {
+                    conditionObj.logic = group.logic;
+                }
+
+                conditions.push(conditionObj);
+            });
+        });
+
+        conditionsJsonInput.value = JSON.stringify(conditions);
+        updatePreview();
+    }
+
+    /**
+     * Update the query preview display
+     */
+    function updatePreview() {
+        const preview = generatePreview();
+
+        if (preview.hasIncomplete) {
+            queryPreviewDiv.innerHTML = `
+                <span class="text-warning">
+                    <i class="bi bi-exclamation-triangle me-1"></i>
+                    Incomplete conditions (highlighted in yellow) will be ignored.
+                </span>
+                ${preview.text ? '<br><span class="text-dark">' + preview.text + '</span>' : ''}
+            `;
+        } else if (preview.text) {
+            queryPreviewDiv.innerHTML = `<span class="text-dark">${preview.text}</span>`;
+        } else {
+            queryPreviewDiv.innerHTML = '<span class="text-muted">Your query will appear here...</span>';
+        }
+    }
+
+    /**
+     * Generate human-readable preview of the query
+     */
+    function generatePreview() {
+        let hasIncomplete = false;
+        const groupPreviews = [];
+
+        state.groups.forEach((group, groupIndex) => {
+            const conditionPreviews = [];
+
+            group.conditions.forEach((cond, condIndex) => {
+                // Check for incomplete conditions
+                if (isConditionPartial(cond)) {
+                    hasIncomplete = true;
+                }
+
+                // Skip incomplete conditions for preview text
+                if (!isConditionComplete(cond)) {
+                    return;
+                }
+
+                // Build condition preview
+                let condPreview = '';
+                if (cond.negate) {
+                    condPreview += 'NOT ';
+                }
+                condPreview += `${getFieldLabel(cond.field)} ${getOperatorLabel(cond.field, cond.operator)} '${cond.value}'`;
+
+                // Add intra-group logic for 2nd+ conditions
+                if (condIndex > 0 && conditionPreviews.length > 0) {
+                    condPreview = `${cond.logic} ${condPreview}`;
+                }
+
+                conditionPreviews.push(condPreview);
+            });
+
+            if (conditionPreviews.length === 0) {
+                return;
+            }
+
+            // Wrap in parentheses if multiple conditions in group
+            let groupPreview = conditionPreviews.length > 1
+                ? `(${conditionPreviews.join(' ')})`
+                : conditionPreviews[0];
+
+            // Add inter-group logic for 2nd+ groups
+            if (groupIndex > 0 && groupPreviews.length > 0) {
+                groupPreview = `${group.logic} ${groupPreview}`;
+            }
+
+            groupPreviews.push(groupPreview);
+        });
+
+        // Add date range to preview
+        const dateFrom = document.getElementById('dateFrom').value;
+        const dateTo = document.getElementById('dateTo').value;
+
+        let datePreview = '';
+        if (dateFrom && dateTo) {
+            datePreview = `Date: ${dateFrom} to ${dateTo}`;
+        } else if (dateFrom) {
+            datePreview = `Date: from ${dateFrom}`;
+        } else if (dateTo) {
+            datePreview = `Date: until ${dateTo}`;
+        }
+
+        let fullPreview = groupPreviews.join(' ');
+        if (datePreview) {
+            fullPreview = fullPreview ? `${fullPreview} AND ${datePreview}` : datePreview;
+        }
+
+        return {
+            text: fullPreview,
+            hasIncomplete: hasIncomplete
+        };
+    }
+
+    // =====================
+    // Action Functions
+    // =====================
+
+    /**
+     * Add a new condition to a group
+     */
+    function addCondition(groupId) {
+        const group = state.groups.find(g => g.id === groupId);
+        if (!group) return;
+
+        group.conditions.push({
+            field: '',
+            operator: '',
+            value: '',
+            negate: false,
+            logic: 'AND'  // Default logic for new conditions
+        });
+
+        render();
+    }
+
+    /**
+     * Delete a condition from a group
+     */
+    function deleteCondition(groupId, condIndex) {
+        const group = state.groups.find(g => g.id === groupId);
+        if (!group) return;
+
+        // Don't delete if it's the only condition
+        if (group.conditions.length <= 1) return;
+
+        group.conditions.splice(condIndex, 1);
+        render();
+    }
+
+    /**
+     * Delete a group
+     */
+    function deleteGroup(groupId) {
+        // Don't delete if it's the only group
+        if (state.groups.length <= 1) return;
+
+        const groupIndex = state.groups.findIndex(g => g.id === groupId);
+        if (groupIndex === -1) return;
+
+        state.groups.splice(groupIndex, 1);
+        render();
+    }
+
+    /**
+     * Add a new group
+     */
+    function addGroup() {
+        const newGroup = {
+            id: state.nextGroupId++,
+            logic: 'AND',  // Default logic connecting to previous group
+            conditions: [
+                {
+                    field: '',
+                    operator: '',
+                    value: '',
+                    negate: false,
+                    logic: 'AND'
+                }
+            ]
+        };
+
+        state.groups.push(newGroup);
+        render();
+    }
+
+    // =====================
+    // State Initialization
+    // =====================
+
+    /**
+     * Initialize state from conditions JSON (for restoring after form submit)
+     */
+    function initializeStateFromJson() {
+        const jsonValue = conditionsJsonInput.value.trim();
+
+        if (!jsonValue || jsonValue === '[]') {
+            // Initialize with default empty state
+            state.groups = [
+                {
+                    id: 1,
+                    logic: 'AND',
+                    conditions: [
+                        {
+                            field: '',
+                            operator: '',
+                            value: '',
+                            negate: false,
+                            logic: 'AND'
+                        }
+                    ]
+                }
+            ];
+            state.nextGroupId = 2;
+            return;
+        }
+
+        try {
+            const conditions = JSON.parse(jsonValue);
+            if (!Array.isArray(conditions) || conditions.length === 0) {
+                throw new Error('Invalid conditions');
+            }
+
+            // Group conditions by group ID
+            const groupedConditions = {};
+            let maxGroupId = 0;
+
+            conditions.forEach(cond => {
+                const groupId = cond.group || 1;
+                if (!groupedConditions[groupId]) {
+                    groupedConditions[groupId] = {
+                        id: groupId,
+                        logic: 'AND',
+                        conditions: []
+                    };
+                }
+
+                // First condition of a group after the first carries the inter-group logic
+                if (groupedConditions[groupId].conditions.length === 0 && cond.logic) {
+                    groupedConditions[groupId].logic = cond.logic;
+                }
+
+                groupedConditions[groupId].conditions.push({
+                    field: cond.field || '',
+                    operator: cond.operator || '',
+                    value: cond.value || '',
+                    negate: cond.negate || false,
+                    logic: cond.logic || 'AND'
+                });
+
+                maxGroupId = Math.max(maxGroupId, groupId);
+            });
+
+            // Convert to array and sort by group ID
+            state.groups = Object.values(groupedConditions).sort((a, b) => a.id - b.id);
+            state.nextGroupId = maxGroupId + 1;
+
+        } catch (e) {
+            console.error('Failed to parse conditions JSON:', e);
+            // Fall back to default state
+            state.groups = [
+                {
+                    id: 1,
+                    logic: 'AND',
+                    conditions: [
+                        {
+                            field: '',
+                            operator: '',
+                            value: '',
+                            negate: false,
+                            logic: 'AND'
+                        }
+                    ]
+                }
+            ];
+            state.nextGroupId = 2;
+        }
+    }
+
+    // =====================
+    // Pagination Handling
+    // =====================
+
+    /**
+     * Handle pagination button clicks
+     */
+    function setupPagination() {
+        document.querySelectorAll('.btn-page').forEach(btn => {
+            btn.addEventListener('click', function() {
+                const page = this.dataset.page;
+                pageInput.value = page;
+                form.submit();
+            });
+        });
+    }
+
+    // =====================
+    // Event Listeners
+    // =====================
+
+    document.getElementById('btnAddGroup').addEventListener('click', addGroup);
+
+    // Update preview when date fields change
+    document.getElementById('dateFrom').addEventListener('change', updatePreview);
+    document.getElementById('dateTo').addEventListener('change', updatePreview);
+
+    // Reset page to 1 when form is submitted via Search button
+    form.addEventListener('submit', function() {
+        // Only reset page if not triggered by pagination
+        if (pageInput.value === '{{ page }}') {
+            pageInput.value = '1';
+        }
+    });
+
+    // =====================
+    // Initialize
+    // =====================
+    initializeStateFromJson();
+    render();
+    setupPagination();
+
+    // Expose state for debugging (remove in production)
+    window.queryBuilderState = state;
+});
+</script>
+{% endblock %}

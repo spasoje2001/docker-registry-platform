@@ -218,20 +218,7 @@
 
             <div class="mb-3">
                 <label class="form-label fw-bold">
-                    <span class="badge bg-primary">2</span> Tag your image
-                </label>
-                <div class="input-group">
-                    <span class="input-group-text bg-dark text-white font-monospace">$</span>
-                    <input type="text" class="form-control font-monospace bg-light" id="tagCmd" readonly>
-                    <button class="btn btn-outline-secondary" type="button" onclick="copyCommand('tagCmd')">
-                        <i class="bi bi-clipboard"></i> Copy
-                    </button>
-                </div>
-            </div>
-
-            <div class="mb-3">
-                <label class="form-label fw-bold">
-                    <span class="badge bg-primary">3</span> Push to registry
+                    <span class="badge bg-primary">2</span> Push to registry
                 </label>
                 <div class="input-group">
                     <span class="input-group-text bg-dark text-white font-monospace">$</span>
@@ -253,14 +240,9 @@
                 <button type="button" class="btn btn-outline-secondary" id="backBtn">
                     <i class="bi bi-arrow-left"></i> Back
                 </button>
-                <a href="{% if from_profile %}
-                            {% url 'accounts:profile' %}
-                        {% else %}
-                            {% url 'explore:search' %}
-                        {% endif %}"
-                class="btn btn-success">
+                <button type="submit" form="repositoryForm" class="btn btn-success" id="doneBtn">
                     <i class="bi bi-check-lg"></i> Done
-                </a>
+                </button>
             </div>
         </div>
     </div>
@@ -352,6 +334,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     const registryUrl = 'localhost:5000';
     
+    function displayErrors(errors) {
+        document.querySelectorAll('.is-invalid').forEach(el => {
+            el.classList.remove('is-invalid');
+        });
+        document.querySelectorAll('.invalid-feedback').forEach(el => {
+            el.remove();
+        });
+        
+        for (const [field, messages] of Object.entries(errors)) {
+            const input = document.querySelector(`[name="${field}"]`);
+            if (input) {
+                input.classList.add('is-invalid');
+                
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'invalid-feedback d-block';
+                errorDiv.textContent = Array.isArray(messages) ? messages[0] : messages;
+                
+                input.parentElement.after(errorDiv);
+            }
+        }
+    }
+    
     nextBtn.addEventListener('click', function() {
         const initialTag = document.getElementById('imageTag').value.trim();
 
@@ -379,53 +383,62 @@ document.addEventListener('DOMContentLoaded', function() {
         if (existingError && existingError.classList.contains('invalid-feedback')) {
             existingError.remove();
         }
-        if (form.checkValidity()) {
-            const repoName = document.querySelector('[name="name"]').value;
-            const tag = initialTag || 'latest';
-            
-            const fullImageName = `${registryUrl}/${repoName}:${tag}`;
-            
-            document.getElementById('buildCmd').value = `docker build -t ${repoName}:${tag} .`;
-            document.getElementById('tagCmd').value = `docker tag ${repoName}:${tag} ${fullImageName}`;
-            document.getElementById('pushCmd').value = `docker push ${fullImageName}`;
-            
-            const formData = new FormData(form);
-            const fromProfile = form.elements['from_profile']?.value === '1';
-            fetch(form.action || window.location.href, {
-                method: 'POST',
-                body: formData,
-                headers: {
-                    'X-Requested-With': 'XMLHttpRequest',
-                    'from_profile': fromProfile
-                }
-            })
-            .then(response => {
-                if (response.ok) {
-                    step1.style.display = 'none';
-                    step2.style.display = 'block';
-                    
-                    step1Indicator.classList.remove('active');
-                    step1Indicator.classList.add('completed');
-                    step2Indicator.classList.add('active');
-                    
-                    step1Label.classList.remove('text-primary', 'fw-semibold');
-                    step1Label.classList.add('text-muted');
-                    step2Label.classList.add('text-primary', 'fw-semibold');
-                    
-                    line1.classList.add('active');
-                    
-                    window.scrollTo({ top: 0, behavior: 'smooth' });
-                } else {
-                    alert('Error creating repository. Please check your input.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to create repository');
-            });
-        } else {
+        
+        if (!form.checkValidity()) {
             form.reportValidity();
+            return;
         }
+        
+        const formData = new FormData(form);
+        
+        nextBtn.disabled = true;
+        nextBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Validating...';
+        
+        fetch("{% url 'repositories:validate' %}", {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-Requested-With': 'XMLHttpRequest',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.valid) {
+                const repoName = document.querySelector('[name="name"]').value;
+                const tag = initialTag || 'latest';
+                
+                const fullImageName = `${registryUrl}/${repoName}:${tag}`;
+                
+                document.getElementById('buildCmd').value = `docker build -t ${fullImageName} .`;
+                document.getElementById('pushCmd').value = `docker push ${fullImageName}`;
+                
+                step1.style.display = 'none';
+                step2.style.display = 'block';
+                
+                step1Indicator.classList.remove('active');
+                step1Indicator.classList.add('completed');
+                step2Indicator.classList.add('active');
+                
+                step1Label.classList.remove('text-primary', 'fw-semibold');
+                step1Label.classList.add('text-muted');
+                step2Label.classList.add('text-primary', 'fw-semibold');
+                
+                line1.classList.add('active');
+                
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            } else {
+                displayErrors(data.errors);
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('Failed to validate repository data');
+        })
+        .finally(() => {
+            nextBtn.disabled = false;
+            nextBtn.innerHTML = 'Next <i class="bi bi-arrow-right"></i>';
+        });
     });
     
     backBtn.addEventListener('click', function() {

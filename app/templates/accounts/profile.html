@@ -75,10 +75,7 @@
 
     <!-- starred repos -->
     <div class="tab-pane fade" id="starred">
-        <div class="col-12 text-center text-muted py-5">
-            <i class="bi bi-inbox fs-1 d-block mb-3"></i>
-            <p class="mb-0">No starred repositories.</p>
-        </div>
+        {% include "repositories/_repository_list_template.html" with repositories=starred_repositories %}
     </div>
 
 

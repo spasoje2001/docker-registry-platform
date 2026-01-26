@@ -48,6 +48,10 @@
 
                                     <span>{{ repo.full_name }}</span>
 
+                                    <span style="margin-right: 0.3rem;">
+                                        <i class="bi bi-star text-warning" style="margin-left: 0.25rem;"></i> {{ repo.star_count }}
+                                    </span>
+
                                     {% if repo.owner.is_verified_publisher %}
                                         <i class="bi bi-patch-check-fill text-primary"
                                         title="Verified Publisher"
