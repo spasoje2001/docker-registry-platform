@@ -209,7 +209,11 @@ def repository_detail_official(request, name):
     """Show official repository details"""
     repo = get_object_or_404(Repository, name=name, is_official=True)
     tags = repo.tags.all()
-
+    is_starred = False
+    if request.user.is_authenticated:
+        is_starred = Star.objects.filter(user=request.user, repository=repo).exists()
+    else:
+        is_starred = False
     from_profile = request.GET.get("from_profile")
     from_explore = request.GET.get("from_explore")
     explore_queries = (
@@ -247,6 +251,7 @@ def repository_detail_official(request, name):
             "explore_queries": explore_queries,
             "tag_q": tag_q,
             "tag_sort": tag_sort,
+            "is_starred": is_starred,
         },
     )
 
