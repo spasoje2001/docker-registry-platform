@@ -52,7 +52,7 @@
                     <a href="{% url 'accounts:profile' %}#repos" class="btn btn-outline-secondary text-decoration-none">
                         <i class="bi bi-arrow-left"></i> Go Back
                     </a>
-                {% elif request.GET.from_explore %}
+                {% else %}
                     <a href="{% url 'explore:search' %}{% if request.GET.q or request.GET.filter or request.GET.sort %}?q={{ request.GET.q }}&filter={{ request.GET.filter }}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.page %}&page={{ request.GET.page }}{% endif %}" class="btn btn-outline-secondary text-decoration-none">
                         <i class="bi bi-arrow-left"></i> Go Back
                     </a>
@@ -223,26 +223,25 @@
                                 value="{{ tag_q }}"
                                 class="form-control"
                                 placeholder="Search tags...">
-                            <button class="btn btn-outline-secondary" type="submit">
-                                <i class="bi bi-search"></i>
+                            <button class="btn btn-primary" type="submit">
+                                <i class="bi bi-search me-1"></i>Search
                             </button>
                         </div>
                     </div>
 
-                    <div class="col-md-1"></div>
                     {% if tag_q or tag_sort != "newest" %}
-                        <div class="col-md-1">
+                        <div class="col-md-2">
                             <label class="form-label small mb-1">&nbsp;</label>
                             {% if repository.is_official %}
                                 <a href="{% url 'repositories:detail_official' repository.name %}{% if request.GET.from_explore %}?from_explore=1{% if request.GET.q or request.GET.filter or request.GET.sort %}&q={{ request.GET.q }}&filter={{ request.GET.filter }}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.page %}&page={{ request.GET.page }}{% endif %}{% endif %}" class="btn btn-outline-secondary">
                             {% else %}
                                 <a href="{% url 'repositories:detail' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% if request.GET.q or request.GET.filter or request.GET.sort %}&q={{ request.GET.q }}&filter={{ request.GET.filter }}&sort={{ request.GET.sort }}{% endif %}{% if request.GET.page %}&page={{ request.GET.page }}{% endif %}{% endif %}" class="btn btn-outline-secondary">
                             {% endif %}
-                                Clean
+                                <i class="bi bi-x-circle me-1"></i>Clear
                             </a>
                         </div>
                     {% else %}
-                        <div class="col-md-1"></div>
+                        <div class="col-md-2"></div>
                     {% endif %}
                 </form>
                 {% else %}

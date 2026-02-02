@@ -15,7 +15,7 @@ Run with: python manage.py test analytics.tests.test_integration
 
 import json
 from datetime import datetime, timedelta
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch
 
 from django.test import TestCase, Client
 from django.urls import reverse
@@ -112,7 +112,11 @@ class AnalyticsAdvancedSearchViewTests(TestCase):
         # Mock response for when ES is available
         self.mock_search_result = {
             'results': [
-                {'timestamp': '2025-01-15T10:00:00', 'level': 'ERROR', 'message': 'Test error'}
+                {
+                    'timestamp': '2025-01-15T10:00:00',
+                    'level': 'ERROR',
+                    'message': 'Test error'
+                }
             ],
             'total': 1,
             'page': 1,
@@ -179,7 +183,12 @@ class AnalyticsAdvancedSearchViewTests(TestCase):
 
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
-            {'field': 'message', 'operator': 'contains', 'value': 'test', 'logic': 'AND'}
+            {
+                'field': 'message',
+                'operator': 'contains',
+                'value': 'test',
+                'logic': 'AND'
+            }
         ]
 
         response = self.client.post(self.url, {
@@ -220,13 +229,26 @@ class AnalyticsAdvancedSearchViewTests(TestCase):
         """POST with grouped conditions should work correctly."""
         mock_search.return_value = {
             **self.mock_search_result,
-            'query_preview': "(Log Level equals 'ERROR' OR Log Level equals 'WARNING') AND Message contains 'test'"
+            'query_preview': "(Log Level equals 'ERROR' " +
+            "OR Log Level equals 'WARNING') AND Message contains 'test'"
         }
 
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
-            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR', 'group': 1},
-            {'field': 'message', 'operator': 'contains', 'value': 'test', 'logic': 'AND', 'group': 2}
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'WARNING',
+                'logic': 'OR',
+                'group': 1
+            },
+            {
+                'field': 'message',
+                'operator': 'contains',
+                'value': 'test',
+                'logic': 'AND',
+                'group': 2
+            }
         ]
 
         response = self.client.post(self.url, {
@@ -462,8 +484,20 @@ class AnalyticsQueryBuilderIntegrationTests(TestCase):
         """Complex grouped query should execute without error."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
-            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR', 'group': 1},
-            {'field': 'message', 'operator': 'contains', 'value': 'request', 'logic': 'AND', 'group': 2}
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'WARNING',
+                'logic': 'OR',
+                'group': 1
+            },
+            {
+                'field': 'message',
+                'operator': 'contains',
+                'value': 'request',
+                'logic': 'AND',
+                'group': 2
+            }
         ]
 
         query = self.builder.build_query(conditions)
@@ -514,11 +548,17 @@ class AnalyticsQueryBuilderIntegrationTests(TestCase):
 
     def test_or_not_combination_returns_all(self):
         """A OR NOT A should return all logs."""
-        all_logs = self.service.search_logs_advanced([])
+        self.service.search_logs_advanced([])
 
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'INFO'},
-            {'field': 'level', 'operator': 'equals', 'value': 'INFO', 'negate': True, 'logic': 'OR'}
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'INFO',
+                'negate': True,
+                'logic': 'OR'
+            }
         ]
 
         result = self.service.search_logs_advanced(conditions)
@@ -528,7 +568,13 @@ class AnalyticsQueryBuilderIntegrationTests(TestCase):
         """A AND NOT A should return no logs."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'INFO'},
-            {'field': 'level', 'operator': 'equals', 'value': 'INFO', 'negate': True, 'logic': 'AND'}
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'INFO',
+                'negate': True,
+                'logic': 'AND'
+            }
         ]
 
         result = self.service.search_logs_advanced(conditions)
@@ -750,7 +796,13 @@ class AnalyticsPreviewGenerationTests(TestCase):
 
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
-            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR', 'group': 1}
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'WARNING',
+                'logic': 'OR',
+                'group': 1
+            }
         ]
 
         response = self.client.post(self.url, {

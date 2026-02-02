@@ -13,7 +13,6 @@ from django.conf import settings
 from .forms import ChangePasswordForm, RequestEmailChangeForm, CreateAdminForm
 from .forms import ConfirmEmailChangeForm, EditProfileForm
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
-from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from .utils import (
     generate_verification_code,
@@ -24,7 +23,7 @@ from .utils import (
 
 from repositories.forms import RepositoryForm
 from repositories.services.repositories_service import RepositoryService
-from repositories.models import Repository, Star
+from repositories.models import Repository
 
 
 User = get_user_model()
@@ -79,24 +78,24 @@ def admin_panel(request):
 def update_badges(request, user_id):
     """Update user badges (Verified Publisher, Sponsored OSS)."""
     if not request.user.is_admin:
-        return JsonResponse({"ok": False, "error": "forbidden"}, status=403)
+        messages.error(request, "Permission denied.")
+        return redirect(request.META.get("HTTP_REFERER", "/"))
 
     target = get_object_or_404(User, id=user_id)
 
     badge = request.POST.get("badge")
-    value = request.POST.get("value")
 
     if badge not in ["is_verified_publisher", "is_sponsored_oss"]:
-        return JsonResponse({"ok": False, "error": "bad badge"}, status=400)
+        messages.error(request, "Invalid badge.")
+        return redirect("accounts:admin_panel")
 
-    bool_value = str(value).lower() in ["1", "true", "on", "yes"]
+    bool_value = "value" in request.POST
 
     setattr(target, badge, bool_value)
     target.save(update_fields=[badge])
 
-    return JsonResponse(
-        {"ok": True, "user_id": target.id, "badge": badge, "value": bool_value}
-    )
+    messages.success(request, "Badge successfully updated.")
+    return redirect("accounts:admin_panel")
 
 
 @login_required
@@ -334,7 +333,7 @@ def change_password(request):
             messages.success(request, "Password successfully changed.")
             return redirect("accounts:profile")
         else:
-            messages.success(request, "Current password wasn't correct.")
+            messages.error(request, "Current password wasn't correct.")
     else:
         form = ChangePasswordForm(user=request.user)
 
@@ -377,12 +376,15 @@ def email_change(request):
                 return redirect("accounts:email_change_confirm")
             except Exception:
                 messages.error(
-                    request, "Failed to send verification email. Please try again."
+                    request, "Failed to sent verification email. Please try again."
                 )
                 # Clean up Redis if email fails
                 delete_email_change_request(request.user.id)
         else:
-            messages.success(request, "Current email wasn't correct.")
+            if "password" in form.errors:
+                messages.error(request, "Current current password wan't correct.")
+            else:
+                messages.error(request, "Current email wasn't correct.")
     else:
         form = RequestEmailChangeForm(request.user)
 

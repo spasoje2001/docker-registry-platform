@@ -202,7 +202,7 @@ class RepositoryModelTests(TestCase):
             kwargs={"owner_username": "user1", "name": "private-repo"},
         )
         response = self.client.get(url)
-        self.assertEqual(response.status_code, 404)
+        self.assertEqual(response.status_code, 302)
 
     def test_user_cannot_create_official_repo(self):
         """Test: regular user cannot create official repository"""

@@ -67,7 +67,7 @@ class RequestLoggingMiddlewareTests(TestCase):
         middleware = RequestLoggingMiddleware(get_response)
 
         with patch("config.middleware.logger") as mock_logger:
-            response = middleware(request)
+            middleware(request)
 
             mock_logger.info.assert_called_once()
             call_args = mock_logger.info.call_args
@@ -95,7 +95,7 @@ class RequestLoggingMiddlewareTests(TestCase):
         middleware = RequestLoggingMiddleware(get_response)
 
         with patch("config.middleware.logger") as mock_logger:
-            response = middleware(request)
+            middleware(request)
 
             call_args = mock_logger.info.call_args
             extra = call_args[1]["extra"]
@@ -116,7 +116,7 @@ class RequestLoggingMiddlewareTests(TestCase):
         middleware = RequestLoggingMiddleware(get_response)
 
         with patch("config.middleware.logger") as mock_logger:
-            response = middleware(request)
+            middleware(request)
 
             call_args = mock_logger.info.call_args
             extra = call_args[1]["extra"]
@@ -139,7 +139,7 @@ class RequestLoggingMiddlewareTests(TestCase):
         middleware = RequestLoggingMiddleware(get_response)
 
         with patch("config.middleware.logger") as mock_logger:
-            response = middleware(request)
+            middleware(request)
 
             call_args = mock_logger.info.call_args
             extra = call_args[1]["extra"]
@@ -161,7 +161,7 @@ class RequestLoggingMiddlewareTests(TestCase):
         middleware = RequestLoggingMiddleware(get_response)
 
         with patch("config.middleware.logger") as mock_logger:
-            response = middleware(request)
+            middleware(request)
 
             call_args = mock_logger.info.call_args
             extra = call_args[1]["extra"]
@@ -182,7 +182,7 @@ class RequestLoggingMiddlewareTests(TestCase):
         middleware = RequestLoggingMiddleware(get_response)
 
         with patch("config.middleware.logger") as mock_logger:
-            response = middleware(request)
+            middleware(request)
 
             # Logger should NOT be called for static paths
             mock_logger.info.assert_not_called()
@@ -202,7 +202,7 @@ class RequestLoggingMiddlewareTests(TestCase):
         middleware = RequestLoggingMiddleware(get_response)
 
         with patch("config.middleware.logger") as mock_logger:
-            response = middleware(request)
+            middleware(request)
             mock_logger.info.assert_not_called()
 
     def test_middleware_logs_non_static_paths(self):
@@ -220,7 +220,7 @@ class RequestLoggingMiddlewareTests(TestCase):
         middleware = RequestLoggingMiddleware(get_response)
 
         with patch("config.middleware.logger") as mock_logger:
-            response = middleware(request)
+            middleware(request)
 
             # Logger SHOULD be called for normal paths
             mock_logger.info.assert_called_once()

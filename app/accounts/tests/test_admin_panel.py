@@ -53,7 +53,7 @@ class AdminPanelTest(TestCase):
             data={"badge": "is_verified_publisher", "value": "true"},
         )
 
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
 
         self.user1.refresh_from_db()
         self.assertTrue(self.user1.is_verified_publisher)
@@ -67,7 +67,7 @@ class AdminPanelTest(TestCase):
             url,
             data={"badge": "is_sponsored_oss", "value": "true"},
         )
-        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.status_code, 302)
 
         self.user2.refresh_from_db()
         self.assertTrue(self.user2.is_sponsored_oss)

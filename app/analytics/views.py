@@ -34,7 +34,7 @@ def format_timestamp(ts_string):
             return dt_local.strftime('%Y-%m-%d %H:%M:%S')
 
         return ts_string
-    except (ValueError, AttributeError) as e:
+    except (ValueError, AttributeError):
         return ts_string
 
 
@@ -121,6 +121,7 @@ def log_search(request):
     }
 
     return render(request, 'analytics/search.html', context)
+
 
 @login_required
 def advanced_search(request):

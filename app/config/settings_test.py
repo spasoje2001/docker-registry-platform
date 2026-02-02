@@ -1,3 +1,4 @@
+# flake8: noqa
 from .settings import *
 
 for handler_name in ["app_file", "access_file", "error_file"]:

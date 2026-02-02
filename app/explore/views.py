@@ -21,7 +21,7 @@ def search(request):
             messages.error(request, "Error fetching repositories from registry.")
             repositories = service.get_initial_repositories(False, None)
 
-    repositories = repositories.select_related("owner").order_by("-created_at")
+    repositories = repositories.select_related("owner").order_by("-updated_at")
 
     return render(
         request,
@@ -36,7 +36,7 @@ def search(request):
 def explore_repositories(request):
     query = request.GET.get("q", "").strip()
     active_filter = request.GET.get("filter", "")
-    sort = request.GET.get("sort", "relevance")
+    sort = request.GET.get("sort", "updated")
     explore_queries = request.GET.urlencode()
 
     service = RepositoryService()
@@ -53,7 +53,7 @@ def explore_repositories(request):
             messages.error(request, "Error fetching repositories from registry.")
             repositories = service.get_initial_repositories(False, None)
 
-    repositories = repositories.select_related("owner").order_by("-created_at")
+    repositories = repositories.select_related("owner").order_by("-updated_at")
 
     if active_filter == "official":
         repositories = repositories.filter(is_official=True)
@@ -61,40 +61,32 @@ def explore_repositories(request):
     elif active_filter == "verified":
         repositories = repositories.filter(owner__is_verified_publisher=True)
 
+    elif active_filter == "sponsored":
+        repositories = repositories.filter(owner__is_sponsored_oss=True)
+
     if query:
         repositories = (
             repositories.filter(
                 Q(name__icontains=query) | Q(description__icontains=query)
             )
-            .annotate(
+            .order_by("-updated_at")
+        )
+
+    if sort == "name_asc":
+        repositories = repositories.order_by("name")
+
+    elif sort == "name_desc":
+        repositories = repositories.order_by("-name")
+
+    elif sort == "relevance":
+        repositories = repositories.annotate(
                 relevance=Case(
                     When(name__icontains=query, then=0),
                     When(description__icontains=query, then=1),
                     default=2,
                     output_field=IntegerField(),
                 )
-            )
-            .order_by("relevance", "name")
-        )
-
-    if sort == "updated":
-        repositories = repositories.order_by("-updated_at")
-
-    elif sort == "name_asc":
-        repositories = repositories.order_by("name")
-
-    elif sort == "name_desc":
-        repositories = repositories.order_by("-name")
-
-    else:
-        if query:
-            repositories = repositories.order_by("relevance", "name")
-        else:
-            repositories = repositories.order_by("-created_at")
-
-    paginator = Paginator(repositories, 20)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
+            ).order_by("relevance", "name")
 
     all_filters = 0
 
@@ -104,8 +96,12 @@ def explore_repositories(request):
     if active_filter:
         all_filters += 1
 
-    if sort != "relevance":
+    if sort != "updated":
         all_filters += 1
+
+    paginator = Paginator(repositories, 20)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
 
     return render(
         request,

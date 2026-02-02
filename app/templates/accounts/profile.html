@@ -20,12 +20,32 @@
         <div class="col">
             <h2 class="mb-1">{{ user.username }}</h2>
             {% if user.is_verified_publisher %}
-                <p class="text-muted mb-2">Verified Publisher</p>
-
-            {% elif user.is_sponsored_oss %}
-                <p class="text-muted mb-2">Sponsored OSS</p>
-
-            {% else %}
+                <i class="bi bi-patch-check-fill text-primary"
+                title="Verified Publisher"
+                data-bs-toggle="tooltip"
+                style="font-size: medium;"></i>
+                <span style="font-size: medium;">Verified Publisher</span>
+            {% endif %}
+            {% if user.is_sponsored_oss %}
+                <i class="bi bi-cash-coin text-success"
+                title="Sponsored OSS"
+                data-bs-toggle="tooltip"
+                style="font-size: medium;"></i>
+                <span style="font-size: medium;">Sponsored OSS</span>
+            {% endif %}
+            {% if user.is_super_admin %}
+                <i class="bi bi-shield-lock-fill text-success"
+                title="Super Admin"
+                data-bs-toggle="tooltip"
+                style="font-size: medium;"></i>
+                <span style="font-size: medium;">Super Admin</span>
+            {% elif user.is_admin %}
+                <i class="bi bi-shield-lock text-success"
+                title="Admin"
+                data-bs-toggle="tooltip"
+                style="font-size: medium;"></i>
+                <span style="font-size: medium;">Admin</span>
+            {% elif not user.is_verified_publisher and not user.is_sponsored_oss %}
                 <p class="text-muted mb-2">Community User</p>
             {% endif %}
 
