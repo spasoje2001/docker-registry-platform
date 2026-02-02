@@ -319,8 +319,10 @@ class QueryBuilder:
         # Single clause in group
         if len(clauses) == 1:
             if clauses[0]['negate']:
+                # Wrap in bool with must_not + match_all
                 return {
                     'bool': {
+                        'must': [{'match_all': {}}],
                         'must_not': [clauses[0]['clause']]
                     }
                 }
@@ -339,47 +341,58 @@ class QueryBuilder:
         Returns:
             ES bool query dict
         """
-        # Separate negated and non-negated clauses
-        must_not_clauses = []
-        regular_clauses = []
-
+        # Process clauses - wrap negated ones in bool must_not
+        processed_clauses = []
         for item in clauses:
             if item['negate']:
-                must_not_clauses.append(item)
+                # Wrap negated clause in bool with must_not + match_all
+                wrapped_clause = {
+                    'bool': {
+                        'must': [{'match_all': {}}],
+                        'must_not': [item['clause']]
+                    }
+                }
+                processed_clauses.append({
+                    'clause': wrapped_clause,
+                    'logic': item['logic']
+                })
             else:
-                regular_clauses.append(item)
+                processed_clauses.append({
+                    'clause': item['clause'],
+                    'logic': item['logic']
+                })
 
-        # Determine logic for regular clauses
-        logics = [item['logic'].upper() for item in regular_clauses[1:]] if len(regular_clauses) > 1 else []
+        # Determine logic - check if all use OR
+        logics = [item['logic'].upper() for item in processed_clauses[1:]] if len(processed_clauses) > 1 else []
 
         all_and = all(logic == 'AND' for logic in logics) if logics else True
         all_or = all(logic == 'OR' for logic in logics) if logics else False
 
-        # Build the bool query
-        bool_query = {}
+        # Extract just the clause objects
+        clause_list = [item['clause'] for item in processed_clauses]
 
-        # Handle regular (non-negated) clauses
-        if regular_clauses:
-            regular_clause_list = [item['clause'] for item in regular_clauses]
-
-            if len(regular_clause_list) == 1:
-                # Single regular clause goes to must
-                bool_query['must'] = regular_clause_list
-            elif all_or:
-                bool_query['should'] = regular_clause_list
-                bool_query['minimum_should_match'] = 1
-            else:
-                # AND or mixed -> must
-                bool_query['must'] = regular_clause_list
-
-        # Handle negated clauses (always go to must_not)
-        if must_not_clauses:
-            bool_query['must_not'] = [item['clause'] for item in must_not_clauses]
-
-        if bool_query:
-            return {'bool': bool_query}
-
-        return {'match_all': {}}
+        if all_or:
+            # All OR - use should with minimum_should_match
+            return {
+                'bool': {
+                    'should': clause_list,
+                    'minimum_should_match': 1
+                }
+            }
+        elif all_and:
+            # All AND - use must
+            return {
+                'bool': {
+                    'must': clause_list
+                }
+            }
+        else:
+            # Mixed logic - treat as AND (proper handling would require expression tree)
+            return {
+                'bool': {
+                    'must': clause_list
+                }
+            }
 
     def _build_clause(self, condition: Dict) -> Optional[Dict]:
         """
@@ -410,6 +423,8 @@ class QueryBuilder:
             return self._build_keyword_clause(field, operator, value)
         elif field_type == 'text':
             return self._build_text_clause(field, operator, value)
+        elif field_type == 'integer':
+            return self._build_integer_clause(field, operator, value)
 
         return None
 
@@ -435,8 +450,10 @@ class QueryBuilder:
                 }
             }
         elif operator == 'not_contains':
+            # Field must exist AND not contain the value
             return {
                 'bool': {
+                    'must': [{'exists': {'field': field}}],
                     'must_not': [{
                         'match': {
                             field: {
@@ -445,6 +462,44 @@ class QueryBuilder:
                             }
                         }
                     }]
+                }
+            }
+
+        return None
+
+    def _build_integer_clause(self, field: str, operator: str, value: str) -> Optional[Dict]:
+        """
+        Build ES clause for integer field.
+
+        Args:
+            field: Field name
+            operator: 'equals', 'not_equals', 'gt', 'gte', 'lt', 'lte'
+            value: Value to compare
+
+        Returns:
+            ES term or range query dict
+        """
+        # Convert value to integer
+        try:
+            int_value = int(value)
+        except (ValueError, TypeError):
+            return None
+
+        if operator == 'equals':
+            return {'term': {field: int_value}}
+        elif operator == 'not_equals':
+            # Field must exist AND not equal the value
+            return {
+                'bool': {
+                    'must': [{'exists': {'field': field}}],
+                    'must_not': [{'term': {field: int_value}}]
+                }
+            }
+        elif operator in ('gt', 'gte', 'lt', 'lte'):
+            # Range queries implicitly require field to exist
+            return {
+                'range': {
+                    field: {operator: int_value}
                 }
             }
 
@@ -465,8 +520,10 @@ class QueryBuilder:
         if operator == 'equals':
             return {'term': {field: value}}
         elif operator == 'not_equals':
+            # Field must exist AND not equal the value
             return {
                 'bool': {
+                    'must': [{'exists': {'field': field}}],
                     'must_not': [{'term': {field: value}}]
                 }
             }

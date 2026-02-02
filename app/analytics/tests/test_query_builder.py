@@ -7,8 +7,8 @@ from django.contrib.auth import get_user_model
 from django.test import TestCase, override_settings, Client
 from django.urls import reverse
 
-from .services import LogIndexer, LogSearchService
-from .services.query_builder import QueryBuilder
+from ..services import LogIndexer, LogSearchService
+from ..services.query_builder import QueryBuilder
 
 User = get_user_model()
 
@@ -517,15 +517,19 @@ class QueryBuilderNegationTests(TestCase):
         self.builder = QueryBuilder()
 
     def test_single_negated_condition(self):
-        """Single negated condition should use must_not."""
+        """Single negated condition should use must_not with match_all."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'INFO', 'negate': True}
         ]
         result = self.builder.build_query(conditions)
 
         self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
         self.assertIn('must_not', result['bool'])
-        self.assertEqual(len(result['bool']['must_not']), 1)
+        # must should contain match_all
+        self.assertEqual(result['bool']['must'], [{'match_all': {}}])
+        # must_not should contain the term query
+        self.assertEqual(result['bool']['must_not'], [{'term': {'level': 'INFO'}}])
 
     def test_regular_and_negated_condition(self):
         """Mix of regular and negated conditions."""
@@ -537,9 +541,14 @@ class QueryBuilderNegationTests(TestCase):
 
         self.assertIn('bool', result)
         self.assertIn('must', result['bool'])
-        self.assertIn('must_not', result['bool'])
-        self.assertEqual(len(result['bool']['must']), 1)
-        self.assertEqual(len(result['bool']['must_not']), 1)
+        # Should have 2 clauses in must - one regular, one wrapped negation
+        self.assertEqual(len(result['bool']['must']), 2)
+        # First clause is the regular term query
+        self.assertEqual(result['bool']['must'][0], {'term': {'level': 'ERROR'}})
+        # Second clause is wrapped bool with must_not
+        second_clause = result['bool']['must'][1]
+        self.assertIn('bool', second_clause)
+        self.assertIn('must_not', second_clause['bool'])
 
     def test_multiple_negated_conditions(self):
         """Multiple negated conditions."""
@@ -550,8 +559,13 @@ class QueryBuilderNegationTests(TestCase):
         result = self.builder.build_query(conditions)
 
         self.assertIn('bool', result)
-        self.assertIn('must_not', result['bool'])
-        self.assertEqual(len(result['bool']['must_not']), 2)
+        self.assertIn('must', result['bool'])
+        # Both negated clauses should be wrapped and in must
+        self.assertEqual(len(result['bool']['must']), 2)
+        # Each clause should be a wrapped bool with must_not
+        for clause in result['bool']['must']:
+            self.assertIn('bool', clause)
+            self.assertIn('must_not', clause['bool'])
 
 class QueryBuilderGroupTests(TestCase):
     """Tests for grouped conditions (parentheses support)."""
@@ -882,3 +896,96 @@ class QueryBuilderNegativeOperatorTests(TestCase):
         preview = self.builder.generate_preview(conditions)
         self.assertIn('does not contain', preview)
         self.assertIn('debug', preview)
+
+class QueryBuilderExistsFilterTests(TestCase):
+    """Tests for exists filter in negative operators."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_not_equals_includes_exists(self):
+        """not_equals should include exists filter."""
+        conditions = [
+            {'field': 'level', 'operator': 'not_equals', 'value': 'INFO'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        # Check that exists is in must
+        must_clauses = result['bool']['must']
+        has_exists = any('exists' in clause for clause in must_clauses)
+        self.assertTrue(has_exists, "not_equals should include exists filter")
+
+    def test_not_contains_includes_exists(self):
+        """not_contains should include exists filter."""
+        conditions = [
+            {'field': 'message', 'operator': 'not_contains', 'value': 'error'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        must_clauses = result['bool']['must']
+        has_exists = any('exists' in clause for clause in must_clauses)
+        self.assertTrue(has_exists, "not_contains should include exists filter")
+
+    def test_integer_not_equals_includes_exists(self):
+        """Integer not_equals should include exists filter."""
+        conditions = [
+            {'field': 'status_code', 'operator': 'not_equals', 'value': '200'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        must_clauses = result['bool']['must']
+        has_exists = any('exists' in clause for clause in must_clauses)
+        self.assertTrue(has_exists, "integer not_equals should include exists filter")
+
+
+class QueryBuilderNegateOrTests(TestCase):
+    """Tests for OR with negate flag combinations."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_or_with_negate_flag(self):
+        """A OR NOT A using negate flag should produce valid OR query."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'negate': True, 'logic': 'OR'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        # Should be a bool with should containing both clauses
+        self.assertIn('bool', result)
+        self.assertIn('should', result['bool'])
+        self.assertEqual(len(result['bool']['should']), 2)
+        self.assertEqual(result['bool']['minimum_should_match'], 1)
+
+    def test_single_negated_condition(self):
+        """Single condition with negate=True should work correctly."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'INFO', 'negate': True}
+        ]
+        result = self.builder.build_query(conditions)
+
+        # Should produce bool with must (match_all) and must_not
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        self.assertIn('must_not', result['bool'])
+
+    def test_and_with_negate_flag(self):
+        """A AND NOT B using negate flag should work correctly."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {'field': 'user', 'operator': 'equals', 'value': 'admin', 'negate': True, 'logic': 'AND'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        self.assertEqual(len(result['bool']['must']), 2)
