@@ -123,7 +123,6 @@ class LogSearchService:
                 'has_prev': has_prev
             }
 
-
         except NotFoundError:
             # No indices exist yet
             logger.warning("No Elasticsearch indices found")

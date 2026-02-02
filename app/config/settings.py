@@ -108,7 +108,7 @@ AUTH_USER_MODEL = "accounts.User"
 
 AUTH_PASSWORD_VALIDATORS = [
     {
-        "NAME": "django.contrib.auth.password_validation"
+        "NAME": "django.contrib.auth.password_validation" +
         ".UserAttributeSimilarityValidator",
     },
     {
@@ -177,7 +177,8 @@ LOGGING = {
         },
         "json_access": {
             "()": "pythonjsonlogger.jsonlogger.JsonFormatter",
-            "format": "%(asctime)s %(levelname)s %(name)s %(message)s %(user)s %(path)s %(method)s",
+            "format": "%(asctime)s %(levelname)s %(name)s %(message)s" +
+            " %(user)s %(path)s %(method)s",
             "rename_fields": {
                 "asctime": "timestamp",
                 "levelname": "level",

@@ -13,7 +13,8 @@ class ExploreRepositoriesTests(TestCase):
 
     def setUp(self):
         self.registry_patcher = patch(
-            "repositories.services.repositories_service.RegistryClient.get_all_repositories"
+            "repositories.services.repositories_service." +
+            "RegistryClient.get_all_repositories"
         )
         self.mock_registry = self.registry_patcher.start()
         self.mock_registry.return_value = [
@@ -173,6 +174,7 @@ class ExploreRepositoriesTests(TestCase):
         self.assertEqual(repos[0], "webserver")
         self.assertEqual(repos[1], "redis")
         self.assertEqual(repos[2], "nginx")
+
 
 def test_sort_by_relevance(self):
     response = self.client.get(self.url, {"q": "nginx", "sort": "relevance"})

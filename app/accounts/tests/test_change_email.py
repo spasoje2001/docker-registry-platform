@@ -21,7 +21,8 @@ class EmailChangeTest(TestCase):
             return_value=True,
         )
         self.list_patcher = patch(
-            "repositories.services.repositories_service.RepositoryService.list_repositories",
+            "repositories.services.repositories_service." +
+            "RepositoryService.list_repositories",
             return_value=Repository.objects.none(),
         )
 

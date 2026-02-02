@@ -66,19 +66,35 @@ class QueryBuilder:
     }
 
     # Operators available per field type
-    # Format: 'field_type': [{'value': 'op_id', 'label': 'Human readable', 'es_type': 'term|match|range'}]
+    # Format: 'field_type': [{
+    #                           'value': 'op_id',
+    #                           'label': 'Human readable',
+    #                           'es_type': 'term|match|range'
+    #                       }]
     OPERATORS = {
         'keyword': [
             {'value': 'equals', 'label': 'equals', 'es_type': 'term'},
-            {'value': 'not_equals', 'label': 'does not equal', 'es_type': 'term_negated'},
+            {
+                'value': 'not_equals',
+                'label': 'does not equal',
+                'es_type': 'term_negated'
+            },
         ],
         'text': [
             {'value': 'contains', 'label': 'contains', 'es_type': 'match'},
-            {'value': 'not_contains', 'label': 'does not contain', 'es_type': 'match_negated'},
+            {
+                'value': 'not_contains',
+                'label': 'does not contain',
+                'es_type': 'match_negated'
+            },
         ],
         'integer': [
             {'value': 'equals', 'label': 'equals', 'es_type': 'term'},
-            {'value': 'not_equals', 'label': 'does not equal', 'es_type': 'term_negated'},
+            {
+                'value': 'not_equals',
+                'label': 'does not equal',
+                'es_type': 'term_negated'
+            },
             {'value': 'gt', 'label': 'greater than', 'es_type': 'range'},
             {'value': 'gte', 'label': 'greater than or equal', 'es_type': 'range'},
             {'value': 'lt', 'label': 'less than', 'es_type': 'range'},
@@ -116,8 +132,20 @@ class QueryBuilder:
         Example:
             conditions = [
                 {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
-                {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR', 'group': 1},
-                {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND', 'group': 2}
+                {
+                    'field': 'level',
+                    'operator': 'equals',
+                    'value': 'WARNING',
+                    'logic': 'OR',
+                    'group': 1
+                },
+                {
+                    'field': 'message',
+                    'operator': 'contains',
+                    'value': 'failed',
+                    'logic': 'AND',
+                    'group': 2
+                }
             ]
             # Produces: (level=ERROR OR level=WARNING) AND message contains "failed"
             query = builder.build_query(conditions)
@@ -258,7 +286,10 @@ class QueryBuilder:
                     should_query = {
                         'bool': {
                             'should': bool_query.pop('should'),
-                            'minimum_should_match': bool_query.pop('minimum_should_match', 1)
+                            'minimum_should_match': bool_query.pop(
+                                'minimum_should_match',
+                                1
+                            )
                         }
                     }
                     bool_query['must'] = [should_query, date_clause]
@@ -363,7 +394,9 @@ class QueryBuilder:
                 })
 
         # Determine logic - check if all use OR
-        logics = [item['logic'].upper() for item in processed_clauses[1:]] if len(processed_clauses) > 1 else []
+        logics = [
+            item['logic'].upper() for item in processed_clauses[1:]
+        ] if len(processed_clauses) > 1 else []
 
         all_and = all(logic == 'AND' for logic in logics) if logics else True
         all_or = all(logic == 'OR' for logic in logics) if logics else False
@@ -428,7 +461,12 @@ class QueryBuilder:
 
         return None
 
-    def _build_text_clause(self, field: str, operator: str, value: str) -> Optional[Dict]:
+    def _build_text_clause(
+        self,
+        field: str,
+        operator: str,
+        value: str
+    ) -> Optional[Dict]:
         """
         Build ES clause for text field.
 
@@ -467,7 +505,12 @@ class QueryBuilder:
 
         return None
 
-    def _build_integer_clause(self, field: str, operator: str, value: str) -> Optional[Dict]:
+    def _build_integer_clause(
+        self,
+        field: str,
+        operator: str,
+        value: str
+    ) -> Optional[Dict]:
         """
         Build ES clause for integer field.
 
@@ -505,7 +548,12 @@ class QueryBuilder:
 
         return None
 
-    def _build_keyword_clause(self, field: str, operator: str, value: str) -> Optional[Dict]:
+    def _build_keyword_clause(
+        self,
+        field: str,
+        operator: str,
+        value: str
+    ) -> Optional[Dict]:
         """
         Build ES clause for keyword field.
 

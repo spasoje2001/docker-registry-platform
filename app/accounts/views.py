@@ -13,7 +13,6 @@ from django.conf import settings
 from .forms import ChangePasswordForm, RequestEmailChangeForm, CreateAdminForm
 from .forms import ConfirmEmailChangeForm, EditProfileForm
 from .forms import CustomUserCreationForm, CustomAuthenticationForm
-from django.http import JsonResponse
 from django.views.decorators.http import require_POST
 from .utils import (
     generate_verification_code,
@@ -24,7 +23,7 @@ from .utils import (
 
 from repositories.forms import RepositoryForm
 from repositories.services.repositories_service import RepositoryService
-from repositories.models import Repository, Star
+from repositories.models import Repository
 
 
 User = get_user_model()

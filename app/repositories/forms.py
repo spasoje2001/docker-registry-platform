@@ -74,7 +74,9 @@ class RepositoryForm(forms.ModelForm):
             raise forms.ValidationError({"initial_tag": "Initial tag is required."})
 
         if is_official and visibility == Repository.VisibilityChoices.PRIVATE:
-            raise forms.ValidationError({"is_official": "Official repositories must be public."})
+            raise forms.ValidationError(
+                {"is_official": "Official repositories must be public."}
+            )
 
         if self.instance.pk:
             if is_official:
