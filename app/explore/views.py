@@ -21,7 +21,7 @@ def search(request):
             messages.error(request, "Error fetching repositories from registry.")
             repositories = service.get_initial_repositories(False, None)
 
-    repositories = repositories.select_related("owner").order_by("-created_at")
+    repositories = repositories.select_related("owner").order_by("-updated_at")
 
     return render(
         request,
@@ -53,7 +53,7 @@ def explore_repositories(request):
             messages.error(request, "Error fetching repositories from registry.")
             repositories = service.get_initial_repositories(False, None)
 
-    repositories = repositories.select_related("owner").order_by("-created_at")
+    repositories = repositories.select_related("owner").order_by("-updated_at")
 
     if active_filter == "official":
         repositories = repositories.filter(is_official=True)
@@ -69,7 +69,7 @@ def explore_repositories(request):
             repositories.filter(
                 Q(name__icontains=query) | Q(description__icontains=query)
             )
-            .order_by("-updated_at").order_by("-updated_at")
+            .order_by("-updated_at")
         )
 
     if sort == "name_asc":
@@ -96,12 +96,12 @@ def explore_repositories(request):
     if active_filter:
         all_filters += 1
 
-    paginator = Paginator(repositories, 2)
-    page_number = request.GET.get("page")
-    page_obj = paginator.get_page(page_number)
-
     if sort != "updated":
         all_filters += 1
+
+    paginator = Paginator(repositories, 20)
+    page_number = request.GET.get("page")
+    page_obj = paginator.get_page(page_number)
 
     return render(
         request,

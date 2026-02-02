@@ -8,7 +8,6 @@ from .services.repositories_service import RepositoryService
 from django.urls import reverse
 import logging
 
-
 logger = logging.getLogger(__name__)
 
 
@@ -152,7 +151,6 @@ def repository_detail(request, owner_username, name):
     # Privacy check
     if repo.visibility == Repository.VisibilityChoices.PRIVATE:
         if not request.user.is_authenticated or request.user != repo.owner:
-            messages.error(request, "You cannot visit this URL address.")
             logger.error(
                 f"Attempt to view private repository detail '{repo.full_name}' by 'unauthorized' user failed"
             )
@@ -257,7 +255,7 @@ def repository_detail_official(request, name):
             "explore_queries": explore_queries,
             "tag_q": tag_q,
             "tag_sort": tag_sort,
-            "is_starred": is_starred,
+            "is_starred": is_starred
         },
     )
 
@@ -719,6 +717,9 @@ def tag_detail(request, owner_username, name, tag_name):
         .replace("from_profile=1", "")
         .lstrip("&")
     )
+
+    if tag.repository.visibility == Repository.VisibilityChoices.PRIVATE:
+        return redirect("accounts:login")
 
     if request.method == "POST":
         form = TagForm(request.POST, instance=tag)

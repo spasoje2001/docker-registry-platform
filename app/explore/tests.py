@@ -173,3 +173,8 @@ class ExploreRepositoriesTests(TestCase):
         self.assertEqual(repos[0], "webserver")
         self.assertEqual(repos[1], "redis")
         self.assertEqual(repos[2], "nginx")
+
+def test_sort_by_relevance(self):
+    response = self.client.get(self.url, {"q": "nginx", "sort": "relevance"})
+    repos = [r.name for r in response.context["page_obj"].object_list]
+    self.assertEqual(repos[0], "nginx")

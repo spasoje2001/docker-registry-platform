@@ -88,7 +88,7 @@ def update_badges(request, user_id):
 
     if badge not in ["is_verified_publisher", "is_sponsored_oss"]:
         messages.error(request, "Invalid badge.")
-        return redirect(request.META.get("HTTP_REFERER", "/"))
+        return redirect("accounts:admin_panel")
 
     bool_value = "value" in request.POST
 
@@ -96,7 +96,7 @@ def update_badges(request, user_id):
     target.save(update_fields=[badge])
 
     messages.success(request, "Badge successfully updated.")
-    return redirect(request.META.get("HTTP_REFERER", "/"))
+    return redirect("accounts:admin_panel")
 
 
 @login_required
