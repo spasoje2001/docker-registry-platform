@@ -34,6 +34,10 @@
                             {% if active_filter == "verified" %}selected{% endif %}>
                         Verified publisher only
                     </option>
+                    <option value="sponsored"
+                            {% if active_filter == "sponsored" %}selected{% endif %}>
+                        Sponsored OSS only
+                    </option>
                 </select>
             </div>
             <div class="col-md-1"></div>
@@ -67,15 +71,15 @@
                         class="form-control"
                         placeholder="Search repositories..."
                     >
-                    <button class="btn btn-outline-secondary" type="submit">
-                        <i class="bi bi-search"></i>
+                    <button class="btn btn-primary" type="submit">
+                        <i class="bi bi-search me-1"></i>Search
                     </button>
                 </div>
             </div>
             <div class="col-md-1 d-flex align-items-end">
                 {% if query or sort != "relevance" or active_filter %}
-                    <a href="{% url 'explore:explore' %}" class="btn btn-outline-secondary">
-                        Clear
+                    <a href="{% url 'explore:search' %}" class="btn btn-outline-secondary">
+                        <i class="bi bi-x-circle me-1"></i>Clear
                     </a>
                 {% endif %}
             </div>
@@ -127,7 +131,7 @@
     {% if all_filters %}
         <p class="text-center text-muted small">
             Showing {{ page_obj.start_index }}–{{ page_obj.end_index }}
-            of {{ page_obj.paginator.count }} results
+            of {{ page_obj.paginator.count }} result{{ page_obj.paginator.count|pluralize }}
         </p>
         <p class="text-muted text-center small">
             {{ all_filters }} active filter{{ all_filters|pluralize }}

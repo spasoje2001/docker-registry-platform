@@ -152,7 +152,13 @@ def repository_detail(request, owner_username, name):
     # Privacy check
     if repo.visibility == Repository.VisibilityChoices.PRIVATE:
         if not request.user.is_authenticated or request.user != repo.owner:
-            raise Http404("Repository not found")
+            messages.error(request, "You cannot visit this URL address.")
+            logger.error(
+                f"Attempt to view private repository detail '{repo.full_name}' by 'unauthorized' user failed"
+            )
+            return redirect(
+                "accounts:login"
+            )
 
     from_profile = request.GET.get("from_profile")
     from_explore = request.GET.get("from_explore")
