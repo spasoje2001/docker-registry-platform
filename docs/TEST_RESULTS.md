@@ -1,6 +1,6 @@
 # End-to-end test results
 
-**Date:** 03.02.2026.
+**Date:** 03-05.02.2026.
 
 **Version:** v0.3.0
 
@@ -13,8 +13,8 @@
 | Login with valid credentials | ✅ PASS |  |
 | Login with invalid credentials | ✅ PASS | Error messages are displayed. |
 | Logout | ✅ PASS |  |
-| Super admin first login → forced password change | ✅ PASS | After success first login admin must change password. |
-| Profile view and edit | ✅ PASS | Registred user can change first and last name. |
+| Super admin first login → forced password change | ✅ PASS | After successful first login admin must change password. |
+| Profile view and edit | ✅ PASS | Registered user can change first and last name. |
 | Change password | ✅ PASS |  |
 | Change email | ✅ PASS | Mailhog is for verification. |
 
@@ -25,7 +25,7 @@
 | Create private repository | ✅ PASS |  |
 | Edit repository | ✅ PASS | Edit visibility and description is possible. |
 | Delete repository | ✅ PASS |  |
-| View own repositories | ✅ PASS | User sees public and private repositories (Admin does not sees official repositories) in profile page. |
+| View own repositories | ✅ PASS | User sees public and private repositories (Admin does not see official repositories) in profile page. |
 | View repository detail | ✅ PASS |  |
 
 ## 3. Tag flow
@@ -47,7 +47,7 @@
 | Filter by Verified Publisher | ✅ PASS |  |
 | Filter by Sponsored OSS | ✅ PASS |  |
 | Sort repositories | ✅ PASS | Sort by last update, relevance, name A-Z and Z-A. |
-| View repository from search results | ✅ PASS | Combine filter, search and sort query are results for displaying. |
+| View repository from search results | ✅ PASS | Combined filter, search and sort queries successfully display results. |
 
 ## 5. Admin flow
 
@@ -55,16 +55,16 @@
 | :--- | :--- | :--- |
 | Super admin creates admin | ✅ PASS |  |
 | Admin searches users | ✅ PASS | Super admin also can search admins. |
-| Admin assigns badges |✅ PASS  | Availabe bagdes are Verified Publisher and Sponsored OSS. |
+| Admin assigns badges |✅ PASS  | Available badges are Verified Publisher and Sponsored OSS. |
 | Admin creates official repository | ✅ PASS | Admin also can edit/delete every official repository and add/delete tags for them. |
 
 ## 6. Registry flow
 
 | Scenario | Status | Notes |
 | :--- | :--- | :--- |
-| Push image to registry | ⚠️ NOT IMPLEMENTED YET |  |
-| Pull image from registry | ⚠️ NOT IMPLEMENTED YET |  |
-| Tags synced to Django | ⚠️ NOT IMPLEMENTED YET |  |
+| Push image to registry | ✅ PASS | Verified with *docker push* to localhost:5000. |
+| Pull image from registry | ✅ PASS | Verified with *docker pull* |
+| Tags synced to Django | ✅ PASS | *sync_tags* successfully detects registry changes and updates metadata. |
 
 ## 7. Analytics flow
 
@@ -80,7 +80,7 @@
 
 | Scenario | Status | Notes |
 | :--- | :--- | :--- |
-| Star a repository | ✅ PASS | User can star official and no-owned repository (Admin cannot star official repository). |
+| Star a repository | ✅ PASS | User can star official and non-owned repository (Admin cannot star official repository). |
 | Unstar a repository | ✅ PASS |  |
 | View starred repositories | ✅ PASS |  |
 
