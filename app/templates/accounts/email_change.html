@@ -2,63 +2,71 @@
 {% block title %}Change Email{% endblock %}
 
 {% block content %}
-<div class="container mt-5" style="max-width: 500px;">
-    <h3 class="mb-4">Change Email Address</h3>
+<div class="row justify-content-center mt-5">
+    <div class="col-md-5">
+        <div class="card shadow-sm">
+            <div class="card-body p-4">
+                <h3 class="mb-4 text-center">
+                    <i class="bi bi-envelope-at"></i> Change Email Address
+                </h3>
 
-    <form method="post" novalidate>
-        {% csrf_token %}
+                <form method="post" novalidate>
+                    {% csrf_token %}
 
-        <div class="mb-3">
-            <label class="form-label">Current email</label>
-            {{ form.old_email }}
-        </div>
+                    <div class="mb-3">
+                        <label class="form-label">Current email</label>
+                        {{ form.old_email }}
+                    </div>
 
-        <div class="mb-3">
-            <label class="form-label">New email</label>
-            {{ form.new_email }}
-        </div>
+                    <div class="mb-3">
+                        <label class="form-label">New email</label>
+                        {{ form.new_email }}
+                    </div>
 
-        <div class="mb-3">
-            <label class="form-label">Password</label>
-            <div class="input-group">
-                {{ form.password }}
-                <button
-                    type="button"
-                    class="btn btn-outline-secondary"
-                    onclick="togglePassword(this)"
-                >
-                    <i class="bi bi-eye-slash"></i>
-                </button>
+                    <div class="mb-3">
+                        <label class="form-label">Password</label>
+                        <div class="input-group">
+                            {{ form.password }}
+                            <button
+                                type="button"
+                                class="btn btn-outline-secondary"
+                                onclick="togglePassword(this)"
+                            >
+                                <i class="bi bi-eye-slash"></i>
+                            </button>
+                        </div>
+                    </div>
+
+                    {% if form.non_field_errors %}
+                    <script>
+                        const errorBox = document.getElementById("input-error");
+                        errorBox.textContent = "{{ form.non_field_errors.0|escapejs }}";
+                        errorBox.classList.remove("d-none");
+                    </script>
+                    {% endif %}
+
+                    <div
+                        id="input-error"
+                        class="text-danger small mt-2 d-none"
+                    ></div>
+
+                    <div class="d-grid gap-2">
+                        <button
+                            type="submit"
+                            id="submitBtn"
+                            class="btn btn-primary w-75 mx-auto"
+                            disabled
+                        >
+                            <i class="bi bi-send me-1"></i>Send verification code
+                        </button>
+                        <a href="{% url 'accounts:edit_profile' %}" class="btn btn-outline-secondary w-75 mx-auto">
+                            <i class="bi bi-x-circle me-1"></i>Cancel
+                        </a>
+                    </div>
+                </form>
             </div>
         </div>
-
-        {% if form.non_field_errors %}
-        <script>
-            const errorBox = document.getElementById("input-error");
-            errorBox.textContent = "{{ form.non_field_errors.0|escapejs }}";
-            errorBox.classList.remove("d-none");
-        </script>
-        {% endif %}
-
-        <div
-            id="input-error"
-            class="text-danger small mt-2 d-none"
-        ></div>
-
-        <div class="d-grid gap-2">
-            <button
-                type="submit"
-                id="submitBtn"
-                class="btn btn-primary w-100"
-                disabled
-            >
-                Send verification code
-            </button>
-            <a href="{% url 'accounts:edit_profile' %}" class="btn btn-outline-secondary">
-                Cancel
-            </a>
-        </div>
-    </form>
+    </div>
 </div>
 
 <script>

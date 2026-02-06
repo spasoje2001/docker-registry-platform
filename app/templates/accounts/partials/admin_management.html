@@ -3,7 +3,6 @@
     <form method="get" class="flex-grow-1 me-3">
         <input type="hidden" name="section" value="admins">
         <div class="input-group">
-            <span class="input-group-text"><i class="bi bi-search"></i></span>
             <input
                 type="text"
                 class="form-control"
@@ -19,6 +18,13 @@
             </div>
         {% endif %}
     </form>
+    {% if q %}
+    <div class="col-md-1 d-flex align-items-end">
+        <a href="{% url 'accounts:admin_panel' %}?section=admins" class="btn btn-outline-secondary">
+            <i class="bi bi-x-circle me-1"></i>Clear
+        </a>
+    </div>
+    {% endif %}
     <a href="{% url 'accounts:create_admin' %}" class="btn btn-success">
         <i class="bi bi-plus-circle me-1"></i> Create Admin
     </a>

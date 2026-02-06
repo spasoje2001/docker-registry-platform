@@ -79,7 +79,7 @@ def update_badges(request, user_id):
     """Update user badges (Verified Publisher, Sponsored OSS)."""
     if not request.user.is_admin:
         messages.error(request, "Permission denied.")
-        return redirect(request.META.get("HTTP_REFERER", "/"))
+        return redirect("home")
 
     target = get_object_or_404(User, id=user_id)
 
@@ -134,7 +134,7 @@ def create_admin(request):
 
             return redirect("accounts:create_admin_success")
         else:
-            messages.error(request, "Please correct the errors below.")
+            messages.error(request, "Username and email need to be unique.")
     else:
         form = CreateAdminForm()
 

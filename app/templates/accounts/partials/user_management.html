@@ -1,24 +1,27 @@
 <!-- Search -->
 <form method="get" class="mb-4">
-    <input type="hidden" name="section" value="users">
-    <div class="input-group">
-        <span class="input-group-text"><i class="bi bi-search"></i></span>
-        <input
-            type="text"
-            class="form-control"
-            name="q"
-            value="{{ q }}"
-            placeholder="Search by username or email..."
-        >
-        <button class="btn btn-primary" type="submit"><i class="bi bi-search me-1"></i>Search</button>
-    {% if q %}
-    <div class="col-md-1"></div>
-    <div class="col-md-1 d-flex align-items-end">
-        <a href="{% url 'accounts:admin_panel' %}" class="btn btn-outline-secondary">
-            <i class="bi bi-x-circle me-1"></i>Clear
-        </a>
-    </div>
-    {% endif %}
+    <div class="input-group row">
+        <div class="col-md-10">
+            <input type="hidden" name="section" value="users">
+            <div class="input-group">
+                <input
+                    type="text"
+                    class="form-control"
+                    name="q"
+                    value="{{ q }}"
+                    placeholder="Search by username or email..."
+                >
+                <button class="btn btn-primary" type="submit"><i class="bi bi-search me-1"></i>Search</button>
+            </div>
+        </div>
+        <div class="col-md-2">
+            {% if q %}
+            <a href="{% url 'accounts:admin_panel' %}" class="btn btn-outline-secondary">
+                <i class="bi bi-x-circle me-1"></i>Clear
+            </a>
+            {% endif %}
+        </div>
+                
     </div>
     {% if q %}
         <div class="form-text">

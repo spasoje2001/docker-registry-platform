@@ -29,6 +29,7 @@ def search(request):
         {
             "repositories": repositories,
             "from_explore": True,
+            "sort": "updated",
         },
     )
 
