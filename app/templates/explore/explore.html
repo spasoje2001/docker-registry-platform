@@ -9,7 +9,7 @@
                 <i class="bi bi-search text-primary"></i> Explore repositories
             </h2>
             {% if user.is_authenticated %}
-                <a href="{% url 'repositories:create' %}" class="btn btn-primary">
+                <a href="{% url 'repositories:create' %}" class="btn btn-success">
                     <i class="bi bi-folder-plus"></i> New
                 </a>
             {% endif %}
@@ -17,7 +17,7 @@
     </div>
 
     <form method="get" action="{% url 'explore:explore' %}" class="mb-4">
-        <div class="input-group row g-3 mb-4">
+        <div class="input-group row">
             <div class="col-md-2">
                 <label class="form-label">Filter by</label>
                 <select
@@ -40,7 +40,6 @@
                     </option>
                 </select>
             </div>
-            <div class="col-md-1"></div>
             <div class="col-md-2">
                 <label class="form-label">Sort by</label>
                 <select name="sort" class="form-select" onchange="this.form.submit()">
@@ -58,9 +57,8 @@
                     </option>
                 </select>
             </div>
-            <div class="col-md-1"></div>
 
-            <div class="col-md-5">
+            <div class="col-md-6">
                 <label class="form-label">Search by name and description</label>
 
                 <div class="input-group">
@@ -76,8 +74,8 @@
                     </button>
                 </div>
             </div>
-            <div class="col-md-1 d-flex align-items-end">
-                {% if query or sort != "relevance" or active_filter %}
+            <div class="col-md-2 d-flex align-items-end">
+                {% if query or sort != "updated" or active_filter %}
                     <a href="{% url 'explore:search' %}" class="btn btn-outline-secondary">
                         <i class="bi bi-x-circle me-1"></i>Clear
                     </a>
