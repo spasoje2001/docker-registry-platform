@@ -11,7 +11,7 @@ from django.db import transaction
 from django.utils import timezone
 
 from ..models import Repository, Tag
-from repositories.clients.registry_client import RegistryClient
+from ..clients.registry_client import RegistryClient
 
 
 logger = logging.getLogger(__name__)
@@ -46,14 +46,12 @@ class SyncService:
 
     def __init__(self, registry_client: RegistryClient = None):
         """Initialize the tag sync service."""
-
         self.registry_client = registry_client or RegistryClient()
         self.stats = SyncStats()
 
     def sync_all_tags(self) -> SyncStats:
         """Synchronize tags for all repositories in the database."""
-
-        logger.info("Starting full tag synchronization")
+        logger.info("Tag sync started: synchronizing all repositories")
         repositories = Repository.objects.all()
 
         for repo in repositories:
@@ -61,24 +59,49 @@ class SyncService:
                 self.sync_repository_tags(repo)
             except Exception as e:
                 error_msg = f"Failed to sync repository {repo.name}: {str(e)}"
-                logger.error(error_msg)
+                logger.error(
+                    "Tag sync failed: repository %s - %s",
+                    repo.name,
+                    str(e)
+                )
                 self.stats.errors.append(error_msg)
                 self.stats.repos_skipped += 1
 
-        logger.info(str(self.stats))
+        # Log summary
+        if self.stats.errors:
+            logger.warning(
+                "Tag sync completed with errors: %d repos processed, %d skipped, "
+                "%d tags created, %d updated, %d deleted, %d errors",
+                self.stats.repos_processed,
+                self.stats.repos_skipped,
+                self.stats.tags_created,
+                self.stats.tags_updated,
+                self.stats.tags_deleted,
+                len(self.stats.errors)
+            )
+        else:
+            logger.info(
+                "Tag sync completed successfully: %d repos processed, "
+                "%d tags created, %d updated, %d deleted",
+                self.stats.repos_processed,
+                self.stats.tags_created,
+                self.stats.tags_updated,
+                self.stats.tags_deleted
+            )
+
         return self.stats
 
     def sync_repository_tags(self, repository: Repository) -> Tuple[int, int, int]:
         """Synchronize tags for a specific repository."""
-
-        logger.info(f"Syncing tags for repository: {repository.name}")
+        logger.info("Tag sync started: repository %s", repository.name)
 
         try:
             registry_tags = self._fetch_registry_tags(repository.name)
         except Exception as e:
             logger.error(
-                f"Failed to fetch tags from registry for {
-                    repository.name}: {e}"
+                "Tag sync failed: unable to fetch tags from registry for %s - %s",
+                repository.name,
+                str(e)
             )
             raise
 
@@ -93,15 +116,17 @@ class SyncService:
         self.stats.tags_deleted += deleted
 
         logger.info(
-            f"Repository {repository.name}: "
-            f"{created} created, {updated} updated, {deleted} deleted"
+            "Tag sync completed: repository %s - %d created, %d updated, %d deleted",
+            repository.name,
+            created,
+            updated,
+            deleted
         )
 
         return created, updated, deleted
 
     def _fetch_registry_tags(self, repo_name: str) -> Dict[str, Dict]:
         """Fetch tags and their digests from the registry."""
-
         tags_list = self.registry_client.get_tags_for_repository(repo_name)
         tags = {}
 
@@ -123,7 +148,10 @@ class SyncService:
                     }
                 except Exception as e:
                     logger.warning(
-                        f"Failed to get digest for {repo_name}:{tag_name}: {e}"
+                        "Tag sync warning: failed to get manifest for %s:%s - %s",
+                        repo_name,
+                        tag_name,
+                        str(e)
                     )
                     continue
 
@@ -133,7 +161,6 @@ class SyncService:
         self, repository: Repository, registry_tags: Dict[str, Dict]
     ) -> Tuple[int, int, int]:
         """Synchronize tags within a database transaction."""
-
         created_count = 0
         updated_count = 0
         deleted_count = 0
@@ -147,6 +174,7 @@ class SyncService:
         existing_tag_names = set(existing_tags.keys())
 
         if registry_tags:
+            # Create new tags
             new_tag_names = registry_tag_names - existing_tag_names
             for tag_name in new_tag_names:
                 tag_data = registry_tags[tag_name]
@@ -162,8 +190,13 @@ class SyncService:
                     last_synced=timezone.now(),
                 )
                 created_count += 1
-                logger.debug(f"Created tag: {repository.name}:{tag_name}")
+                logger.info(
+                    "Tag synced (created): %s:%s",
+                    repository.name,
+                    tag_name
+                )
 
+            # Update existing tags
             common_tag_names = registry_tag_names & existing_tag_names
             for tag_name in common_tag_names:
                 tag = existing_tags[tag_name]
@@ -187,24 +220,37 @@ class SyncService:
                         ]
                     )
                     updated_count += 1
-                    logger.debug(
-                        f"Updated tag: {repository.name}:{tag_name} "
-                        f"(digest changed)"
+                    logger.info(
+                        "Tag synced (updated): %s:%s - digest changed",
+                        repository.name,
+                        tag_name
                     )
                 else:
                     tag.last_synced = timezone.now()
                     tag.save(update_fields=["last_synced"])
 
+        # Delete tags not in registry
         deleted_tag_names = existing_tag_names - registry_tag_names
         for tag_name in deleted_tag_names:
             tag = existing_tags[tag_name]
             Tag.objects.filter(repository=repository, name=tag_name).delete()
             deleted_count += 1
-            logger.debug(f"Deleted tag: {repository.name}:{tag_name}")
+            logger.info(
+                "Tag synced (deleted): %s:%s - no longer in registry",
+                repository.name,
+                tag_name
+            )
 
         return created_count, updated_count, deleted_count
 
     def sync_repository_by_name(self, repo_name: str) -> Tuple[int, int, int]:
-        """Synchronize tags for a repository by name"""
-        repository = Repository.objects.get(name=repo_name)
-        return self.sync_repository_tags(repository)
+        """Synchronize tags for a repository by name."""
+        try:
+            repository = Repository.objects.get(name=repo_name)
+            return self.sync_repository_tags(repository)
+        except Repository.DoesNotExist:
+            logger.error(
+                "Tag sync failed: repository %s not found in database",
+                repo_name
+            )
+            raise

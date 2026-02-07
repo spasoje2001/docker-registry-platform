@@ -40,8 +40,9 @@ def repository_create(request):
                 form.add_error(
                     "is_official", "Only admins can create official repositories."
                 )
-                logger.error(
-                    f"Repository creation attempt by '{request.user.username}' failed"
+                logger.warning(
+                    "Unauthorized official repo creation attempt: %s tried to create official repository",
+                    request.user.username
                 )
 
                 if from_profile:
@@ -57,20 +58,28 @@ def repository_create(request):
                 request, f'Repository "{repo.full_name}" successfully created!'
             )
             logger.info(
-                f"Repository created: '{repo.full_name}'  by '{request.user.username}'"
+                "Repository created: %s (visibility: %s) by %s",
+                repo.full_name,
+                repo.visibility,
+                request.user.username
             )
 
             try:
                 Tag.objects.create(name=tag_name, repository=repo)
                 logger.info(
-                    f"Tag created: '{tag_name}' for repository " +
-                    f"'{repo.full_name}' by '{request.user.username}'"
+                    "Tag created: %s:%s by %s",
+                    repo.full_name,
+                    tag_name,
+                    request.user.username
                 )
             except Exception as e:
                 form.add_error(None, f"Error creating initial tag: {e}")
                 logger.error(
-                    f"Tag creation attempt for repository '{repo.full_name}' by " +
-                    f"'{request.user.username}' failed"
+                    "Tag creation failed: %s:%s by %s - %s",
+                    repo.full_name,
+                    tag_name,
+                    request.user.username,
+                    str(e)
                 )
 
                 return render(
@@ -286,9 +295,10 @@ def repository_update(request, owner_username, name):
     # Permission check
     if repo.owner != request.user:
         messages.error(request, "You cannot edit this repository.")
-        logger.error(
-            f"Repository edit attempt for '{repo.full_name}' by " +
-            f"'{request.user.username}' failed"
+        logger.warning(
+            "Unauthorized repository edit attempt: %s tried to edit %s",
+            request.user.username,
+            repo.full_name
         )
         return redirect(
             "repositories:detail",
@@ -309,12 +319,15 @@ def repository_update(request, owner_username, name):
 
     if request.method == "POST" and form.is_valid():
         updated_repo = form.save()
+
+        logger.info(
+            "Repository updated: %s by %s",
+            updated_repo.full_name,
+            request.user.username
+        )
+
         messages.success(
             request, f'Repository "{updated_repo.full_name}" updated successfully!'
-        )
-        logger.info(
-            f"Repository updated: '{updated_repo.full_name}' by " +
-            f"'{request.user.username}'"
         )
 
         if updated_repo.is_official:
@@ -368,9 +381,10 @@ def repository_update_official(request, name):
 
     if not request.user.is_admin:
         messages.error(request, "Only admins can edit official repositories.")
-        logger.error(
-            f"Official repository edit attempt for '{repo.name}' by " +
-            f"'{request.user.username}' failed"
+        logger.warning(
+            "Unauthorized official repository edit attempt: %s tried to edit %s",
+            request.user.username,
+            repo.full_name
         )
         return redirect("repositories:detail_official", name=repo.name)
 
@@ -387,13 +401,17 @@ def repository_update_official(request, name):
 
     if request.method == "POST" and form.is_valid():
         updated_repo = form.save()
+
+        logger.info(
+            "Official repository updated: %s by %s",
+            updated_repo.full_name,
+            request.user.username
+        )
+
         messages.success(
             request, f'Repository "{updated_repo.full_name}" updated successfully!'
         )
-        logger.info(
-            f"Official repository updated: '{updated_repo.name}' by" +
-            f" '{request.user.username}'"
-        )
+
 
         if not updated_repo.is_official:
             url = reverse(
@@ -451,9 +469,10 @@ def repository_delete(request, owner_username, name):
 
     if repo.owner != request.user:
         messages.warning(request, "You cannot delete this repository.")
-        logger.error(
-            f"Repository delete attempt for '{repo.full_name}' by " +
-            f"'{request.user.username}' failed"
+        logger.warning(
+            "Unauthorized repository delete attempt: %s tried to delete %s",
+            request.user.username,
+            repo.full_name
         )
         return redirect(
             "repositories:detail", owner_username=repo.owner.username, name=repo.name
@@ -481,7 +500,11 @@ def repository_delete(request, owner_username, name):
         repo_name = repo.full_name
         repo.delete()
         messages.success(request, f'Repository "{repo_name}" deleted.')
-        logger.info(f"Repository deleted: '{repo_name}' by '{request.user.username}'")
+        logger.info(
+            "Repository deleted: %s by %s",
+            repo_name,
+            request.user.username
+        )
 
         if from_profile:
             return redirect("accounts:profile")
@@ -515,9 +538,10 @@ def repository_delete_official(request, name):
     # Permission check - only admins can delete official repos
     if not request.user.is_admin:
         messages.error(request, "Only admins can delete official repositories.")
-        logger.error(
-            f"Official repository delete attempt for '{repo.name}'" +
-            f" by '{request.user.username}' failed"
+        logger.warning(
+            "Unauthorized official repository delete attempt: %s tried to delete %s",
+            request.user.username,
+            repo.full_name
         )
         return redirect("repositories:detail_official", name=repo.name)
 
@@ -543,7 +567,9 @@ def repository_delete_official(request, name):
         repo.delete()
         messages.success(request, f'Repository "{repo_name}" deleted.')
         logger.info(
-            f"Official repository deleted: '{repo_name}' by '{request.user.username}'"
+            "Official repository deleted: %s by %s",
+            repo_name,
+            request.user.username
         )
 
         if from_explore:
@@ -577,9 +603,10 @@ def tag_create(request, owner_username, name):
     # Permission check
     if repo.owner != request.user:
         messages.error(request, "You cannot create tags for this repository.")
-        logger.error(
-            f"Tag creation attempt for repository '{repo.full_name}' by " +
-            f"'{request.user.username}' failed"
+        logger.warning(
+            "Unauthorized tag creation attempt: %s tried to create tag for %s",
+            request.user.username,
+            repo.full_name
         )
         return redirect("repositories:detail", owner_username=owner_username, name=name)
 
@@ -605,16 +632,20 @@ def tag_create(request, owner_username, name):
                 form.add_error(
                     "name", f'Tag "{tag.name}" already exists for this repository.'
                 )
-                logger.error(
-                    f"Tag creation attempt for repository '{repo.full_name}'" +
-                    f" by '{request.user.username}' failed - duplicate tag name"
+                logger.warning(
+                    "Tag creation failed: %s:%s already exists (attempted by %s)",
+                    repo.full_name,
+                    tag.name,
+                    request.user.username
                 )
             else:
                 tag.save()
                 messages.success(request, f'Tag "{tag.name}" created successfully!')
                 logger.info(
-                    f"Tag created: '{tag.name}' for repository " +
-                    f"'{repo.full_name}' by '{request.user.username}'"
+                    "Tag created: %s:%s by %s",
+                    repo.full_name,
+                    tag.name,
+                    request.user.username
                 )
 
                 url = reverse(
@@ -655,9 +686,10 @@ def tag_create_official(request, name):
         messages.error(
             request, "Only admins can create tags for official repositories."
         )
-        logger.error(
-            f"Tag creation attempt for official repository '{repo.name}'" +
-            f" by '{request.user.username}' failed"
+        logger.warning(
+            "Unauthorized tag creation attempt: %s tried to create tag for official repository %s",
+            request.user.username,
+            repo.full_name
         )
         return redirect("repositories:detail_official", name=name)
 
@@ -681,16 +713,20 @@ def tag_create_official(request, name):
                 form.add_error(
                     "name", f'Tag "{tag.name}" already exists for this repository.'
                 )
-                logger.error(
-                    f"Tag creation attempt for repository '{repo.full_name}'" +
-                    f" by '{request.user.username}' failed - duplicate tag name"
+                logger.warning(
+                    "Tag creation failed: %s:%s already exists (attempted by %s)",
+                    repo.full_name,
+                    tag.name,
+                    request.user.username
                 )
             else:
                 tag.save()
                 messages.success(request, f'Tag "{tag.name}" created successfully!')
                 logger.info(
-                    f"Tag created: '{tag.name}' for official repository " +
-                    f"'{repo.name}' by '{request.user.username}'"
+                    "Tag created: %s:%s by %s",
+                    repo.full_name,
+                    tag.name,
+                    request.user.username
                 )
 
                 url = reverse("repositories:detail_official", kwargs={"name": name})
@@ -851,9 +887,11 @@ def tag_delete(request, owner_username, name, tag_name, digest):
 
     if repo.owner != request.user:
         messages.warning(request, "You cannot delete tags from this repository.")
-        logger.error(
-            f"Tag delete attempt for repository '{repo.full_name}'" +
-            f" by '{request.user.username}' failed"
+        logger.warning(
+            "Unauthorized tag delete attempt: %s tried to delete %s:%s",
+            request.user.username,
+            repo.full_name,
+            tag_name
         )
         return redirect(
             "repositories:tag_detail",
@@ -891,16 +929,21 @@ def tag_delete(request, owner_username, name, tag_name, digest):
                 if service.delete_manifest(repo.name, tag.digest):
                     tag.delete()
                     logger.info(
-                        f"Tag deleted: '{tag.name}' from repository " +
-                        f"'{repo.full_name}' by '{request.user.username}'"
+                        "Tag deleted: %s:%s by %s",
+                        repo.full_name,
+                        tag.name,
+                        request.user.username
                     )
                     deletion_success = True
                 else:
                     error_message = "Failed to delete manifest from registry."
             except Exception as e:
                 logger.error(
-                    f"Tag deletion attempt for repository '{repo.full_name}'" +
-                    f" by '{request.user.username}' failed"
+                    "Tag deletion failed: %s:%s by %s - %s",
+                    repo.full_name,
+                    tag.name,
+                    request.user.username,
+                    str(e)
                 )
                 error_message = str(e)
 
@@ -961,9 +1004,11 @@ def tag_delete_official(request, name, tag_name, digest):
         messages.error(
             request, "Only admins can delete tags from official repositories."
         )
-        logger.error(
-            f"Tag delete attempt for official repository '{repo.name}'" +
-            f" by '{request.user.username}' failed"
+        logger.warning(
+            "Unauthorized tag delete attempt: %s tried to delete %s:%s",
+            request.user.username,
+            repo.full_name,
+            tag_name
         )
         return redirect("repositories:detail_official", name=repo.name)
 
@@ -1000,8 +1045,10 @@ def tag_delete_official(request, name, tag_name, digest):
                         f'Tag "{tag_name}" deleted from repository "{repo.full_name}".',
                     )
                     logger.info(
-                        f"Tag deleted: '{tag.name}' from official repository" +
-                        " '{repo.name}' by '{request.user.username}'"
+                        "Tag deleted: %s:%s by %s",
+                        repo.full_name,
+                        tag.name,
+                        request.user.username
                     )
 
                     url = reverse("repositories:detail_official", kwargs={"name": name})
@@ -1014,8 +1061,11 @@ def tag_delete_official(request, name, tag_name, digest):
                     error_message = "Failed to delete manifest from registry."
             except Exception as e:
                 logger.error(
-                    "Tag deletion attempt for official repository " +
-                    f"'{repo.name}' by '{request.user.username}' failed"
+                    "Tag deletion failed: %s:%s by %s - %s",
+                    repo.full_name,
+                    tag.name,
+                    request.user.username,
+                    str(e)
                 )
                 error_message = str(e)
 
@@ -1058,9 +1108,10 @@ def star_repository(request, name):
 
     if repo.owner == request.user:
         messages.error(request, "You cannot star your own repository!")
-        logger.error(
-            f"Star attempt for repository '{repo.full_name}'" +
-            " by '{request.user.username}' failed - unauthorized"
+        logger.warning(
+            "Star attempt rejected: %s tried to star own repository %s",
+            request.user.username,
+            repo.full_name
         )
         return render(
             request,
@@ -1073,9 +1124,10 @@ def star_repository(request, name):
 
     if repo.visibility == Repository.VisibilityChoices.PRIVATE:
         messages.error(request, "You cannot star a private repository!")
-        logger.error(
-            f"Star attempt for private repository '{repo.full_name}'" +
-            " by '{request.user.username}' failed - cannot star private repository"
+        logger.warning(
+            "Star attempt rejected: %s tried to star private repository %s",
+            request.user.username,
+            repo.full_name
         )
         return render(
             request,
@@ -1093,13 +1145,16 @@ def star_repository(request, name):
             repo.save()
             messages.success(request, "Repository unstarred successfully!")
             logger.info(
-                f"Repository unstarred: '{repo.full_name}' by '{request.user.username}'"
+                "Repository unstarred: %s by %s",
+                repo.full_name,
+                request.user.username
             )
         except Exception:
             messages.error(request, "Error unstarring repository")
             logger.error(
-                f"Repository unstar attempt for '{repo.full_name}'" +
-                " by '{request.user.username}' failed"
+                "Repository unstar failed: %s by %s",
+                repo.full_name,
+                request.user.username
             )
     else:
         try:
@@ -1108,13 +1163,16 @@ def star_repository(request, name):
             repo.save()
             messages.success(request, "Repository starred successfully!")
             logger.info(
-                f"Repository starred: '{repo.full_name}' by '{request.user.username}'"
+                "Repository starred: %s by %s",
+                repo.full_name,
+                request.user.username
             )
         except Exception:
             messages.error(request, "Error starring repository")
             logger.error(
-                f"Repository star attempt for '{repo.full_name}'" +
-                " by '{request.user.username}' failed"
+                "Repository star failed: %s by %s",
+                repo.full_name,
+                request.user.username
             )
 
     return render(

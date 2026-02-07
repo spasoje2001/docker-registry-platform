@@ -25,24 +25,41 @@ from repositories.forms import RepositoryForm
 from repositories.services.repositories_service import RepositoryService
 from repositories.models import Repository
 
+import logging
+
+logger = logging.getLogger(__name__)
+
+def get_client_ip(request):
+    """Extract client IP address from request."""
+    x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
+    if x_forwarded_for:
+        return x_forwarded_for.split(',')[0].strip()
+    return request.META.get('REMOTE_ADDR', 'unknown')
+
 
 User = get_user_model()
 
 
 @login_required
 def admin_panel(request):
-    """
-    Main admin panel with tabs for different management sections.
-    All admins see User Management.
-    Only super admins see Admin Management tab.
-    """
+    """Main admin panel with tabs for different management sections."""
     if not request.user.is_admin:
+        # Log unauthorized access attempt
+        logger.warning(
+            "Unauthorized access attempt: %s tried to access admin panel",
+            request.user.username
+        )
         messages.warning(request, "You do not have permission to access this page.")
         return redirect("core:home")
 
     section = request.GET.get("section", "users")
 
     if section == "admins" and not request.user.is_super_admin:
+        # Log unauthorized section access
+        logger.warning(
+            "Unauthorized access attempt: %s tried to access admin management section",
+            request.user.username
+        )
         messages.warning(request, "You do not have permission to access this section.")
         return redirect("accounts:admin_panel")
 
@@ -78,6 +95,11 @@ def admin_panel(request):
 def update_badges(request, user_id):
     """Update user badges (Verified Publisher, Sponsored OSS)."""
     if not request.user.is_admin:
+        logger.warning(
+            "Unauthorized badge update attempt: %s tried to modify user %s",
+            request.user.username,
+            user_id
+        )
         messages.error(request, "Permission denied.")
         return redirect("home")
 
@@ -90,9 +112,22 @@ def update_badges(request, user_id):
         return redirect("accounts:admin_panel")
 
     bool_value = "value" in request.POST
+    old_value = getattr(target, badge)
 
     setattr(target, badge, bool_value)
     target.save(update_fields=[badge])
+
+    # Log badge update
+    action = "assigned" if bool_value else "removed"
+    badge_name = "Verified Publisher" if badge == "is_verified_publisher" else "Sponsored OSS"
+    logger.warning(
+        "Admin action: %s %s '%s' badge %s user %s",
+        request.user.username,
+        action,
+        badge_name,
+        "to" if bool_value else "from",
+        target.username
+    )
 
     messages.success(request, "Badge successfully updated.")
     return redirect("accounts:admin_panel")
@@ -100,11 +135,12 @@ def update_badges(request, user_id):
 
 @login_required
 def create_admin(request):
-    """
-    Create a new admin user. Only accessible by super admin.
-    Displays form with option to generate random password.
-    """
+    """Create a new admin user. Only accessible by super admin."""
     if not request.user.is_super_admin:
+        logger.warning(
+            "Unauthorized admin creation attempt: %s tried to create admin user",
+            request.user.username
+        )
         messages.warning(request, "Only super administrators can create admin users.")
         return redirect("accounts:admin_panel")
 
@@ -124,11 +160,17 @@ def create_admin(request):
             admin.set_password(password)
             admin.save()
 
+            # Log admin creation
+            logger.warning(
+                "Admin action: %s created new admin user '%s'",
+                request.user.username,
+                admin.username
+            )
+
             messages.success(
                 request, f'Admin user "{admin.username}" created successfully.'
             )
 
-            # Store password in session to display on next page
             request.session["new_admin_password"] = password
             request.session["new_admin_username"] = admin.username
 
@@ -176,12 +218,26 @@ def login_view(request):
             user = form.get_user()
             login(request, user)
 
+            # Log successful login
+            logger.info(
+                "User logged in: %s from IP %s",
+                user.username,
+                get_client_ip(request)
+            )
+
             messages.success(request, "You have successfully logged in!")
 
             if next_url:
                 return redirect(next_url)
             return redirect("core:home")
         else:
+            # Log failed login attempt
+            attempted_username = request.POST.get('username', 'unknown')
+            logger.warning(
+                "Failed login attempt: username '%s' from IP %s",
+                attempted_username,
+                get_client_ip(request)
+            )
             messages.error(request, "Invalid username or password. Please try again.")
     else:
         form = CustomAuthenticationForm(request)
@@ -194,7 +250,12 @@ def login_view(request):
 
 
 def logout_view(request):
+    username = request.user.username if request.user.is_authenticated else 'anonymous'
+
     logout(request)
+
+    # Log logout
+    logger.info("User logged out: %s", username)
 
     messages.success(request, "You have successfully logged out!")
     return redirect("core:home")
@@ -209,9 +270,18 @@ def register(request):
         if form.is_valid():
             user = form.save()
             login(request, user)
+
+            # Log successful registration
+            logger.info(
+                "User registered: %s (email: %s) from IP %s",
+                user.username,
+                user.email,
+                get_client_ip(request)
+            )
+
             messages.success(
                 request, f"Welcome, {
-                    user.username}! Your account has been created successfully.", )
+                user.username}! Your account has been created successfully.", )
 
             return redirect("core:home")
 
@@ -224,25 +294,23 @@ def register(request):
 class CustomPasswordChangeView(auth_views.PasswordChangeView):
     """
     Custom password change view that clears must_change_password flag.
-
-    Extends Django's built-in PasswordChangeView to add custom logic
-    for clearing the must_change_password flag after successful password change.
     """
 
     template_name = "accounts/password_change.html"
     success_url = reverse_lazy("accounts:password_change_done")
 
     def form_valid(self, form):
-        """
-        Clear must_change_password flag after successful password change.
-
-        This is called when the form is valid and before the user is redirected.
-        We override this method to set must_change_password=False.
-        """
+        """Clear must_change_password flag after successful password change."""
         response = super().form_valid(form)
 
         user = self.request.user
+
         if user.must_change_password:
+            # Log forced password change (first login for admin)
+            logger.info(
+                "Forced password change completed: %s (admin first login)",
+                user.username
+            )
             user.must_change_password = False
             user.save(update_fields=["must_change_password"])
 
@@ -251,6 +319,9 @@ class CustomPasswordChangeView(auth_views.PasswordChangeView):
                 "Password changed successfully! "
                 "You now have full access to the application.",
             )
+        else:
+            # Log regular password change
+            logger.info("Password changed: %s", user.username)
 
         return response
 
@@ -314,6 +385,13 @@ def edit_profile(request):
         form = EditProfileForm(request.POST, instance=user)
         if form.is_valid():
             form.save()
+
+            # Log profile update
+            logger.info(
+                "Profile updated: %s",
+                user.username
+            )
+
             messages.success(request, "Profile updated successfully.")
             return redirect("accounts:profile")
     else:
@@ -330,9 +408,18 @@ def change_password(request):
         if form.is_valid():
             user = form.save()
             update_session_auth_hash(request, user)
+
+            # Log password change
+            logger.info("Password changed: %s", user.username)
+
             messages.success(request, "Password successfully changed.")
             return redirect("accounts:profile")
         else:
+            # Log failed password change attempt
+            logger.warning(
+                "Failed password change attempt: %s (incorrect current password)",
+                request.user.username
+            )
             messages.error(request, "Current password wasn't correct.")
     else:
         form = ChangePasswordForm(user=request.user)
@@ -344,9 +431,7 @@ def change_password(request):
 
 @login_required
 def email_change(request):
-    """
-    Request email change - sends verification code to new email.
-    """
+    """Request email change - sends verification code to new email."""
     if request.method == "POST":
         form = RequestEmailChangeForm(request.user, request.POST)
         if form.is_valid():
@@ -363,26 +448,46 @@ def email_change(request):
                 send_mail(
                     subject="Email Change Verification Code",
                     message=f"Your verification code is: {code}\n\n"
-                    f"This code will expire in 10 minutes.",
+                            f"This code will expire in 10 minutes.",
                     from_email=settings.DEFAULT_FROM_EMAIL,
                     recipient_list=[new_email],
                     fail_silently=False,
                 )
+
+                # Log email change request
+                logger.info(
+                    "Email change requested: %s (new email: %s)",
+                    request.user.username,
+                    new_email
+                )
+
                 messages.success(
                     request,
                     f"Verification code sent to {new_email}. "
                     f"Please check your inbox.",
                 )
                 return redirect("accounts:email_change_confirm")
-            except Exception:
+            except Exception as e:
+                # Log email sending failure
+                logger.error(
+                    "Email change failed: %s - unable to send verification email to %s - %s",
+                    request.user.username,
+                    new_email,
+                    str(e)
+                )
                 messages.error(
-                    request, "Failed to sent verification email. Please try again."
+                    request, "Failed to send verification email. Please try again."
                 )
                 # Clean up Redis if email fails
                 delete_email_change_request(request.user.id)
         else:
             if "password" in form.errors:
-                messages.error(request, "Current current password wan't correct.")
+                # Log failed attempt due to wrong password
+                logger.warning(
+                    "Email change failed: %s - incorrect password",
+                    request.user.username
+                )
+                messages.error(request, "Current password wasn't correct.")
             else:
                 messages.error(request, "Current email wasn't correct.")
     else:
@@ -393,13 +498,15 @@ def email_change(request):
 
 @login_required
 def email_change_confirm(request):
-    """
-    Confirm email change with verification code.
-    """
+    """Confirm email change with verification code."""
     # Check if there's a pending request
     email_data = get_email_change_request(request.user.id)
 
     if not email_data:
+        logger.warning(
+            "Email change confirm failed: %s - no pending request or expired",
+            request.user.username
+        )
         messages.error(request, "No pending email change request or code has expired.")
         return redirect("accounts:profile")
 
@@ -409,14 +516,28 @@ def email_change_confirm(request):
             entered_code = form.cleaned_data["code"]
 
             if entered_code == email_data["code"]:
+                old_email = request.user.email
                 request.user.email = email_data["new_email"]
                 request.user.save(update_fields=["email"])
 
                 delete_email_change_request(request.user.id)
 
+                # Log successful email change
+                logger.info(
+                    "Email changed: %s (from %s to %s)",
+                    request.user.username,
+                    old_email,
+                    email_data["new_email"]
+                )
+
                 messages.success(request, "Email address changed successfully!")
                 return redirect("accounts:profile")
             else:
+                # Log invalid code attempt
+                logger.warning(
+                    "Email change failed: %s - invalid verification code",
+                    request.user.username
+                )
                 form.add_error("code", "Invalid verification code.")
     else:
         form = ConfirmEmailChangeForm()
@@ -430,11 +551,16 @@ def email_change_confirm(request):
 
 @login_required
 def cancel_email_change(request):
-    """
-    Cancel pending email change request.
-    """
+    """Cancel pending email change request."""
     if request.method == "POST":
         delete_email_change_request(request.user.id)
+
+        # Log cancellation
+        logger.info(
+            "Email change cancelled: %s",
+            request.user.username
+        )
+
         messages.info(request, "Email change request cancelled.")
 
     return redirect("accounts:edit_profile")

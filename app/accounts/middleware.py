@@ -2,6 +2,10 @@ from django.shortcuts import redirect
 from django.urls import reverse
 from django.contrib.auth import get_user_model
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 User = get_user_model()
 
 
@@ -41,21 +45,19 @@ class ForcePasswordChangeMiddleware:
         ]
 
     def __call__(self, request):
-        """
-        Process each request.
-
-        Args:
-            request: The HTTP request object
-
-        Returns:
-            HTTP response (either redirect or continue to next middleware/view)
-        """
+        """Process each request."""
         if (
-            request.user.is_authenticated
-            and hasattr(request.user, "must_change_password")
-            and request.user.must_change_password
+                request.user.is_authenticated
+                and hasattr(request.user, "must_change_password")
+                and request.user.must_change_password
         ):
             if not self._is_excluded_path(request.path):
+                # Log redirect due to forced password change
+                logger.info(
+                    "Forced password change redirect: %s attempted to access %s",
+                    request.user.username,
+                    request.path
+                )
                 return redirect("accounts:password_change")
 
         response = self.get_response(request)

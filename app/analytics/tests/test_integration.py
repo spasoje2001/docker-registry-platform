@@ -836,3 +836,70 @@ class AnalyticsPreviewGenerationTests(TestCase):
         self.assertIn('Date:', preview)
         self.assertIn('2025-01-01', preview)
         self.assertIn('2025-01-31', preview)
+
+
+class AnalyticsRefreshLogsTests(TestCase):
+    """Tests for the refresh logs endpoint."""
+
+    def setUp(self):
+        """Set up test client and users."""
+        self.client = Client()
+        self.admin_user = User.objects.create_user(
+            username='admin_test',
+            email='admin@test.com',
+            password='testpass123',
+            role='admin'
+        )
+        self.regular_user = User.objects.create_user(
+            username='regular_test',
+            email='regular@test.com',
+            password='testpass123',
+            role='user'
+        )
+        self.url = reverse('analytics:refresh_logs')
+
+    def test_refresh_logs_requires_authentication(self):
+        """Refresh logs should require authentication."""
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 401)
+        data = response.json()
+        self.assertFalse(data['success'])
+
+    def test_refresh_logs_requires_admin(self):
+        """Refresh logs should require admin role."""
+        self.client.login(username='regular_test', password='testpass123')
+        response = self.client.post(self.url)
+        self.assertEqual(response.status_code, 403)
+        data = response.json()
+        self.assertFalse(data['success'])
+
+    def test_refresh_logs_rejects_get_request(self):
+        """Refresh logs should reject GET requests."""
+        self.client.login(username='admin_test', password='testpass123')
+        response = self.client.get(self.url)
+        self.assertEqual(response.status_code, 405)  # Method not allowed
+
+    @patch('analytics.views.call_command')
+    def test_refresh_logs_success(self, mock_call_command):
+        """Refresh logs should call index_logs command."""
+        self.client.login(username='admin_test', password='testpass123')
+
+        response = self.client.post(self.url)
+
+        self.assertEqual(response.status_code, 200)
+        data = response.json()
+        self.assertTrue(data['success'])
+        mock_call_command.assert_called_once()
+
+    @patch('analytics.views.call_command')
+    def test_refresh_logs_handles_command_error(self, mock_call_command):
+        """Refresh logs should handle command errors gracefully."""
+        mock_call_command.side_effect = Exception('Command failed')
+        self.client.login(username='admin_test', password='testpass123')
+
+        response = self.client.post(self.url)
+
+        self.assertEqual(response.status_code, 500)
+        data = response.json()
+        self.assertFalse(data['success'])
+        self.assertIn('error', data)
