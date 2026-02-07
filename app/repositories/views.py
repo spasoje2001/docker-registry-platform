@@ -318,16 +318,7 @@ def repository_update(request, owner_username, name):
     form = RepositoryForm(request.POST or None, instance=repo, request=request)
 
     if request.method == "POST" and form.is_valid():
-        old_visibility = repo.visibility
         updated_repo = form.save()
-        if old_visibility != updated_repo.visibility:
-            logger.warning(
-                "Repository visibility changed: %s from %s to %s by %s",
-                updated_repo.full_name,
-                old_visibility,
-                updated_repo.visibility,
-                request.user.username
-            )
 
         logger.info(
             "Repository updated: %s by %s",
@@ -409,17 +400,7 @@ def repository_update_official(request, name):
     form = RepositoryForm(request.POST or None, instance=repo, request=request)
 
     if request.method == "POST" and form.is_valid():
-        old_visibility = repo.visibility
         updated_repo = form.save()
-
-        if old_visibility != updated_repo.visibility:
-            logger.warning(
-                "Official repository visibility changed: %s from %s to %s by %s",
-                updated_repo.full_name,
-                old_visibility,
-                updated_repo.visibility,
-                request.user.username
-            )
 
         logger.info(
             "Official repository updated: %s by %s",

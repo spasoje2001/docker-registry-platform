@@ -248,11 +248,6 @@ def refresh_logs(request):
         )
         return JsonResponse({'success': False, 'error': 'Admin access required'}, status=403)
 
-    logger.info(
-        "Log refresh triggered by %s",
-        request.user.username
-    )
-
     try:
         # Capture command output
         out = StringIO()
@@ -271,12 +266,6 @@ def refresh_logs(request):
                         except ValueError:
                             pass
                         break
-
-            logger.info(
-                "Log refresh completed: %s indexed %d logs",
-                request.user.username,
-                indexed_count
-            )
 
         return JsonResponse({
             'success': True,
