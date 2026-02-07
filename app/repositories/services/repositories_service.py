@@ -3,6 +3,9 @@ from django.db.models.query import QuerySet
 from django.db import models
 from ..clients.registry_client import RegistryClient
 from ..models import Repository, Tag
+import logging
+
+logger = logging.getLogger(__name__)
 
 
 class RepositoryService:
@@ -14,7 +17,10 @@ class RepositoryService:
         try:
             repositories = self.registry_client.get_all_repositories()
         except Exception as e:
-            print(f"Error fetching repositories from registry: {e}")
+            logger.error(
+                "Repository service: failed to fetch repositories from registry - %s",
+                str(e)
+            )
             raise
 
         db_list = Repository.objects.filter(
@@ -32,7 +38,11 @@ class RepositoryService:
         try:
             tags = self.registry_client.get_tags_for_repository(repo_name)
         except Exception as e:
-            print(f"Error fetching tags from registry: {e}")
+            logger.error(
+                "Repository service: failed to fetch tags for %s - %s",
+                repo_name,
+                str(e)
+            )
             raise
 
         db_list = Tag.objects.filter(models.Q(repository=repo_name))
@@ -44,14 +54,24 @@ class RepositoryService:
             manifest = self.registry_client.get_manifest(repo_name, tag_name)
             return manifest
         except Exception as e:
-            print(f"Error fetching manifest from registry: {e}")
+            logger.error(
+                "Repository service: failed to fetch manifest for %s:%s - %s",
+                repo_name,
+                tag_name,
+                str(e)
+            )
             raise
 
     def delete_manifest(self, repo_name: str, tag_name: str) -> bool:
         try:
             return self.registry_client.delete_manifest(repo_name, tag_name)
         except Exception as e:
-            print(f"Error deleting manifest from registry: {e}")
+            logger.error(
+                "Repository service: failed to delete manifest for %s:%s - %s",
+                repo_name,
+                tag_name,
+                str(e)
+            )
             raise
 
     def combine_lists(self, client_list: List[str], db_list: List) -> List:

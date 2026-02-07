@@ -1,11 +1,20 @@
+from io import StringIO
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.management import call_command
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from datetime import datetime
 import pytz
 import json
+import logging
+
+from django.views.decorators.http import require_POST
 
 from .services import LogSearchService
+
+logger = logging.getLogger(__name__)
 
 
 def format_timestamp(ts_string):
@@ -40,13 +49,12 @@ def format_timestamp(ts_string):
 
 @login_required
 def log_search(request):
-    """
-    Analytics log search view.
-
-    Admin-only access. Allows searching and filtering logs from Elasticsearch.
-    """
-    # Check admin permission
+    """Analytics log search view. Admin-only access."""
     if not request.user.is_admin:
+        logger.warning(
+            "Unauthorized analytics access attempt: %s",
+            request.user.username
+        )
         messages.warning(request, "You do not have permission to access this page.")
         return redirect("core:home")
 
@@ -127,6 +135,10 @@ def log_search(request):
 def advanced_search(request):
     """Advanced analytics log search with query builder. Admin-only access."""
     if not request.user.is_admin:
+        logger.warning(
+            "Unauthorized analytics access attempt: %s",
+            request.user.username
+        )
         messages.warning(request, "You do not have permission to access this page.")
         return redirect("core:home")
 
@@ -221,3 +233,64 @@ def advanced_search(request):
         })
 
     return render(request, 'analytics/advanced_search.html', context)
+
+
+@require_POST
+def refresh_logs(request):
+    """AJAX endpoint to trigger log indexing."""
+    if not request.user.is_authenticated:
+        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.user.role not in ['admin', 'super_admin']:
+        logger.warning(
+            "Unauthorized log refresh attempt: %s",
+            request.user.username if request.user.is_authenticated else "anonymous"
+        )
+        return JsonResponse({'success': False, 'error': 'Admin access required'}, status=403)
+
+    logger.info(
+        "Log refresh triggered by %s",
+        request.user.username
+    )
+
+    try:
+        # Capture command output
+        out = StringIO()
+        call_command('index_logs', stdout=out)
+        output = out.getvalue()
+
+        # Parse the output to get count
+        indexed_count = 0
+        for line in output.split('\n'):
+            if 'Indexed' in line and 'logs' in line:
+                parts = line.split()
+                for i, part in enumerate(parts):
+                    if part == 'Indexed' and i + 1 < len(parts):
+                        try:
+                            indexed_count = int(parts[i + 1])
+                        except ValueError:
+                            pass
+                        break
+
+            logger.info(
+                "Log refresh completed: %s indexed %d logs",
+                request.user.username,
+                indexed_count
+            )
+
+        return JsonResponse({
+            'success': True,
+            'message': f'Successfully indexed {indexed_count} new logs' if indexed_count else 'Log indexing complete',
+            'indexed_count': indexed_count
+        })
+
+    except Exception as e:
+        logger.error(
+            "Log refresh failed: %s - %s",
+            request.user.username,
+            str(e)
+        )
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)

@@ -13,6 +13,9 @@ import string
 from django.conf import settings
 from django.contrib.auth import get_user_model
 from django.core.management.base import BaseCommand
+import logging
+
+logger = logging.getLogger(__name__)
 
 User = get_user_model()
 
@@ -38,6 +41,12 @@ class Command(BaseCommand):
         # Check if super admin already exists
         if User.objects.filter(role=User.Role.SUPER_ADMIN).exists():
             existing_admin = User.objects.get(role=User.Role.SUPER_ADMIN)
+
+            logger.warning(
+                "Setup admin skipped: super admin already exists (%s)",
+                existing_admin.username
+            )
+
             self.stdout.write(
                 self.style.WARNING(
                     f"Super admin already exists: {existing_admin.username}. "
@@ -59,6 +68,12 @@ class Command(BaseCommand):
             is_staff=True,
         )
 
+        # Log super admin creation (security-critical event)
+        logger.warning(
+            "Super admin created: %s (must change password on first login)",
+            username
+        )
+
         self.stdout.write(
             self.style.SUCCESS(f"Successfully created super admin: {username}")
         )
@@ -66,6 +81,11 @@ class Command(BaseCommand):
         # Write password to file
         password_file_path = self._get_password_file_path()
         self._write_password_to_file(password_file_path, username, password)
+
+        logger.info(
+            "Super admin credentials written to: %s",
+            password_file_path
+        )
 
         self.stdout.write(
             self.style.SUCCESS(f"Password written to: {password_file_path}")
@@ -117,17 +137,7 @@ class Command(BaseCommand):
         return path
 
     def _write_password_to_file(self, file_path, username, password):
-        """
-        Write password to file with restrictive permissions.
-
-        Args:
-            file_path: Path where to write the file
-            username: Admin username
-            password: Admin password
-
-        Raises:
-            Exception: If file writing fails
-        """
+        """Write password to file with restrictive permissions."""
         try:
             with open(file_path, "w") as f:
                 f.write("Super Admin Credentials\n")
@@ -140,6 +150,11 @@ class Command(BaseCommand):
             os.chmod(file_path, 0o600)
 
         except Exception as e:
+            logger.error(
+                "Failed to write super admin credentials to file: %s - %s",
+                file_path,
+                str(e)
+            )
             self.stdout.write(
                 self.style.ERROR(f"Failed to write password file: {str(e)}")
             )
