@@ -3,6 +3,8 @@ from django.core.validators import RegexValidator
 from django.contrib.auth import get_user_model
 from django.db.models import Q
 from django.utils import timezone
+from django.db.models import Sum
+
 
 User = get_user_model()
 
@@ -58,6 +60,18 @@ class Repository(models.Model):
 
     def __str__(self):
         return self.full_name
+    @property
+    def total_size(self):
+        return self.tags.aggregate(total=Sum("size"))["total"] or 0
+
+    @property
+    def total_size_display(self):
+        size = self.total_size
+        for unit in ["B", "KB", "MB", "GB"]:
+            if size < 1024.0:
+                return f"{size:.2f} {unit}"
+            size /= 1024.0
+        return f"{size:.2f} TB"
 
 
 class Tag(models.Model):

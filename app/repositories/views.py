@@ -7,6 +7,9 @@ from .forms import RepositoryForm, TagForm
 from .services.repositories_service import RepositoryService
 from django.urls import reverse
 import logging
+from io import StringIO
+from django.core.management import call_command
+from django.views.decorators.http import require_POST
 
 logger = logging.getLogger(__name__)
 
@@ -1183,3 +1186,27 @@ def star_repository(request, name):
             "is_starred": not is_starred,
         },
     )
+
+@require_POST
+@login_required
+def refresh_tags(request, owner, repo):
+    if not (request.user.is_admin or request.user.username == owner):
+        return JsonResponse(
+            {'success': False, 'error': 'Permission denied'},
+            status=403
+        )
+
+    try:
+        out = StringIO()
+        call_command('sync_tags', repo=repo, stdout=out)
+
+        return JsonResponse({
+            'success': True,
+            'message': 'Tags successfully synchronized'
+        })
+
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'error': str(e)
+        }, status=500)
