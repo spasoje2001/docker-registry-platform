@@ -1,0 +1,55 @@
+<button type="button"
+        class="btn btn-outline-secondary"
+        id="refreshTagsBtn">
+    <span id="refreshTagsContent">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh tags
+    </span>
+    <span id="refreshTagsLoading" class="d-none">
+        <span class="spinner-border spinner-border-sm me-1"></span>
+        Syncing...
+    </span>
+</button>
+
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const btn = document.getElementById('refreshTagsBtn');
+    const content = document.getElementById('refreshTagsContent');
+    const loading = document.getElementById('refreshTagsLoading');
+
+    btn.addEventListener('click', async () => {
+        btn.disabled = true;
+        content.classList.add('d-none');
+        loading.classList.remove('d-none');
+
+        try {
+            const response = await fetch(
+                "{% url 'repositories:refresh_tags' repository.owner.username repository.name %}",
+                {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}'
+                    }
+                }
+            );
+
+            const data = await response.json();
+
+            if (data.success) {
+                window.location.reload();
+            } else {
+                alert(data.error || 'Sync failed');
+                reset();
+            }
+        } catch {
+            alert('Server error');
+            reset();
+        }
+
+        function reset() {
+            btn.disabled = false;
+            content.classList.remove('d-none');
+            loading.classList.add('d-none');
+        }
+    });
+});
+</script>
