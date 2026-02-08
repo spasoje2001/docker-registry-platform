@@ -55,7 +55,7 @@
 | :--- | :--- | :--- |
 | Super admin creates admin | ✅ PASS |  |
 | Admin searches users | ✅ PASS | Super admin also can search admins. |
-| Admin assigns badges |✅ PASS  | Available badges are Verified Publisher and Sponsored OSS. |
+| Admin assigns badges | ✅ PASS  | Available badges are Verified Publisher and Sponsored OSS. |
 | Admin creates official repository | ✅ PASS | Admin also can edit/delete every official repository and add/delete tags for them. |
 
 ## 6. Registry flow

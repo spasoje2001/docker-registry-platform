@@ -60,10 +60,11 @@
                                         data-bs-toggle="tooltip"></i>
                                     {% endif %}
 
+                                    {% if repo.visibility != 'PRIVATE' %}
                                     <span style="margin-right: 0.3rem;">
                                         <i class="bi bi-star text-warning" style="margin-left: 0.25rem;"></i> {{ repo.star_count }}
                                     </span>
-
+                                    {% endif %}
                                 </h5>
                             </div>
                             <div>
