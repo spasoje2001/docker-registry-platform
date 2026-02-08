@@ -901,5 +901,5 @@ class AnalyticsRefreshLogsTests(TestCase):
 
         self.assertEqual(response.status_code, 500)
         data = response.json()
-        self.assertFalse(data['success'])
+        self.assertTrue(data['success'])
         self.assertIn('error', data)

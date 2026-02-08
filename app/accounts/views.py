@@ -337,6 +337,10 @@ def profile_view(request):
 
     if not service.health_check():
         if request.GET.get("tab") == "repos" or not request.GET.get("tab"):
+
+            # Log registry unavailable
+            logger.error("Profile view: registry unavailable")
+
             messages.error(
                 request,
                 "Registry is unavailable at this moment. Please try again later.",
@@ -345,6 +349,10 @@ def profile_view(request):
         try:
             repositories = service.list_repositories(request.user, True)
         except Exception:
+
+            # Log cannot fetching repositories
+            logger.error("Profile view: fetching repositories from registry")
+
             messages.error(request, "Error fetching repositories from registry.")
             repositories = service.get_initial_repositories(True, request.user)
 
@@ -489,6 +497,11 @@ def email_change(request):
                 )
                 messages.error(request, "Current password wasn't correct.")
             else:
+                # Log failed attempt due to wrong current email
+                logger.warning(
+                    "Email change failed: %s - incorrect current email",
+                    request.user.username
+                )
                 messages.error(request, "Current email wasn't correct.")
     else:
         form = RequestEmailChangeForm(request.user)
