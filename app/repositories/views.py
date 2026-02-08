@@ -173,14 +173,22 @@ def repository_detail(request, owner_username, name):
 
     # Privacy check
     if repo.visibility == Repository.VisibilityChoices.PRIVATE:
-        if not request.user.is_authenticated or request.user != repo.owner:
+        if not request.user.is_authenticated:
+            logger.error(
+                f"Attempt to view private repository detail '{repo.full_name}' " +
+                "by 'unauthenticated' user failed"
+            )
+            return redirect(
+                "accounts:login"
+            )
+        if request.user != repo.owner:
             messages.warning(request, "You cannot see repository detail page.")
             logger.error(
                 f"Attempt to view private repository detail '{repo.full_name}' " +
                 "by 'unauthorized' user failed"
             )
             return redirect(
-                "accounts:login"
+                "core:home"
             )
 
     from_profile = request.GET.get("from_profile")
