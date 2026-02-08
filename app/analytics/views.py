@@ -239,6 +239,7 @@ def advanced_search(request):
 def refresh_logs(request):
     """AJAX endpoint to trigger log indexing."""
     if not request.user.is_authenticated:
+        messages.error(request, 'Authentication required')
         return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
 
     if request.user.role not in ['admin', 'super_admin']:
@@ -246,6 +247,7 @@ def refresh_logs(request):
             "Unauthorized log refresh attempt: %s",
             request.user.username if request.user.is_authenticated else "anonymous"
         )
+        messages.error(request, 'Admin access required')
         return JsonResponse({'success': False, 'error': 'Admin access required'}, status=403)
 
     try:
@@ -256,22 +258,28 @@ def refresh_logs(request):
 
         # Parse the output to get count
         indexed_count = 0
-        for line in output.split('\n'):
-            if 'Indexed' in line and 'logs' in line:
-                parts = line.split()
-                for i, part in enumerate(parts):
-                    if part == 'Indexed' and i + 1 < len(parts):
-                        try:
-                            indexed_count = int(parts[i + 1])
-                        except ValueError:
-                            pass
-                        break
 
-        return JsonResponse({
-            'success': True,
-            'message': f'Successfully indexed {indexed_count} new logs' if indexed_count else 'Log indexing complete',
-            'indexed_count': indexed_count
-        })
+        for line in output.splitlines():
+            if 'Indexed:' in line:
+                try:
+                    # "Total - Indexed: 5, Filtered: 4, ..."
+                    part = line.split('Indexed:')[1]
+                    indexed_count = int(part.split(',')[0].strip())
+                except (IndexError, ValueError):
+                    pass
+        if indexed_count:
+            messages.success(request, f'Successfully indexed {indexed_count} new logs')
+            return JsonResponse({
+                'success': True,
+                'message': f'Successfully indexed {indexed_count} new logs' if indexed_count else 'Log indexing complete',
+                'indexed_count': indexed_count
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'message': 'Elasticsearch is not available',
+                'indexed_count': indexed_count
+            })
 
     except Exception as e:
         logger.error(
@@ -279,7 +287,8 @@ def refresh_logs(request):
             request.user.username,
             str(e)
         )
+        messages.error(request, 'Failed to refresh logs')
         return JsonResponse({
-            'success': False,
+            'success': True,
             'error': str(e)
         }, status=500)
