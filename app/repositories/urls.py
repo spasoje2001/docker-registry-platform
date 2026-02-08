@@ -53,9 +53,9 @@ urlpatterns = [
         name="tag_delete_official",
     ),
     path(
-    '<str:owner>/<str:repo>/refresh-tags/',
-    views.refresh_tags,
-    name='refresh_tags'
-),
+        '<str:owner>/<str:repo>/refresh-tags/',
+        views.refresh_tags,
+        name='refresh_tags'
+    ),
 
 ]

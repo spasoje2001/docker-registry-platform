@@ -312,8 +312,13 @@ class LogIndexer:
 
             logger.info(
                 "%s: indexed=%d, skipped=%d, errors=%d, filtered=%d",
-                log_file, stats["indexed"], stats["skipped"], stats["errors"], stats.get("filtered", 0)
-            )
+                log_file,
+                stats["indexed"],
+                stats["skipped"],
+                stats["errors"],
+                stats.get(
+                    "filtered",
+                    0))
 
         logger.info(
             "Total: indexed=%d, skipped=%d, errors=%d, filtered=%d",

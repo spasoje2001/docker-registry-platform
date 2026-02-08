@@ -39,7 +39,9 @@ class RegistryClient:
             logger.debug("Fetched %d repositories from registry", len(repos))
             return repos
         except requests.exceptions.RequestException as e:
-            logger.error("Registry connection failed: unable to fetch repositories - %s", str(e))
+            logger.error(
+                "Registry connection failed: unable to fetch repositories - %s",
+                str(e))
             raise Exception(f"Failed to fetch repositories: {str(e)}")
 
     def get_tags_for_repository(self, repository: str) -> List[str]:
@@ -48,11 +50,17 @@ class RegistryClient:
             response = self.session.get(url)
             response.raise_for_status()
             tags_list = response.json().get("tags", [])
-            logger.debug("Fetched %d tags for repository %s", len(tags_list) if tags_list else 0, repository)
+            logger.debug(
+                "Fetched %d tags for repository %s",
+                len(tags_list) if tags_list else 0,
+                repository)
             return tags_list
 
         except requests.exceptions.RequestException as e:
-            logger.error("Registry connection failed: unable to fetch tags for %s - %s", repository, str(e))
+            logger.error(
+                "Registry connection failed: unable to fetch tags for %s - %s",
+                repository,
+                str(e))
             raise Exception(f"Failed to fetch repository {repository}: {str(e)}")
 
     def get_manifest(self, repository: str, tag_name: str) -> Dict:
@@ -89,7 +97,8 @@ class RegistryClient:
 
             if "config" in manifest and "layers" in manifest:
                 config_digest = manifest["config"]["digest"]
-                config_url = f"{self.registry_url}/v2/{repository}/blobs/{config_digest}"
+                config_url = f"{
+                    self.registry_url}/v2/{repository}/blobs/{config_digest}"
                 config_response = self.session.get(
                     config_url, headers={"Accept": manifest["config"]["mediaType"]}
                 )

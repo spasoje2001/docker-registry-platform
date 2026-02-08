@@ -107,7 +107,10 @@ def explore_repositories(request):
 
     # Log search query (only when there's an actual search)
     if query or active_filter:
-        username = request.user.username if request.user.is_authenticated else "anonymous"
+        if request.user.is_authenticated:
+            username = request.user.username
+        else:
+            username = "anonymous"
         logger.info(
             "Explore search: query='%s' filter=%s sort=%s results=%d by %s",
             query if query else "(none)",
