@@ -29,6 +29,7 @@ import logging
 
 logger = logging.getLogger(__name__)
 
+
 def get_client_ip(request):
     """Extract client IP address from request."""
     x_forwarded_for = request.META.get('HTTP_X_FORWARDED_FOR')
@@ -112,14 +113,16 @@ def update_badges(request, user_id):
         return redirect("accounts:admin_panel")
 
     bool_value = "value" in request.POST
-    old_value = getattr(target, badge)
 
     setattr(target, badge, bool_value)
     target.save(update_fields=[badge])
 
     # Log badge update
     action = "assigned" if bool_value else "removed"
-    badge_name = "Verified Publisher" if badge == "is_verified_publisher" else "Sponsored OSS"
+    if badge == "is_verified_publisher":
+        badge_name = "Verified Publisher"
+    else:
+        badge_name = "Sponsored OSS"
     logger.warning(
         "Admin action: %s %s '%s' badge %s user %s",
         request.user.username,
@@ -281,7 +284,7 @@ def register(request):
 
             messages.success(
                 request, f"Welcome, {
-                user.username}! Your account has been created successfully.", )
+                    user.username}! Your account has been created successfully.", )
 
             return redirect("core:home")
 
@@ -478,7 +481,8 @@ def email_change(request):
             except Exception as e:
                 # Log email sending failure
                 logger.error(
-                    "Email change failed: %s - unable to send verification email to %s - %s",
+                    "Email change failed: %s - unable "
+                    "to send verification email to %s - %s",
                     request.user.username,
                     new_email,
                     str(e)

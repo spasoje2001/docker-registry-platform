@@ -67,7 +67,11 @@ class TestRegistryIntegration(TestCase):
         sync_service = SyncService()
         stats = sync_service.sync_all_tags()
 
-        self.assertEqual(Tag.objects.filter(repository=self.repository, name="v1.0.0").count(), 0)
+        self.assertEqual(
+            Tag.objects.filter(
+                repository=self.repository,
+                name="v1.0.0").count(),
+            0)
         self.assertEqual(stats.tags_deleted, 1)
 
         self.repository.refresh_from_db()

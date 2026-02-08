@@ -240,7 +240,8 @@ def refresh_logs(request):
     """AJAX endpoint to trigger log indexing."""
     if not request.user.is_authenticated:
         messages.error(request, 'Authentication required')
-        return JsonResponse({'success': False, 'error': 'Authentication required'}, status=401)
+        return JsonResponse(
+            {'success': False, 'error': 'Authentication required'}, status=401)
 
     if request.user.role not in ['admin', 'super_admin']:
         logger.warning(
@@ -248,7 +249,8 @@ def refresh_logs(request):
             request.user.username if request.user.is_authenticated else "anonymous"
         )
         messages.error(request, 'Admin access required')
-        return JsonResponse({'success': False, 'error': 'Admin access required'}, status=403)
+        return JsonResponse(
+            {'success': False, 'error': 'Admin access required'}, status=403)
 
     try:
         # Capture command output
@@ -271,7 +273,8 @@ def refresh_logs(request):
             messages.success(request, f'Successfully indexed {indexed_count} new logs')
             return JsonResponse({
                 'success': True,
-                'message': f'Successfully indexed {indexed_count} new logs' if indexed_count else 'Log indexing complete',
+                'message': f'Successfully indexed {indexed_count} '
+                           f'new logs' if indexed_count else 'Log indexing complete',
                 'indexed_count': indexed_count
             })
         else:

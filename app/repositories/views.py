@@ -44,9 +44,9 @@ def repository_create(request):
                     "is_official", "Only admins can create official repositories."
                 )
                 logger.warning(
-                    "Unauthorized official repo creation attempt: %s tried to create official repository",
-                    request.user.username
-                )
+                    "Unauthorized official repo creation attempt: "
+                    "%s tried to create official repository",
+                    request.user.username)
 
                 if from_profile:
                     return redirect("accounts:profile")
@@ -423,7 +423,6 @@ def repository_update_official(request, name):
             request, f'Repository "{updated_repo.full_name}" updated successfully!'
         )
 
-
         if not updated_repo.is_official:
             url = reverse(
                 "repositories:detail",
@@ -698,10 +697,10 @@ def tag_create_official(request, name):
             request, "Only admins can create tags for official repositories."
         )
         logger.warning(
-            "Unauthorized tag creation attempt: %s tried to create tag for official repository %s",
+            "Unauthorized tag creation attempt: "
+            "%s tried to create tag for official repository %s",
             request.user.username,
-            repo.full_name
-        )
+            repo.full_name)
         return redirect("repositories:detail_official", name=name)
 
     from_explore = request.GET.get("from_explore") or request.POST.get("from_explore")
@@ -1194,6 +1193,7 @@ def star_repository(request, name):
             "is_starred": not is_starred,
         },
     )
+
 
 @require_POST
 @login_required

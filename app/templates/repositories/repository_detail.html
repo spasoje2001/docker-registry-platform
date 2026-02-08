@@ -191,7 +191,7 @@
 
             {% if user == repository.owner %}
                 {% include 'repositories/_refresh_tags_button.html' %}
-            {% elif repository.is_official and user.is_admin %}    
+            {% elif repository.is_official and user.is_admin %}
                 {% include 'repositories/_refresh_tags_button.html' %}
             {% else %}
                 <div class="col-md-1"></div>
@@ -232,7 +232,7 @@
                         </select>
                     </div>
 
-                    <div class="flex-grow-1" style="min-width: 470px;">
+                    <div class="flex-grow-1">
                         <label class="form-label small mb-1">Search by name</label>
                         <div class="input-group">
                             <input type="text"
@@ -262,11 +262,11 @@
                     {% endif %}
                 </form>
                 {% else %}
-                    <div class="col-md-8" style="height: 75px"></div>
+                    <div class="col-md-8"></div>
                 {% endif %}
 
                 {% if repository.is_official and user.is_admin %}
-                    <div class="up">
+                    <div>
                         <label class="form-label small">&nbsp;</label>
                         <a href="{% url 'repositories:tag_create_official' repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% elif 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}" class="btn btn-success">
                             <i class="bi bi-plus"></i> New
@@ -274,7 +274,7 @@
                     </div>
                 {% else %}
                     {% if user == repository.owner %}
-                    <div class="up">
+                    <div>
                         <a href="{% url 'repositories:tag_create' repository.owner.username repository.name %}{% if request.GET.from_profile %}?from_profile=1{% endif %}{% if request.GET.from_explore %}?from_explore=1{% endif %}{% if 'from_explore=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_explore=1&' }}{% elif 'from_profile=1&' in request.GET.urlencode %}&{{ request.GET.urlencode|cut:'from_profile=1&' }}{% endif %}"
                             class="btn btn-sm btn-success">
                             <i class="bi bi-plus-circle"></i> New
@@ -336,10 +336,4 @@
     </div>
 </div>
 </div>
-<style>
-.up {
-  position: relative;
-  top: -20px;
-}
-</style>
 {% endblock %}

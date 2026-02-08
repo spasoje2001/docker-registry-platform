@@ -60,6 +60,7 @@ class Repository(models.Model):
 
     def __str__(self):
         return self.full_name
+
     @property
     def total_size(self):
         return self.tags.aggregate(total=Sum("size"))["total"] or 0
