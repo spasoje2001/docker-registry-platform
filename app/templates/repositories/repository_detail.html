@@ -104,6 +104,7 @@
                     {% endif %}
                 {% endif %}
                 </div>
+
             </div>
 
             <div class="row g-3 mt-3 pt-3 border-top">
@@ -147,12 +148,15 @@
                         </div>
                     </div>
                 </div>
-            <div class="d-flex justify-content-between align-items-center mb-3">
-                <h5 class="mb-0 me-3">
-                    <i class="bi bi-tags"></i> Tags
-                        </h5>
-                     {% include 'repositories/_refresh_tags_button.html' %}
-            </div>
+            <div class="col-md-3">
+                <div class="d-flex align-items-center text-muted">
+                    <i class="bi bi-hdd-fill me-2"></i>
+                        <div>
+                    <small class="d-block text-muted">Total Size</small>
+                <strong class="text-dark">{{ repository.total_size_display }}</strong>
+                        </div>
+    </div>
+</div>
 
             </div>
         </div>
@@ -184,6 +188,7 @@
                 <h5 class="mb-0 me-3">
                     <i class="bi bi-tags"></i> Tags
                 </h5>
+            {% include 'repositories/_refresh_tags_button.html' %}
 
                 {% if tags or tag_q or tag_sort != "newest" %}
                 <form method="get"
