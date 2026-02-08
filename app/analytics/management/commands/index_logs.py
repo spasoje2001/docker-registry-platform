@@ -44,6 +44,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS(
                     f"Indexed: {stats['indexed']}, "
+                    f"Filtered: {stats.get('filtered', 0)}, "
                     f"Skipped: {stats['skipped']}, "
                     f"Errors: {stats['errors']}"
                 )
@@ -56,6 +57,7 @@ class Command(BaseCommand):
             self.stdout.write(
                 self.style.SUCCESS(
                     f"Total - Indexed: {stats['indexed']}, "
+                    f"Filtered: {stats.get('filtered', 0)}, "
                     f"Skipped: {stats['skipped']}, "
                     f"Errors: {stats['errors']}"
                 )

@@ -29,6 +29,12 @@
         </li>
     </ul>
 
+    <!-- Add after the tab navigation, before the form -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Query Builder</h5>
+        {% include 'analytics/_refresh_button.html' %}
+    </div>
+
     <!-- Query Builder Card -->
     <div class="card shadow-sm mb-4">
         <div class="card-header bg-primary text-white">
@@ -507,7 +513,7 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * Create value input - either text input or select based on field choices
+     * Create value input - either text input, select, or number input based on field
      */
     function createValueInput(fieldValue, currentValue) {
         const fieldConfig = getFieldConfig(fieldValue);
@@ -534,6 +540,16 @@ document.addEventListener('DOMContentLoaded', function() {
             });
 
             return select;
+        } else if (fieldConfig && fieldConfig.type === 'integer') {
+            // Create number input for integer fields
+            const input = document.createElement('input');
+            input.type = 'number';
+            input.className = 'form-control form-control-sm condition-value';
+            input.placeholder = 'Number...';
+            input.style.width = '150px';
+            input.value = currentValue || '';
+            input.min = '0';  // Status codes are positive
+            return input;
         } else {
             // Create text input for free-form fields
             const input = document.createElement('input');
@@ -550,16 +566,41 @@ document.addEventListener('DOMContentLoaded', function() {
      * Check if a condition is complete (all required fields filled)
      */
     function isConditionComplete(condition) {
-        return condition.field && condition.operator && condition.value;
+        if (!condition.field || !condition.operator || !condition.value) {
+            return false;
+        }
+
+        // Additional validation for integer fields
+        const fieldConfig = getFieldConfig(condition.field);
+        if (fieldConfig && fieldConfig.type === 'integer') {
+            const intValue = parseInt(condition.value, 10);
+            if (isNaN(intValue)) {
+                return false;  // Invalid integer
+            }
+        }
+
+        return true;
     }
 
     /**
-     * Check if a condition is partially filled (some fields but not all)
+     * Check if a condition is partially filled (some fields but not all) or has invalid values
      */
     function isConditionPartial(condition) {
         const hasField = !!condition.field;
         const hasOperator = !!condition.operator;
         const hasValue = !!condition.value;
+
+        // Check for invalid integer value
+        if (hasField && hasValue) {
+            const fieldConfig = getFieldConfig(condition.field);
+            if (fieldConfig && fieldConfig.type === 'integer') {
+                const intValue = parseInt(condition.value, 10);
+                if (isNaN(intValue)) {
+                    return true;  // Has value but it's invalid
+                }
+            }
+        }
+
         const filledCount = [hasField, hasOperator, hasValue].filter(Boolean).length;
         return filledCount > 0 && filledCount < 3;
     }
@@ -849,16 +890,26 @@ document.addEventListener('DOMContentLoaded', function() {
     function updatePreview() {
         const preview = generatePreview();
 
-        if (preview.hasIncomplete) {
-            queryPreviewDiv.innerHTML = `
+        let warningHtml = '';
+        if (preview.hasInvalidInteger) {
+            warningHtml = `
+                <span class="text-danger">
+                    <i class="bi bi-exclamation-circle me-1"></i>
+                    Invalid number value - condition will be ignored.
+                </span><br>
+            `;
+        } else if (preview.hasIncomplete) {
+            warningHtml = `
                 <span class="text-warning">
                     <i class="bi bi-exclamation-triangle me-1"></i>
-                    Incomplete conditions (highlighted in yellow) will be ignored.
-                </span>
-                ${preview.text ? '<br><span class="text-dark">' + preview.text + '</span>' : ''}
+                    Incomplete conditions (highlighted) will be ignored.
+                </span><br>
             `;
-        } else if (preview.text) {
-            queryPreviewDiv.innerHTML = `<span class="text-dark">${preview.text}</span>`;
+        }
+
+        if (warningHtml || preview.text) {
+            queryPreviewDiv.innerHTML = warningHtml +
+                (preview.text ? `<span class="text-dark">${preview.text}</span>` : '');
         } else {
             queryPreviewDiv.innerHTML = '<span class="text-muted">Your query will appear here...</span>';
         }
@@ -869,6 +920,7 @@ document.addEventListener('DOMContentLoaded', function() {
      */
     function generatePreview() {
         let hasIncomplete = false;
+        let hasInvalidInteger = false;
         const groupPreviews = [];
 
         state.groups.forEach((group, groupIndex) => {
@@ -878,6 +930,17 @@ document.addEventListener('DOMContentLoaded', function() {
                 // Check for incomplete conditions
                 if (isConditionPartial(cond)) {
                     hasIncomplete = true;
+
+                    // Check specifically for invalid integer
+                    if (cond.field && cond.value) {
+                        const fieldConfig = getFieldConfig(cond.field);
+                        if (fieldConfig && fieldConfig.type === 'integer') {
+                            const intValue = parseInt(cond.value, 10);
+                            if (isNaN(intValue)) {
+                                hasInvalidInteger = true;
+                            }
+                        }
+                    }
                 }
 
                 // Skip incomplete conditions for preview text
@@ -937,7 +1000,8 @@ document.addEventListener('DOMContentLoaded', function() {
 
         return {
             text: fullPreview,
-            hasIncomplete: hasIncomplete
+            hasIncomplete: hasIncomplete,
+            hasInvalidInteger: hasInvalidInteger
         };
     }
 

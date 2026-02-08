@@ -16,10 +16,22 @@ This application is a simplified version of the DockerHub platform. It allows us
 Key features:
 - User registration and authentication with role-based access control
 - Repository management (create, update, delete, visibility settings)
-- Public repository search with relevance-based sorting
-- Tag management for Docker images
+- Public repository search with relevance-based sorting and filtering
+- Tag management with registry synchronization
+- Star/bookmark repositories for quick access
 - Admin panel for user and official repository management
-- System analytics powered by Elasticsearch
+- System analytics with simple and advanced log search (AND/OR/NOT operators)
+
+## User Roles
+
+| Role | Permissions |
+|------|-------------|
+| **Super Admin** | Full system access, can create other admins |
+| **Admin** | Create official repositories, assign badges, view analytics |
+| **User** | Create personal repositories, star repositories |
+| **Anonymous** | Browse public repositories only |
+
+Super admin is created via `setup_admin` command. Regular users register through the web interface.
 
 ## Tech Stack
 
@@ -94,18 +106,7 @@ cat admin_password.txt
 
 **Important:** This command is idempotent (safe to run multiple times). Super admin will be forced to change password on first login.
 
-### 7. Tag synchronization
-Synchronize all tags for all repositories:
-```bash
-docker-compose exec web python manage.py sync_tags
-```
-
-Synchronize all tags for single repository:
-```bash
-docker-compose exec web python manage.py sync_tags --repo myrepo
-```
-
-### 8. Verify Everything is Running
+### 7. Verify Everything is Running
 
 Open in browser:
 
@@ -116,7 +117,31 @@ Open in browser:
 | Registry | http://localhost:5000/v2/ | `{}` |
 | MailHog | http://localhost:8025 | Email inbox UI |
 
-### 9. Verify Registry Authentication
+### 8. Index Logs for Analytics
+Index application logs into Elasticsearch for the analytics dashboard:
+```bash
+docker-compose exec web python manage.py index_logs
+```
+
+To re-index all logs (ignore previous position):
+```bash
+docker-compose exec web python manage.py index_logs --full
+```
+
+**Note:** Run this periodically or after generating new logs to keep analytics up to date.
+
+### 9. Tag synchronization
+Synchronize all tags for all repositories:
+```bash
+docker-compose exec web python manage.py sync_tags
+```
+
+Synchronize all tags for single repository:
+```bash
+docker-compose exec web python manage.py sync_tags --repo myrepo
+```
+
+### 10. Verify Registry Authentication
 ```bash
 # Test docker login
 docker login localhost:5000
@@ -127,7 +152,7 @@ docker login localhost:5000
 curl -u admin:Admin123 http://localhost:5000/v2/_catalog
 ```
 
-### 10. Stop the Application
+### 11. Stop the Application
 
 Press `Ctrl+C` in the terminal, then:
 ```bash
@@ -175,31 +200,6 @@ docker-compose exec db psql -U postgres -d dockerhub
 # \d tablename - describe table
 # \q           - quit
 ```
-### Registry configuration
-
-### 1. Create htpasswd file
-
-Create htpasswd file locally using Docker htpasswd image.
-
-```docker run --rm --entrypoint htpasswd httpd:2 -Bbn admin Admin123 > auth/htpasswd```
-
-Do not edit file manually. Encode it to UTF-8 LF.
-
-### 2. Test login
-
-```docker login localhost:5000```
-
-Enter the credentials:
-Username: admin
-Password: Admin123
-
-Then, in command prompt, to get all repositories:
-
-```curl -i -u admin:Admin123 http://localhost:5000/v2/_catalog```
-
-or in Powershell:
-
-```(Invoke-WebRequest -Uri "http://localhost:5000/v2/_catalog" -Headers @{Authorization = "Basic $([Convert]::ToBase64String([Text.Encoding]::ASCII.GetBytes('admin:Admin123')))"}).Content```
 
 ### Running Tests Locally
 
@@ -219,7 +219,7 @@ Run with verbosity:
 docker-compose exec web python manage.py test -v 2
 ```
 
-## Running Linter
+### Running Linter
 
 Run linter before committing to avoid CI failures:
 ```bash
@@ -267,9 +267,9 @@ This project follows the [GitFlow](https://www.atlassian.com/git/tutorials/compa
 - Feature and bugfix branches are created from `develop`
 - Only `develop` is merged into `main` during releases
 
-## Conventions
+### Conventions
 
-### Commit Messages
+#### Commit Messages
 
 Format: `<type>: <description>`
 
@@ -283,7 +283,7 @@ Format: `<type>: <description>`
 | `chore` | Maintenance tasks |
 | `style` | Code style changes (formatting, no logic change) |
 
-### Branch Naming
+#### Branch Naming
 
 - Features: `feature-<short-description>`
 - Bug fixes: `bugfix-<short-description>`
@@ -305,6 +305,7 @@ docker-registry-platform/
 │   ├── accounts/               # User management app
 │   ├── analytics/              # Elasticsearch logs app
 │   ├── config/                 # Django project settings
+│   ├── core/                   # Core app (home page, base templates)
 │   ├── explore/                # Search functionality app
 │   ├── repositories/           # Repository management app
 │   ├── templates/              # HTML templates
@@ -322,10 +323,6 @@ docker-registry-platform/
 ├── docker-compose.yml
 └── README.md
 ```
-
-## API Documentation
-
-*To be added.*
 
 ## Troubleshooting
 

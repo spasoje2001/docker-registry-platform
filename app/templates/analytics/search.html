@@ -29,6 +29,12 @@
         </li>
     </ul>
 
+    <!-- Add after the tab navigation, before the form -->
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <h5 class="mb-0">Search Logs</h5>
+        {% include 'analytics/_refresh_button.html' %}
+    </div>
+
     <!-- Search Filters Card -->
     <div class="card shadow-sm mb-4">
         <div class="card-body">
@@ -91,14 +97,19 @@
                     </div>
 
                     <!-- Buttons -->
-                    <div class="col-md-2 d-flex align-items-end">
-                        <div class="btn-group w-100" role="group">
-                            <button type="submit" class="btn btn-primary">
-                                <i class="bi bi-search me-1"></i>Search
-                            </button>
+                    <div class="col-md-2 d-flex align-items-end row">
+                        {% if query or not level == '' or date_from or date_to%}
+                        <div class="btn-group w-100">
                             <a href="{% url 'analytics:search' %}" class="btn btn-outline-secondary">
                                 <i class="bi bi-x-circle me-1"></i>Clear
                             </a>
+                        </div>
+                        {% endif %}
+                        <div class="btn-group w-100">
+                            <button type="submit" class="btn btn-primary">
+                                <i class="bi bi-search me-1"></i>Search
+                            </button>
+                            
                         </div>
                     </div>
                 </div>

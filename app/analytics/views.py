@@ -1,11 +1,20 @@
+from io import StringIO
+
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.core.management import call_command
+from django.http import JsonResponse
 from django.shortcuts import redirect, render
 from datetime import datetime
 import pytz
 import json
+import logging
+
+from django.views.decorators.http import require_POST
 
 from .services import LogSearchService
+
+logger = logging.getLogger(__name__)
 
 
 def format_timestamp(ts_string):
@@ -34,19 +43,18 @@ def format_timestamp(ts_string):
             return dt_local.strftime('%Y-%m-%d %H:%M:%S')
 
         return ts_string
-    except (ValueError, AttributeError) as e:
+    except (ValueError, AttributeError):
         return ts_string
 
 
 @login_required
 def log_search(request):
-    """
-    Analytics log search view.
-
-    Admin-only access. Allows searching and filtering logs from Elasticsearch.
-    """
-    # Check admin permission
+    """Analytics log search view. Admin-only access."""
     if not request.user.is_admin:
+        logger.warning(
+            "Unauthorized analytics access attempt: %s",
+            request.user.username
+        )
         messages.warning(request, "You do not have permission to access this page.")
         return redirect("core:home")
 
@@ -122,10 +130,15 @@ def log_search(request):
 
     return render(request, 'analytics/search.html', context)
 
+
 @login_required
 def advanced_search(request):
     """Advanced analytics log search with query builder. Admin-only access."""
     if not request.user.is_admin:
+        logger.warning(
+            "Unauthorized analytics access attempt: %s",
+            request.user.username
+        )
         messages.warning(request, "You do not have permission to access this page.")
         return redirect("core:home")
 
@@ -220,3 +233,65 @@ def advanced_search(request):
         })
 
     return render(request, 'analytics/advanced_search.html', context)
+
+
+@require_POST
+def refresh_logs(request):
+    """AJAX endpoint to trigger log indexing."""
+    if not request.user.is_authenticated:
+        messages.error(request, 'Authentication required')
+        return JsonResponse(
+            {'success': False, 'error': 'Authentication required'}, status=401)
+
+    if request.user.role not in ['admin', 'super_admin']:
+        logger.warning(
+            "Unauthorized log refresh attempt: %s",
+            request.user.username if request.user.is_authenticated else "anonymous"
+        )
+        messages.error(request, 'Admin access required')
+        return JsonResponse(
+            {'success': False, 'error': 'Admin access required'}, status=403)
+
+    try:
+        # Capture command output
+        out = StringIO()
+        call_command('index_logs', stdout=out)
+        output = out.getvalue()
+
+        # Parse the output to get count
+        indexed_count = 0
+
+        for line in output.splitlines():
+            if 'Indexed:' in line:
+                try:
+                    # "Total - Indexed: 5, Filtered: 4, ..."
+                    part = line.split('Indexed:')[1]
+                    indexed_count = int(part.split(',')[0].strip())
+                except (IndexError, ValueError):
+                    pass
+        if indexed_count:
+            messages.success(request, f'Successfully indexed {indexed_count} new logs')
+            return JsonResponse({
+                'success': True,
+                'message': f'Successfully indexed {indexed_count} '
+                           f'new logs' if indexed_count else 'Log indexing complete',
+                'indexed_count': indexed_count
+            })
+        else:
+            return JsonResponse({
+                'success': True,
+                'message': 'Elasticsearch is not available',
+                'indexed_count': indexed_count
+            })
+
+    except Exception as e:
+        logger.error(
+            "Log refresh failed: %s - %s",
+            request.user.username,
+            str(e)
+        )
+        messages.error(request, 'Failed to refresh logs')
+        return JsonResponse({
+            'success': True,
+            'error': str(e)
+        }, status=500)

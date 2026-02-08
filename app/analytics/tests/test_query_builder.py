@@ -1,14 +1,13 @@
 import json
 from datetime import datetime
-from pathlib import Path
-from unittest.mock import Mock, patch, MagicMock
+from unittest.mock import patch
 
 from django.contrib.auth import get_user_model
-from django.test import TestCase, override_settings, Client
+from django.test import TestCase, Client
 from django.urls import reverse
 
-from .services import LogIndexer, LogSearchService
-from .services.query_builder import QueryBuilder
+from ..services import LogIndexer, LogSearchService
+from ..services.query_builder import QueryBuilder
 
 User = get_user_model()
 
@@ -326,6 +325,7 @@ class AnalyticsViewTest(TestCase):
         self.assertEqual(len(messages), 1)
         self.assertIn('Elasticsearch', str(messages[0]))
 
+
 class QueryBuilderBasicTests(TestCase):
     """Tests for basic QueryBuilder functionality."""
 
@@ -362,6 +362,7 @@ class QueryBuilderBasicTests(TestCase):
         result = self.builder.build_query(conditions)
         self.assertEqual(result, {'match_all': {}})
 
+
 class QueryBuilderKeywordFieldTests(TestCase):
     """Tests for keyword field queries."""
 
@@ -392,6 +393,7 @@ class QueryBuilderKeywordFieldTests(TestCase):
         ]
         result = self.builder.build_query(conditions)
         self.assertEqual(result, {'term': {'user': 'admin'}})
+
 
 class QueryBuilderTextFieldTests(TestCase):
     """Tests for text field queries."""
@@ -433,6 +435,7 @@ class QueryBuilderTextFieldTests(TestCase):
         result = self.builder.build_query(conditions)
         self.assertEqual(result['match']['message']['query'], 'failed')
 
+
 class QueryBuilderAndLogicTests(TestCase):
     """Tests for AND logic between conditions."""
 
@@ -444,7 +447,12 @@ class QueryBuilderAndLogicTests(TestCase):
         """Two conditions with AND logic."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
-            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND'}
+            {
+                'field': 'message',
+                'operator': 'contains',
+                'value': 'failed',
+                'logic': 'AND'
+            }
         ]
         result = self.builder.build_query(conditions)
 
@@ -456,7 +464,12 @@ class QueryBuilderAndLogicTests(TestCase):
         """Three conditions with AND logic."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
-            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND'},
+            {
+                'field': 'message',
+                'operator': 'contains',
+                'value': 'failed',
+                'logic': 'AND'
+            },
             {'field': 'method', 'operator': 'equals', 'value': 'POST', 'logic': 'AND'}
         ]
         result = self.builder.build_query(conditions)
@@ -475,6 +488,7 @@ class QueryBuilderAndLogicTests(TestCase):
 
         self.assertIn('bool', result)
         self.assertIn('must', result['bool'])
+
 
 class QueryBuilderOrLogicTests(TestCase):
     """Tests for OR logic between conditions."""
@@ -509,6 +523,7 @@ class QueryBuilderOrLogicTests(TestCase):
         self.assertIn('should', result['bool'])
         self.assertEqual(len(result['bool']['should']), 3)
 
+
 class QueryBuilderNegationTests(TestCase):
     """Tests for NOT operator (negation)."""
 
@@ -517,41 +532,68 @@ class QueryBuilderNegationTests(TestCase):
         self.builder = QueryBuilder()
 
     def test_single_negated_condition(self):
-        """Single negated condition should use must_not."""
+        """Single negated condition should use must_not with match_all."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'INFO', 'negate': True}
         ]
         result = self.builder.build_query(conditions)
 
         self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
         self.assertIn('must_not', result['bool'])
-        self.assertEqual(len(result['bool']['must_not']), 1)
+        # must should contain match_all
+        self.assertEqual(result['bool']['must'], [{'match_all': {}}])
+        # must_not should contain the term query
+        self.assertEqual(result['bool']['must_not'], [{'term': {'level': 'INFO'}}])
 
     def test_regular_and_negated_condition(self):
         """Mix of regular and negated conditions."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
-            {'field': 'message', 'operator': 'contains', 'value': 'debug', 'logic': 'AND', 'negate': True}
+            {
+                'field': 'message',
+                'operator': 'contains',
+                'value': 'debug',
+                'logic': 'AND',
+                'negate': True
+            }
         ]
         result = self.builder.build_query(conditions)
 
         self.assertIn('bool', result)
         self.assertIn('must', result['bool'])
-        self.assertIn('must_not', result['bool'])
-        self.assertEqual(len(result['bool']['must']), 1)
-        self.assertEqual(len(result['bool']['must_not']), 1)
+        # Should have 2 clauses in must - one regular, one wrapped negation
+        self.assertEqual(len(result['bool']['must']), 2)
+        # First clause is the regular term query
+        self.assertEqual(result['bool']['must'][0], {'term': {'level': 'ERROR'}})
+        # Second clause is wrapped bool with must_not
+        second_clause = result['bool']['must'][1]
+        self.assertIn('bool', second_clause)
+        self.assertIn('must_not', second_clause['bool'])
 
     def test_multiple_negated_conditions(self):
         """Multiple negated conditions."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'INFO', 'negate': True},
-            {'field': 'level', 'operator': 'equals', 'value': 'DEBUG', 'logic': 'AND', 'negate': True}
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'DEBUG',
+                'logic': 'AND',
+                'negate': True
+            }
         ]
         result = self.builder.build_query(conditions)
 
         self.assertIn('bool', result)
-        self.assertIn('must_not', result['bool'])
-        self.assertEqual(len(result['bool']['must_not']), 2)
+        self.assertIn('must', result['bool'])
+        # Both negated clauses should be wrapped and in must
+        self.assertEqual(len(result['bool']['must']), 2)
+        # Each clause should be a wrapped bool with must_not
+        for clause in result['bool']['must']:
+            self.assertIn('bool', clause)
+            self.assertIn('must_not', clause['bool'])
+
 
 class QueryBuilderGroupTests(TestCase):
     """Tests for grouped conditions (parentheses support)."""
@@ -564,8 +606,20 @@ class QueryBuilderGroupTests(TestCase):
         """Two groups combined with AND: (A OR B) AND C."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
-            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR', 'group': 1},
-            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND', 'group': 2}
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'WARNING',
+                'logic': 'OR',
+                'group': 1
+            },
+            {
+                'field': 'message',
+                'operator': 'contains',
+                'value': 'failed',
+                'logic': 'AND',
+                'group': 2
+            }
         ]
         result = self.builder.build_query(conditions)
 
@@ -582,7 +636,13 @@ class QueryBuilderGroupTests(TestCase):
         """Two groups combined with OR: (A) OR (B)."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
-            {'field': 'method', 'operator': 'equals', 'value': 'POST', 'logic': 'OR', 'group': 2}
+            {
+                'field': 'method',
+                'operator': 'equals',
+                'value': 'POST',
+                'logic': 'OR',
+                'group': 2
+            }
         ]
         result = self.builder.build_query(conditions)
 
@@ -593,10 +653,33 @@ class QueryBuilderGroupTests(TestCase):
     def test_three_groups(self):
         """Three groups: (A OR B) AND (C) AND (D)."""
         conditions = [
-            {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
-            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR', 'group': 1},
-            {'field': 'method', 'operator': 'equals', 'value': 'POST', 'logic': 'AND', 'group': 2},
-            {'field': 'user', 'operator': 'equals', 'value': 'admin', 'logic': 'AND', 'group': 3}
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'ERROR',
+                'group': 1
+            },
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'WARNING',
+                'logic': 'OR',
+                'group': 1
+            },
+            {
+                'field': 'method',
+                'operator': 'equals',
+                'value': 'POST',
+                'logic': 'AND',
+                'group': 2
+            },
+            {
+                'field': 'user',
+                'operator': 'equals',
+                'value': 'admin',
+                'logic': 'AND',
+                'group': 3
+            }
         ]
         result = self.builder.build_query(conditions)
 
@@ -608,13 +691,19 @@ class QueryBuilderGroupTests(TestCase):
         """Conditions without group should default to group 1."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
-            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND'}
+            {
+                'field': 'message',
+                'operator': 'contains',
+                'value': 'failed',
+                'logic': 'AND'
+            }
         ]
         result = self.builder.build_query(conditions)
 
         # Should behave as single group with AND
         self.assertIn('bool', result)
         self.assertIn('must', result['bool'])
+
 
 class QueryBuilderDateRangeTests(TestCase):
     """Tests for date range filtering."""
@@ -625,15 +714,25 @@ class QueryBuilderDateRangeTests(TestCase):
 
     def test_only_date_range(self):
         """Only date range, no conditions."""
-        result = self.builder.build_query([], date_from='2025-01-01', date_to='2025-01-31')
+        result = self.builder.build_query(
+            [],
+            date_from='2025-01-01',
+            date_to='2025-01-31'
+        )
 
         self.assertIn('bool', result)
         self.assertIn('must', result['bool'])
         range_clause = result['bool']['must'][0]
         self.assertIn('range', range_clause)
         self.assertIn('timestamp', range_clause['range'])
-        self.assertEqual(range_clause['range']['timestamp']['gte'], '2025-01-01T00:00:00')
-        self.assertEqual(range_clause['range']['timestamp']['lte'], '2025-01-31T23:59:59')
+        self.assertEqual(
+            range_clause['range']['timestamp']['gte'],
+            '2025-01-01T00:00:00'
+        )
+        self.assertEqual(
+            range_clause['range']['timestamp']['lte'],
+            '2025-01-31T23:59:59'
+        )
 
     def test_only_date_from(self):
         """Only date_from specified."""
@@ -666,9 +765,18 @@ class QueryBuilderDateRangeTests(TestCase):
         """Multiple conditions with date range."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
-            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND'}
+            {
+                'field': 'message',
+                'operator': 'contains',
+                'value': 'failed',
+                'logic': 'AND'
+            }
         ]
-        result = self.builder.build_query(conditions, date_from='2025-01-01', date_to='2025-01-31')
+        result = self.builder.build_query(
+            conditions,
+            date_from='2025-01-01',
+            date_to='2025-01-31'
+        )
 
         self.assertIn('bool', result)
         self.assertIn('must', result['bool'])
@@ -683,6 +791,7 @@ class QueryBuilderDateRangeTests(TestCase):
 
         # Should just have the term clause, no date range
         self.assertEqual(result, {'term': {'level': 'ERROR'}})
+
 
 class QueryBuilderPreviewTests(TestCase):
     """Tests for preview generation."""
@@ -708,7 +817,12 @@ class QueryBuilderPreviewTests(TestCase):
         """Two conditions with AND preview."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
-            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND'}
+            {
+                'field': 'message',
+                'operator': 'contains',
+                'value': 'failed',
+                'logic': 'AND'
+            }
         ]
         preview = self.builder.generate_preview(conditions)
         self.assertIn('Log Level equals', preview)
@@ -738,9 +852,26 @@ class QueryBuilderPreviewTests(TestCase):
     def test_grouped_conditions_preview(self):
         """Grouped conditions should show parentheses."""
         conditions = [
-            {'field': 'level', 'operator': 'equals', 'value': 'ERROR', 'group': 1},
-            {'field': 'level', 'operator': 'equals', 'value': 'WARNING', 'logic': 'OR', 'group': 1},
-            {'field': 'message', 'operator': 'contains', 'value': 'failed', 'logic': 'AND', 'group': 2}
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'ERROR',
+                'group': 1
+            },
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'WARNING',
+                'logic': 'OR',
+                'group': 1
+            },
+            {
+                'field': 'message',
+                'operator': 'contains',
+                'value': 'failed',
+                'logic': 'AND',
+                'group': 2
+            }
         ]
         preview = self.builder.generate_preview(conditions)
         self.assertIn('(', preview)
@@ -750,7 +881,11 @@ class QueryBuilderPreviewTests(TestCase):
 
     def test_date_range_preview(self):
         """Date range preview."""
-        preview = self.builder.generate_preview([], date_from='2025-01-01', date_to='2025-01-31')
+        preview = self.builder.generate_preview(
+            [],
+            date_from='2025-01-01',
+            date_to='2025-01-31'
+        )
         self.assertIn('Date:', preview)
         self.assertIn('2025-01-01', preview)
         self.assertIn('2025-01-31', preview)
@@ -774,6 +909,7 @@ class QueryBuilderPreviewTests(TestCase):
         """Date to only preview."""
         preview = self.builder.generate_preview([], date_to='2025-01-31')
         self.assertEqual(preview, "Date: until 2025-01-31")
+
 
 class QueryBuilderUIHelperTests(TestCase):
     """Tests for UI helper methods."""
@@ -823,6 +959,7 @@ class QueryBuilderUIHelperTests(TestCase):
         operators = self.builder.get_operators_for_field('nonexistent')
         self.assertEqual(operators, [])
 
+
 class QueryBuilderNegativeOperatorTests(TestCase):
     """Tests for not_equals and not_contains operators."""
 
@@ -854,10 +991,16 @@ class QueryBuilderNegativeOperatorTests(TestCase):
         self.assertEqual(len(result['bool']['must_not']), 1)
 
     def test_equals_and_not_equals_same_value(self):
-        """Equals AND not_equals same value should produce valid query (returns 0 results)."""
+        """Equals AND not_equals same value should produce
+        valid query (returns 0 results)."""
         conditions = [
             {'field': 'level', 'operator': 'equals', 'value': 'INFO'},
-            {'field': 'level', 'operator': 'not_equals', 'value': 'INFO', 'logic': 'AND'}
+            {
+                'field': 'level',
+                'operator': 'not_equals',
+                'value': 'INFO',
+                'logic': 'AND'
+            }
         ]
         result = self.builder.build_query(conditions)
 
@@ -882,3 +1025,109 @@ class QueryBuilderNegativeOperatorTests(TestCase):
         preview = self.builder.generate_preview(conditions)
         self.assertIn('does not contain', preview)
         self.assertIn('debug', preview)
+
+
+class QueryBuilderExistsFilterTests(TestCase):
+    """Tests for exists filter in negative operators."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_not_equals_includes_exists(self):
+        """not_equals should include exists filter."""
+        conditions = [
+            {'field': 'level', 'operator': 'not_equals', 'value': 'INFO'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        # Check that exists is in must
+        must_clauses = result['bool']['must']
+        has_exists = any('exists' in clause for clause in must_clauses)
+        self.assertTrue(has_exists, "not_equals should include exists filter")
+
+    def test_not_contains_includes_exists(self):
+        """not_contains should include exists filter."""
+        conditions = [
+            {'field': 'message', 'operator': 'not_contains', 'value': 'error'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        must_clauses = result['bool']['must']
+        has_exists = any('exists' in clause for clause in must_clauses)
+        self.assertTrue(has_exists, "not_contains should include exists filter")
+
+    def test_integer_not_equals_includes_exists(self):
+        """Integer not_equals should include exists filter."""
+        conditions = [
+            {'field': 'status_code', 'operator': 'not_equals', 'value': '200'}
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        must_clauses = result['bool']['must']
+        has_exists = any('exists' in clause for clause in must_clauses)
+        self.assertTrue(has_exists, "integer not_equals should include exists filter")
+
+
+class QueryBuilderNegateOrTests(TestCase):
+    """Tests for OR with negate flag combinations."""
+
+    def setUp(self):
+        """Set up test fixtures."""
+        self.builder = QueryBuilder()
+
+    def test_or_with_negate_flag(self):
+        """A OR NOT A using negate flag should produce valid OR query."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {
+                'field': 'level',
+                'operator': 'equals',
+                'value': 'ERROR',
+                'negate': True,
+                'logic': 'OR'
+            }
+        ]
+        result = self.builder.build_query(conditions)
+
+        # Should be a bool with should containing both clauses
+        self.assertIn('bool', result)
+        self.assertIn('should', result['bool'])
+        self.assertEqual(len(result['bool']['should']), 2)
+        self.assertEqual(result['bool']['minimum_should_match'], 1)
+
+    def test_single_negated_condition(self):
+        """Single condition with negate=True should work correctly."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'INFO', 'negate': True}
+        ]
+        result = self.builder.build_query(conditions)
+
+        # Should produce bool with must (match_all) and must_not
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        self.assertIn('must_not', result['bool'])
+
+    def test_and_with_negate_flag(self):
+        """A AND NOT B using negate flag should work correctly."""
+        conditions = [
+            {'field': 'level', 'operator': 'equals', 'value': 'ERROR'},
+            {
+                'field': 'user',
+                'operator': 'equals',
+                'value': 'admin',
+                'negate': True,
+                'logic': 'AND'
+            }
+        ]
+        result = self.builder.build_query(conditions)
+
+        self.assertIn('bool', result)
+        self.assertIn('must', result['bool'])
+        self.assertEqual(len(result['bool']['must']), 2)

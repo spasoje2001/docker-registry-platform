@@ -1,0 +1,60 @@
+<!-- Refresh Logs Button -->
+<button type="button" class="btn btn-outline-secondary" id="refreshLogsBtn">
+    <span id="refreshBtnContent">
+        <i class="bi bi-arrow-clockwise me-1"></i> Refresh Logs
+    </span>
+    <span id="refreshBtnLoading" class="d-none">
+        <span class="spinner-border spinner-border-sm me-1" role="status" aria-hidden="true"></span>
+        Indexing...
+    </span>
+</button>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const refreshBtn = document.getElementById('refreshLogsBtn');
+    const btnContent = document.getElementById('refreshBtnContent');
+    const btnLoading = document.getElementById('refreshBtnLoading');
+
+    refreshBtn.addEventListener('click', async function() {
+        // Disable button and show loading state
+        refreshBtn.disabled = true;
+        btnContent.classList.add('d-none');
+        btnLoading.classList.remove('d-none');
+
+        try {
+            const response = await fetch('{% url "analytics:refresh_logs" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Reload the page to show new logs (with newest first)
+                setTimeout(() => {
+                    // Reset to page 1 and newest first
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('page', '1');
+                    url.searchParams.set('sort_order', 'desc');
+                    window.location.href = url.toString();
+                }, 1000);
+            } else {
+                resetButton();
+            }
+        } catch (error) {
+            console.error('Error refreshing logs:', error);
+            resetButton();
+        }
+    });
+
+    function resetButton() {
+        refreshBtn.disabled = false;
+        btnContent.classList.remove('d-none');
+        btnLoading.classList.add('d-none');
+    }
+
+});
+</script>

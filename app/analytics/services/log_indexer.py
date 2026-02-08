@@ -3,6 +3,7 @@ import logging
 from datetime import datetime
 from pathlib import Path
 from typing import Dict, List, Optional
+import hashlib
 
 from django.conf import settings
 from elasticsearch import Elasticsearch, exceptions as es_exceptions
@@ -20,6 +21,19 @@ class LogIndexer:
 
     INDEX_PREFIX = "docker-registry-logs"
     BATCH_SIZE = 100
+
+    # Loggers to exclude from indexing
+    EXCLUDED_LOGGERS = [
+        'django.server',  # Redundant with access logs
+        'django.utils.autoreload',  # Development noise
+        'django.template',  # Template debug noise
+    ]
+
+    # Path prefixes to exclude (reduces noise from static files)
+    EXCLUDED_PATH_PREFIXES = [
+        '/static/',
+        '/favicon.ico',
+    ]
 
     INDEX_MAPPING = {
         "settings": {
@@ -84,11 +98,47 @@ class LogIndexer:
 
     def parse_log_line(self, line: str) -> Optional[Dict]:
         """Parse JSON log line, return dict or None if invalid."""
+        line = line.strip()
+        if not line:
+            return None
+
+        # Only try to parse lines that look like JSON
+        if not line.startswith('{'):
+            # Old plain-text format log - skip silently
+            return None
+
         try:
-            return json.loads(line.strip())
+            return json.loads(line)
         except json.JSONDecodeError:
             logger.warning("Failed to parse log line: %s", line[:100])
             return None
+
+    def should_index_log(self, log_entry: Dict) -> bool:
+        """
+        Determine if a log entry should be indexed.
+
+        Filters out redundant and noisy logs.
+
+        Args:
+            log_entry: Parsed log entry dict
+
+        Returns:
+            True if log should be indexed, False to skip
+        """
+        # Check excluded loggers
+        logger_name = log_entry.get('logger_name', '')
+        for excluded in self.EXCLUDED_LOGGERS:
+            if logger_name.startswith(excluded):
+                return False
+
+        # Check excluded paths (for access logs)
+        path = log_entry.get('path', '')
+        if path:
+            for prefix in self.EXCLUDED_PATH_PREFIXES:
+                if path.startswith(prefix):
+                    return False
+
+        return True
 
     def _load_state(self) -> Dict:
         """Load indexer state from file."""
@@ -124,17 +174,17 @@ class LogIndexer:
         """
         Index new entries from log file.
 
-        Returns dict with stats: indexed, skipped, errors.
+        Returns dict with stats: indexed, skipped, errors, filtered.
         """
         if not log_file_path.exists():
             logger.warning("Log file not found: %s", log_file_path)
-            return {"indexed": 0, "skipped": 0, "errors": 0}
+            return {"indexed": 0, "skipped": 0, "errors": 0, "filtered": 0}
 
         log_source = log_file_path.stem  # 'app', 'access', or 'error'
         start_position = 0 if full_reindex else self.get_last_indexed_position(
             str(log_file_path))
 
-        stats = {"indexed": 0, "skipped": 0, "errors": 0}
+        stats = {"indexed": 0, "skipped": 0, "errors": 0, "filtered": 0}
         batch = []
 
         try:
@@ -148,6 +198,11 @@ class LogIndexer:
                     log_entry = self.parse_log_line(line)
                     if not log_entry:
                         stats["skipped"] += 1
+                        continue
+
+                    # Filter out noisy/redundant logs
+                    if not self.should_index_log(log_entry):
+                        stats["filtered"] += 1
                         continue
 
                     # Add metadata
@@ -175,7 +230,14 @@ class LogIndexer:
                         stats["errors"] += 1
                         continue
 
-                    batch.append({"index": {"_index": index_name}})
+                    # Generate unique document ID to prevent duplicates on re-index
+                    doc_id = hashlib.md5(
+                        f"{log_entry.get('timestamp', '')}"
+                        f"{log_entry.get('message', '')}"
+                        f"{log_source}".encode()
+                    ).hexdigest()
+
+                    batch.append({"index": {"_index": index_name, "_id": doc_id}})
                     batch.append(log_entry)
 
                     # Bulk index when batch is full
@@ -230,12 +292,12 @@ class LogIndexer:
         """
         if not self.connect():
             logger.error("Cannot index logs: Elasticsearch unavailable")
-            return {"indexed": 0, "skipped": 0, "errors": 0}
+            return {"indexed": 0, "skipped": 0, "errors": 0, "filtered": 0}
 
         logs_dir = Path(settings.BASE_DIR) / "logs"
         log_files = ["app.log", "access.log", "error.log"]
 
-        total_stats = {"indexed": 0, "skipped": 0, "errors": 0}
+        total_stats = {"indexed": 0, "skipped": 0, "errors": 0, "filtered": 0}
 
         for log_file in log_files:
             log_path = logs_dir / log_file
@@ -246,16 +308,23 @@ class LogIndexer:
             total_stats["indexed"] += stats["indexed"]
             total_stats["skipped"] += stats["skipped"]
             total_stats["errors"] += stats["errors"]
+            total_stats["filtered"] += stats.get("filtered", 0)
 
             logger.info(
-                "%s: indexed=%d, skipped=%d, errors=%d",
-                log_file, stats["indexed"], stats["skipped"], stats["errors"]
-            )
+                "%s: indexed=%d, skipped=%d, errors=%d, filtered=%d",
+                log_file,
+                stats["indexed"],
+                stats["skipped"],
+                stats["errors"],
+                stats.get(
+                    "filtered",
+                    0))
 
         logger.info(
-            "Total: indexed=%d, skipped=%d, errors=%d",
+            "Total: indexed=%d, skipped=%d, errors=%d, filtered=%d",
             total_stats["indexed"],
             total_stats["skipped"],
-            total_stats["errors"])
+            total_stats["errors"],
+            total_stats["filtered"])
 
         return total_stats

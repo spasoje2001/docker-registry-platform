@@ -37,7 +37,8 @@ class ExploreSearchFlowTestCase(TestCase):
         )
 
         self.patcher = patch(
-            "repositories.services.repositories_service.RegistryClient.get_all_repositories"
+            "repositories.services.repositories_service." +
+            "RegistryClient.get_all_repositories"
         )
         self.mock_registry = self.patcher.start()
         self.mock_registry.return_value = [

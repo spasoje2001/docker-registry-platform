@@ -62,22 +62,42 @@
                     
                     <div class="mb-3">
                         <label class="form-label">Role</label>
-                        <input class="form-control" value="{{ user.role }}" disabled>
-                    </div><div class="mb-3">
-                    
-                    <div>
-                        <label class="form-label">Badges</label>
-                        <input
-                            class="form-control"
-                            value="{% if user.is_verified_publisher %} Verified Publisher
-                                {% elif user.is_sponsored_oss %} Sponsored OSS
-                                {% else %} Community User
-                                {% endif %}"
-                            disabled
-                        >
+                        
+                        <div class="input-group">
+                            <input class="form-control" value="{% if user.role == 'admin' %} Admin
+                                                            {% elif user.role == 'user' %} User
+                                                            {% elif user.role == 'super_admin' %} Super Admin 
+                                                            {% else %} {{user.role}}
+                                                            {% endif %}" disabled>
+                            {% if user.is_super_admin %}
+                                <span class="input-group-text"><i class="bi bi-shield-lock-fill text-success"></i></span>
+                            {% elif user.is_admin %}
+                                <span class="input-group-text"><i class="bi bi-shield-lock text-success"></i></span>
+                            {% endif %}
+                        </div>
                     </div>
+                    
+                    {% if user.is_sponsored_oss or user.is_verified_publisher %}
+                    <div class="mb-3">
+                        <label class="form-label">Badges</label>
+                        <div class="input-group">
+                            <input
+                                class="form-control"
+                                value="{% if user.is_verified_publisher %} Verified Publisher
+                                    {% else %} Sponsored OSS
+                                    {% endif %}"
+                                disabled
+                            >
+                            {% if user.is_sponsored_oss %}
+                                <span class="input-group-text"><i class="bi bi-cash-coin text-success"></i></span>
+                            {% else %}
+                                <span class="input-group-text"><i class="bi bi-patch-check-fill text-success"></i></span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endif %}
 
-                    </br></br>
+                    </br>
                     <div
                         id="input-error"
                         class="text-danger small mt-2 d-none"
@@ -87,13 +107,13 @@
                         <button
                             id="save-btn"
                             type="submit"
-                            class="btn btn-primary w-75"
+                            class="btn btn-success w-75 mx-auto"
                             disabled
                         >
-                            Save changes
+                            <i class="bi bi-check-circle me-1"></i>Save changes
                         </button>
-                        <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary w-75">
-                            Cancel
+                        <a href="{% url 'accounts:profile' %}" class="btn btn-outline-secondary w-75 mx-auto">
+                            <i class="bi bi-x-circle me-1"></i>Cancel
                         </a>
                     </div>
                 </form>

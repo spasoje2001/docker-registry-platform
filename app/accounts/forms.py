@@ -221,6 +221,15 @@ class CreateAdminForm(forms.ModelForm):
         self.fields["first_name"].required = False
         self.fields["last_name"].required = False
 
+    def clean_email(self):
+        """Validate email is unique."""
+        email = self.cleaned_data.get("email")
+        if email and User.objects.filter(email__iexact=email).exists():
+            raise forms.ValidationError(
+                "A user with this email address already exists."
+            )
+        return email
+
     def clean(self):
         """Validate password fields based on generate_password option."""
         cleaned_data = super().clean()
